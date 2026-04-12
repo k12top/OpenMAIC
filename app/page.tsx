@@ -18,6 +18,8 @@ import {
   Monitor,
   BotOff,
   ChevronUp,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { LanguageSwitcher } from '@/components/language-switcher';
@@ -668,6 +670,27 @@ function GreetingBar() {
   const nameInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [casdoorUser, setCasdoorUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setCasdoorUser(data.user);
+          // Sync Casdoor user gently to local store
+          if (!nickname || nickname === t('profile.defaultNickname')) {
+            setNickname(data.user.nickname || data.user.id);
+          }
+          if (data.user.avatar && avatar === AVATAR_OPTIONS[0]) {
+            setAvatar(data.user.avatar);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to fetch Casdoor profile:', err));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const displayName = nickname || t('profile.defaultNickname');
 
@@ -921,6 +944,32 @@ function GreetingBar() {
                   rows={2}
                   className="resize-none border-border/40 bg-transparent min-h-[72px] !text-[13px] !leading-relaxed placeholder:!text-[11px] placeholder:!leading-relaxed focus-visible:ring-1 focus-visible:ring-border/60"
                 />
+
+                {/* Casdoor Auth Actions */}
+                <div className="pt-3 pb-1 flex justify-end">
+                  {casdoorUser ? (
+                    <button
+                      onClick={async () => {
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                        window.location.reload();
+                      }}
+                      className="flex items-center gap-1.5 text-[12px] text-red-500/80 hover:text-red-600 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                    >
+                      <LogOut className="size-3" />
+                      Logout
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        window.location.href = '/api/auth/login';
+                      }}
+                      className="flex items-center gap-1.5 text-[12px] text-violet-500/80 hover:text-violet-600 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                    >
+                      <LogIn className="size-3" />
+                      Login via Casdoor
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>

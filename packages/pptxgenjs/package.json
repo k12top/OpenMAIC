@@ -59,9 +59,9 @@
 		"gulp-insert": "^0.5.0",
 		"gulp-sourcemaps": "^3.0.0",
 		"gulp-uglify": "^3.0.2",
+		"esbuild": "^0.24.0",
 		"rollup": "^4.24.2",
-		"rollup-plugin-typescript2": "^0.36.0",
-		"tslib": "^2.8.0",
+		"rollup-plugin-esbuild": "^6.1.1",
 		"typescript": "^5.6.3",
 		"typescript-eslint": "^8.31.0"
 	},
