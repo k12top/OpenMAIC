@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server';
+
 import { casdoorSDK, casdoorConfig } from '@/lib/auth/casdoor';
 
 export async function GET(request: Request) {
