@@ -3,6 +3,7 @@ import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
 import type { ProtoGrpcType } from './types/tdd_openmaic';
 import type { TddOpenmaicServiceClient } from './types/tdd/v1/TddOpenmaicService';
+import type { GetAssembledPromptResponse__Output } from './types/tdd/v1/GetAssembledPromptResponse';
 
 const PROTO_PATH = path.join(process.cwd(), 'lib/grpc/proto/tdd_openmaic.proto');
 
@@ -25,7 +26,6 @@ export function getTaskGrpcClient(): TddOpenmaicServiceClient {
   if (!client) {
     const address = process.env.GRPC_SERVER_ADDRESS || 'localhost:50051';
     // Using insecure credentials for default configuration
-    // @ts-expect-error Any type placeholder
     client = new v1Package.TddOpenmaicService(address, grpc.credentials.createInsecure());
   }
   return client;
@@ -35,7 +35,7 @@ export async function fetchTaskContent(tempId: string): Promise<string> {
   const gRpcClient = getTaskGrpcClient();
 
   return new Promise((resolve, reject) => {
-    gRpcClient.GetAssembledPrompt({ prompt_id: tempId }, (err: grpc.ServiceError | null, response: any) => {
+    gRpcClient.GetAssembledPrompt({ promptId: tempId }, (err: grpc.ServiceError | null, response: GetAssembledPromptResponse__Output | undefined) => {
       if (err) {
         return reject(err);
       }

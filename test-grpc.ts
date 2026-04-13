@@ -26,25 +26,25 @@ async function runMockServer() {
   // 2. Add Handlers (mocking the upstream backend)
   const handlers: TddOpenmaicServiceHandlers = {
     GetAssembledPrompt(call, callback) {
-      console.log('✅ [Server] Received request for prompt_id:', call.request.prompt_id);
-      
-      if (!call.request.prompt_id) {
+      console.log('✅ [Server] Received request for promptId:', call.request.promptId);
+
+      if (!call.request.promptId) {
         return callback({
           code: grpc.status.INVALID_ARGUMENT,
-          message: 'prompt_id is missing',
+          message: 'promptId is missing',
         }, null);
       }
 
       // Mock response
       callback(null, {
-        prompt: `This is a mock, completely assembled AI prompt triggered by ID: ${call.request.prompt_id}`,
+        prompt: `This is a mock, completely assembled AI prompt triggered by ID: ${call.request.promptId}`,
       });
     },
 
     ReportUserQuestionPrompt(call, callback) {
       console.log('✅ [Server] Received report for user question:', call.request);
       callback(null, {
-        prompt_id: `mock-prompt-id-${Date.now()}`
+        promptId: `mock-prompt-id-${Date.now()}`,
       });
     }
   };
