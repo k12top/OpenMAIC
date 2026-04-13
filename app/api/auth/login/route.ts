@@ -1,10 +1,16 @@
-import { NextResponse } from 'next/server';
-import { casdoorSDK } from '@/lib/auth/casdoor';
+import { casdoorSDK, casdoorConfig } from '@/lib/auth/casdoor';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const returnUrl = url.searchParams.get('returnUrl');
   const redirectUri = `${url.origin}/api/auth/callback`;
-  const signinUrl = casdoorSDK.getSigninUrl(redirectUri);
+  
+  let signinUrl = casdoorSDK.getSignInUrl(redirectUri);
+  
+  if (returnUrl) {
+    // Casdoor SDK hardcodes state to appName. We replace it with our encoded returnUrl.
+    signinUrl = signinUrl.replace(`state=${casdoorConfig.appName}`, `state=${encodeURIComponent(returnUrl)}`);
+  }
 
   return NextResponse.redirect(signinUrl);
 }

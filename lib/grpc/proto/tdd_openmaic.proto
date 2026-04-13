@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package tdd.v1;
+
+option go_package = "k12_backend/api/tdd/v1;v1";
+
+// OpenMaic 相关：将题目上下文拼装为 prompt 存 Redis，供外部链路按 ID 取回。
+service TddOpenmaicService {
+  // 上报当前用户对题目的提问：服务端将题目内容、用户答案、正确答案、题目类型、解析
+  // 与用户追问（若有）拼装为 prompt 写入 Redis，返回唯一 ID。
+  rpc ReportUserQuestionPrompt(ReportUserQuestionPromptRequest) returns (ReportUserQuestionPromptResponse);
+
+  // 通过唯一 ID 获取服务端已拼装的完整 prompt 文本。
+  rpc GetAssembledPrompt(GetAssembledPromptRequest) returns (GetAssembledPromptResponse);
+}
+
+message ReportUserQuestionPromptRequest {
+  // 用户针对本题的额外提问；可能未输入，为空字符串即可。
+  string user_question = 1;
+  // 当前题目内容（题干等）。
+  string question_content = 2;
+  // 用户作答。
+  string user_answer = 3;
+  // 正确答案。
+  string correct_answer = 4;
+  // 题目类型（与业务约定一致，如 objective/subjective 或题型编码）。
+  string question_type = 5;
+  // 答案解析。
+  string explanation = 6;
+}
+
+message ReportUserQuestionPromptResponse {
+  // 存储在 Redis 中的唯一标识，用于后续查询。
+  string prompt_id = 1;
+}
+
+message GetAssembledPromptRequest {
+  string prompt_id = 1;
+}
+
+message GetAssembledPromptResponse {
+  // 服务端拼装后的完整 prompt。
+  string prompt = 1;
+}

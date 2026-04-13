@@ -19,36 +19,76 @@ function SooTaskContent() {
 
   useEffect(() => {
     const tempId = searchParams.get('tempId');
+    const directContent = searchParams.get('content');
+    const directContentB64 = searchParams.get('content_b64');
 
-    if (!tempId) {
-      setError('Missing tempId parameter. Please provide a valid temporary task ID.');
+    if (!tempId && !directContent && !directContentB64) {
+      setError('Missing parameters. Please provide a tempId, content, or content_b64.');
       setLoading(false);
       return;
     }
 
-    const fetchAndGenerate = async () => {
+    const decodeBase64UTF8 = (str: string) => {
       try {
-        // 1. Fetch from backend API which performs gRPC call
-        const response = await fetch('/api/orchestration/fetch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tempId }),
-        });
+        const binaryString = window.atob(str);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return new TextDecoder().decode(bytes);
+      } catch (e) {
+        console.error('Failed to decode base64:', e);
+        return null;
+      }
+    };
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Failed to fetch task content');
+    const processTask = async () => {
+      try {
+        // 0. Check authentication first
+        const authResponse = await fetch('/api/auth/me');
+        if (authResponse.status === 401) {
+          console.warn('User not authenticated, redirecting to login...');
+          const returnUrl = encodeURIComponent(window.location.href);
+          window.location.href = `/api/auth/login?returnUrl=${returnUrl}`;
+          return;
         }
 
-        const data = await response.json();
-        if (!data.success || !data.content) {
-          throw new Error('Task content is empty or invalid.');
+        let content = '';
+
+        if (directContent) {
+          content = directContent;
+        } else if (directContentB64) {
+          const decoded = decodeBase64UTF8(directContentB64);
+          if (!decoded) throw new Error('Invalid Base64 content provided.');
+          content = decoded;
+        } else if (tempId) {
+          // Fetch from backend API which performs gRPC call
+          const response = await fetch('/api/orchestration/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tempId }),
+          });
+
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to fetch task content');
+          }
+
+          const data = await response.json();
+          if (!data.success || !data.content) {
+            throw new Error('Task content is empty or invalid.');
+          }
+          content = data.content;
+        }
+
+        if (!content) {
+          throw new Error('No content available for task generation.');
         }
 
         // 2. Build generationSession required by /generation-preview
         const userProfile = useUserProfileStore.getState();
         const requirements: UserRequirements = {
-          requirement: data.content,
+          requirement: content,
           language: 'zh-CN', // Default language, could be inferred from user preferences
           userNickname: userProfile.nickname || undefined,
           userBio: userProfile.bio || undefined,
@@ -70,13 +110,13 @@ function SooTaskContent() {
         setLoading(false);
         router.push('/generation-preview');
       } catch (err: any) {
-        console.error('Task fetch error:', err);
-        setError(err.message || 'An error occurred while fetching the task.');
+        console.error('Task process error:', err);
+        setError(err.message || 'An error occurred while processing the task.');
         setLoading(false);
       }
     };
 
-    fetchAndGenerate();
+    processTask();
   }, [router, searchParams]);
 
   return (

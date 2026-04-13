@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const user = casdoorSDK.verifyAuthToken(token);
+    const user = casdoorSDK.parseJwtToken(token);
     return NextResponse.json({
       authenticated: true,
       user: {

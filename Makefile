@@ -7,6 +7,12 @@ help: ## 显示可用命令列表
 	@echo "可用命令:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+proto-gen: ## 生成基于 proto 文件的 TypeScript 强类型声明
+	npx proto-loader-gen-types --grpcLib=@grpc/grpc-js --outDir=lib/grpc/types lib/grpc/proto/tdd_openmaic.proto
+
+grpc-mock: ## 启动本地 Mock gRPC 服务器和客户端连通性沙盒进行测试
+	npx tsx test-grpc.ts
+
 install: ## 安装项目所有依赖 (包含子包的构建)
 	pnpm install
 
