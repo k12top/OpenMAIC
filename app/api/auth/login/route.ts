@@ -8,8 +8,11 @@ export async function GET(request: Request) {
   let signinUrl = casdoorSDK.getSignInUrl(redirectUri);
   
   if (returnUrl) {
-    // Casdoor SDK hardcodes state to appName. We replace it with our encoded returnUrl.
-    signinUrl = signinUrl.replace(`state=${casdoorConfig.appName}`, `state=${encodeURIComponent(returnUrl)}`);
+    // Manually inject the state parameter into the Casdoor authorize URL.
+    // This is more robust than string replacement as it handles various SDK output formats.
+    const signinUrlObj = new URL(signinUrl);
+    signinUrlObj.searchParams.set('state', returnUrl);
+    signinUrl = signinUrlObj.toString();
   }
 
   return NextResponse.redirect(signinUrl);
