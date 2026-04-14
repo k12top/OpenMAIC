@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { casdoorSDK, casdoorConfig, getPublicAppOrigin } from '@/lib/auth/casdoor';
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
   const publicOrigin = getPublicAppOrigin(request);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
 
   try {
     const token = await casdoorSDK.getAuthToken(code);
-    const user = casdoorSDK.parseJwtToken(token.access_token);
+    const _user = casdoorSDK.parseJwtToken(token.access_token);
 
     // Default redirect to home (use public origin so we never send users to 0.0.0.0)
     let redirectUrl = publicOrigin;
