@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
-import { casdoorSDK, casdoorConfig } from '@/lib/auth/casdoor';
+import { casdoorSDK, getPublicAppOrigin } from '@/lib/auth/casdoor';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const returnUrl = url.searchParams.get('returnUrl');
-  const redirectUri = `${url.origin}/api/auth/callback`;
+  const publicOrigin = getPublicAppOrigin(request);
+  const redirectUri = `${publicOrigin}/api/auth/callback`;
   
   let signinUrl = casdoorSDK.getSignInUrl(redirectUri);
   

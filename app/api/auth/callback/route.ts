@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { casdoorSDK, casdoorConfig } from '@/lib/auth/casdoor';
+import { casdoorSDK, casdoorConfig, getPublicAppOrigin } from '@/lib/auth/casdoor';
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
+  const publicOrigin = getPublicAppOrigin(request);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
 
@@ -14,15 +14,15 @@ export async function GET(request: Request) {
     const token = await casdoorSDK.getAuthToken(code);
     const user = casdoorSDK.parseJwtToken(token.access_token);
 
-    // Default redirect to home
-    let redirectUrl = url.origin;
-    
+    // Default redirect to home (use public origin so we never send users to 0.0.0.0)
+    let redirectUrl = publicOrigin;
+
     // Check if we have a valid returnUrl in state
     if (state && state !== casdoorConfig.appName) {
       try {
         const decodedState = decodeURIComponent(state);
-        // Security: only redirect to internal paths or same origin
-        if (decodedState.startsWith('/') || decodedState.startsWith(url.origin)) {
+        // Security: only redirect to internal paths or same origin (public)
+        if (decodedState.startsWith('/') || decodedState.startsWith(publicOrigin)) {
           redirectUrl = decodedState;
         }
       } catch (err) {
@@ -45,6 +45,6 @@ export async function GET(request: Request) {
     return response;
   } catch (error) {
     console.error('Casdoor authentication error:', error);
-    return NextResponse.redirect(`${url.origin}/?error=auth_failed`);
+    return NextResponse.redirect(`${publicOrigin}/?error=auth_failed`);
   }
 }
