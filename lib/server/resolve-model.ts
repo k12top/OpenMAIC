@@ -10,8 +10,18 @@ import { getModel, parseModelString, type ModelWithInfo } from '@/lib/ai/provide
 import { resolveApiKey, resolveBaseUrl, resolveProxy } from '@/lib/server/provider-config';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 
+/** Env default or bare model id; must parse to a non-empty modelId (see parseModelString). */
+function resolveEffectiveModelString(explicit?: string | null): string {
+  const fallback = (process.env.DEFAULT_MODEL || 'gpt-4o-mini').trim();
+  const trimmed = (explicit ?? '').trim();
+  if (!trimmed) return fallback;
+  const { modelId } = parseModelString(trimmed);
+  if (!modelId?.trim()) return fallback;
+  return trimmed;
+}
+
 export interface ResolvedModel extends ModelWithInfo {
-  /** Original model string (e.g. "openai/gpt-4o-mini") */
+  /** Effective model string after normalization (e.g. "openai:gpt-4o-mini") */
   modelString: string;
   /** Resolved provider ID (e.g. "openai", "ollama") */
   providerId: string;
@@ -30,7 +40,7 @@ export function resolveModel(params: {
   baseUrl?: string;
   providerType?: string;
 }): ResolvedModel {
-  const modelString = params.modelString || process.env.DEFAULT_MODEL || 'gpt-4o-mini';
+  const modelString = resolveEffectiveModelString(params.modelString);
   const { providerId, modelId } = parseModelString(modelString);
 
   // SSRF validation applies only to client-supplied base URLs.

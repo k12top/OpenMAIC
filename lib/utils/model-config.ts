@@ -1,3 +1,4 @@
+import { PROVIDERS } from '@/lib/ai/providers';
 import { useSettingsStore } from '@/lib/store/settings';
 
 /**
@@ -5,14 +6,17 @@ import { useSettingsStore } from '@/lib/store/settings';
  */
 export function getCurrentModelConfig() {
   const { providerId, modelId, providersConfig } = useSettingsStore.getState();
-  const modelString = `${providerId}:${modelId}`;
+  const catalog = PROVIDERS[providerId];
+  const resolvedModelId =
+    modelId?.trim() || catalog?.models[0]?.id || PROVIDERS.openai.models[0]?.id || 'gpt-4o-mini';
+  const modelString = `${providerId}:${resolvedModelId}`;
 
   // Get current provider's config
   const providerConfig = providersConfig[providerId];
 
   return {
     providerId,
-    modelId,
+    modelId: resolvedModelId,
     modelString,
     apiKey: providerConfig?.apiKey || '',
     baseUrl: providerConfig?.baseUrl || '',
