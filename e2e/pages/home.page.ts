@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { BRAND_NAME } from '../../lib/constants/brand';
 
 export class HomePage {
   readonly page: Page;
@@ -8,7 +9,7 @@ export class HomePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.logo = page.locator('img[alt="OpenMAIC"]');
+    this.logo = page.getByRole('heading', { level: 1, name: BRAND_NAME });
     this.textarea = page.locator('textarea');
     this.enterButton = page
       .getByRole('button', { name: /enter/i })

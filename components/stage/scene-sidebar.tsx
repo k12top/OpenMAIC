@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BRAND_NAME } from '@/lib/constants/brand';
 import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
 import { useStageStore, useCanvasStore } from '@/lib/store';
 import { useI18n } from '@/lib/hooks/use-i18n';
@@ -126,7 +127,9 @@ export function SceneSidebar({
             className="flex items-center gap-2 cursor-pointer rounded-lg px-1.5 -mx-1.5 py-1 -my-1 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 active:scale-[0.97] transition-all duration-150"
             title={t('generation.backToHome')}
           >
-            <img src="/logo-horizontal.png" alt="OpenMAIC" className="h-6" />
+            <span className="text-sm font-semibold text-foreground truncate max-w-[11rem]">
+              {BRAND_NAME}
+            </span>
           </button>
           <button
             onClick={() => onCollapseChange(true)}

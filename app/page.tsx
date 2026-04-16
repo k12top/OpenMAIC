@@ -50,6 +50,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
+import { BRAND_NAME } from '@/lib/constants/brand';
 
 const log = createLogger('Home');
 
@@ -446,22 +447,22 @@ function HomePage() {
           classrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
         )}
       >
-        {/* ── Logo ── */}
-        <motion.img
-          src="/logo-horizontal.png"
-          alt="OpenMAIC"
-          initial={{ opacity: 0, scale: 0.9 }}
+        {/* ── Brand title (text, no image) ── */}
+        <motion.h1
+          initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{
             delay: 0.1,
             type: 'spring',
             stiffness: 200,
-            damping: 20,
+            damping: 22,
           }}
-          className="h-12 md:h-16 mb-2 -ml-2 md:-ml-3"
-        />
+          className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2 select-none"
+        >
+          {BRAND_NAME}
+        </motion.h1>
 
-        {/* ── Slogan ── */}
+        {/* ── Tagline ── */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -641,7 +642,7 @@ function HomePage() {
 
       {/* Footer — flows with content, at the very end */}
       <div className="mt-auto pt-12 pb-4 text-center text-xs text-muted-foreground/40">
-        OpenMAIC Open Source Project
+        {BRAND_NAME}
       </div>
     </div>
   );

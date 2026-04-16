@@ -6,7 +6,7 @@
     "loading": "Загрузка..."
   },
   "home": {
-    "slogan": "Generative Learning in Multi-Agent Interactive Classroom",
+    "slogan": "Интерактивный класс и создание документов",
     "greetingWithName": "Привет, {{name}}"
   },
   "toolbar": {
