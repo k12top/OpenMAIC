@@ -85,6 +85,7 @@ interface StageState {
   clearFailedOutlines: () => void;
   retryFailedOutline: (outlineId: string) => void;
   setCreditsInsufficient: (value: boolean) => void;
+  updateSpeechActionAudioUrl: (audioId: string, url: string) => void;
 
   // Getters
   getCurrentScene: () => Scene | null;
@@ -235,6 +236,26 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   },
 
   setCreditsInsufficient: (value) => set({ creditsInsufficient: value }),
+
+  updateSpeechActionAudioUrl: (audioId, url) => {
+    const { scenes } = get();
+    for (const scene of scenes) {
+      const actions = scene.actions || [];
+      if (
+        actions.some(
+          (a) => a.type === 'speech' && (a as { audioId?: string }).audioId === audioId,
+        )
+      ) {
+        const updated = actions.map((a) =>
+          a.type === 'speech' && (a as { audioId?: string }).audioId === audioId
+            ? { ...a, audioUrl: url }
+            : a,
+        );
+        get().updateScene(scene.id, { actions: updated });
+        break;
+      }
+    }
+  },
 
   // Getters
   getCurrentScene: () => {

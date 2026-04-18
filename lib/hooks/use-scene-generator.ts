@@ -175,11 +175,17 @@ export async function generateAndStoreTTS(
     createdAt: Date.now(),
   });
 
-  // Upload to cloud storage (best-effort)
+  // Upload to cloud storage and write back the MinIO URL into the speech action
   const stageId = useStageStore.getState().stage?.id;
   if (stageId) {
     import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
-      uploadMediaToServer(stageId, 'tts', blob, `${audioId}.${data.format}`).catch(() => {});
+      uploadMediaToServer(stageId, 'tts', blob, `${audioId}.${data.format}`)
+        .then((result) => {
+          if (result?.url) {
+            useStageStore.getState().updateSpeechActionAudioUrl(audioId, result.url);
+          }
+        })
+        .catch(() => {});
     });
   }
 }
