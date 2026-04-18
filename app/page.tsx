@@ -465,13 +465,20 @@ function HomePage() {
       <div className="w-full md:w-[320px] lg:w-[380px] shrink-0 h-auto md:h-full flex flex-col bg-white dark:bg-slate-900 border-r border-border/40 z-10 relative overflow-y-auto hidden-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div className="p-6 md:p-8 flex flex-col min-h-full">
           {/* Brand + Profile */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground select-none">
-              {BRAND_NAME}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed font-medium">
-              智能生成助手
-            </p>
+          <div className="mb-8 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
+                <img src="/logos/xiangyu-logo.png" alt={BRAND_NAME} className="size-full object-cover scale-110" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white leading-tight uppercase select-none">
+                  {BRAND_NAME}
+                </h1>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-[0.2em] leading-tight">
+                  Premium SaaS
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col gap-6 flex-1">

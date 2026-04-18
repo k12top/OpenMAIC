@@ -13,20 +13,167 @@ import { playBrowserTTSPreview } from '@/lib/audio/browser-tts-preview';
 import {
   Sparkles,
   ChevronDown,
-  ChevronUp,
   Shuffle,
   Volume2,
   VolumeX,
   Loader2,
-  MessageSquare,
-  Minus,
-  Plus,
+  Check,
+  User,
+  GraduationCap,
+  Users,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AgentConfig } from '@/lib/orchestration/registry/types';
 import type { TTSProviderId } from '@/lib/audio/types';
 import type { ProviderWithVoices } from '@/lib/audio/voice-resolver';
 
+/**
+ * Role Badge Component
+ */
+function RoleBadge({ role }: { role: string }) {
+  const { t } = useI18n();
+  const getLabel = () => {
+    if (role === 'teacher') return t('settings.agentRoles.teacher') || '教师';
+    if (role === 'assistant') return t('settings.agentRoles.assistant') || '助教';
+    return t('settings.agentRoles.student') || '学生';
+  };
+
+  return (
+    <span
+      className={cn(
+        'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all',
+        role === 'teacher' && 'bg-blue-500 text-white dark:bg-blue-600',
+        role === 'assistant' && 'bg-violet-500 text-white dark:bg-violet-600',
+        role === 'student' && 'bg-emerald-500 text-white dark:bg-emerald-600',
+      )}
+    >
+      {getLabel()}
+    </span>
+  );
+}
+
+/**
+ * Voice Selection Item
+ */
+function VoiceSelectionItem({
+  provider,
+  group,
+  voice,
+  isActive,
+  isPreviewing,
+  onSelect,
+  onPreview,
+}: {
+  provider: ProviderWithVoices;
+  group: { modelId: string; modelName: string };
+  voice: { id: string; name: string };
+  isActive: boolean;
+  isPreviewing: boolean;
+  onSelect: () => void;
+  onPreview: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'group flex items-center gap-2 px-2 py-1.5 rounded-md transition-all cursor-pointer mb-0.5',
+        isActive ? 'bg-primary/10 border border-primary/20' : 'hover:bg-accent border border-transparent',
+      )}
+      onClick={onSelect}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={cn('text-[13px] truncate', isActive ? 'text-primary font-semibold' : 'text-foreground')}>
+            {voice.name}
+          </span>
+          {isActive && <Check className="size-3 text-primary shrink-0" />}
+        </div>
+        <div className="text-[10px] text-muted-foreground/60 truncate">
+          {group.modelId ? `${provider.providerName} · ${group.modelName}` : provider.providerName}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onPreview}
+        className={cn(
+          'shrink-0 size-7 flex items-center justify-center rounded-full transition-all',
+          isPreviewing ? 'bg-primary text-white shadow-lg' : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
+        )}
+      >
+        {isPreviewing ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Volume2 className="size-3.5" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Universal Agent Voice Selector Popover Content
+ */
+function VoiceSelectorContent({
+  availableProviders,
+  currentProviderId,
+  currentVoiceId,
+  currentModelId,
+  previewingId,
+  onSelect,
+  handlePreview,
+}: {
+  availableProviders: ProviderWithVoices[];
+  currentProviderId: string;
+  currentVoiceId: string;
+  currentModelId: string;
+  previewingId: string | null;
+  onSelect: (providerId: TTSProviderId, voiceId: string, modelId?: string) => void;
+  handlePreview: (providerId: TTSProviderId, voiceId: string, modelId?: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="w-64 max-h-[320px] overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
+      <div className="px-2 py-2 mb-1 border-b border-border/40">
+        <h4 className="text-[12px] font-bold text-foreground flex items-center gap-2">
+          <Volume2 className="size-3.5 text-primary" />
+          {t('toolbar.voiceSettings') || '选择音色'}
+        </h4>
+      </div>
+      {availableProviders.map((provider) =>
+        provider.modelGroups.map((group) => (
+          <div key={`${provider.providerId}::${group.modelId}`} className="mb-2 last:mb-0">
+            {group.voices.map((voice) => {
+              const isActive =
+                currentProviderId === provider.providerId &&
+                currentVoiceId === voice.id &&
+                (currentModelId || '') === (group.modelId || '');
+              const previewKey = `${provider.providerId}::${voice.id}`;
+              const isPreviewing = previewingId === previewKey;
+              return (
+                <VoiceSelectionItem
+                  key={previewKey}
+                  provider={provider}
+                  group={group}
+                  voice={voice}
+                  isActive={isActive}
+                  isPreviewing={isPreviewing}
+                  onSelect={() => onSelect(provider.providerId, voice.id, group.modelId || undefined)}
+                  onPreview={(e) => {
+                    e.stopPropagation();
+                    handlePreview(provider.providerId, voice.id, group.modelId);
+                  }}
+                />
+              );
+            })}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/**
+ * Agent Voice Pill
+ */
 function AgentVoicePill({
   agent,
   agentIndex,
@@ -97,7 +244,6 @@ function AgentVoicePill({
         return;
       }
 
-      // Server TTS
       try {
         const controller = new AbortController();
         previewAbortRef.current = controller;
@@ -120,7 +266,6 @@ function AgentVoicePill({
         if (!res.ok) throw new Error('TTS error');
         const data = await res.json();
         if (!data.base64) throw new Error('No audio');
-
         const audio = new Audio(`data:audio/${data.format || 'mp3'};base64,${data.base64}`);
         previewAudioRef.current = audio;
         audio.addEventListener('ended', () => setPreviewingId(null));
@@ -133,133 +278,52 @@ function AgentVoicePill({
     [previewingId, stopPreview, ttsProvidersConfig],
   );
 
-  // Cleanup on unmount
   useEffect(() => () => stopPreview(), [stopPreview]);
 
   if (disabled) {
     return (
-      <div
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1.5 h-6 w-[100px] rounded-full bg-muted/40 px-2.5 text-[11px] text-muted-foreground/30 shrink-0 cursor-not-allowed"
-      >
+      <div className="flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-muted/40 text-[11px] text-muted-foreground/30 ring-1 ring-border/20 cursor-not-allowed">
         <VolumeX className="size-3 shrink-0" />
-        <span className="truncate flex-1 text-left">{displayName}</span>
+        <span className="truncate">{displayName}</span>
       </div>
     );
   }
 
   return (
-    <Popover
-      open={popoverOpen}
-      onOpenChange={(open) => {
-        setPopoverOpen(open);
-        if (!open) stopPreview();
-      }}
-    >
+    <Popover open={popoverOpen} onOpenChange={(open) => { setPopoverOpen(open); if (!open) stopPreview(); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 h-6 w-[100px] rounded-full bg-primary/10 hover:bg-primary/20 dark:bg-primary/25 dark:hover:bg-primary/35 px-2.5 text-[11px] text-primary/80 hover:text-primary dark:text-primary/90 transition-colors shrink-0 cursor-pointer"
+          className="group flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 text-[11px] text-primary/80 hover:text-primary transition-all shrink-0 shadow-sm"
         >
-          <Volume2 className="size-3 shrink-0" />
-          <span className="truncate flex-1 text-left">{displayName}</span>
-          <ChevronDown className="size-3 shrink-0 opacity-50" />
+          <Volume2 className={cn("size-3 shrink-0", previewingId && "animate-pulse")} />
+          <span className="truncate max-w-[60px]">{displayName}</span>
+          <ChevronDown className="size-3 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        side="bottom"
-        align="end"
-        sideOffset={4}
-        className="w-56 px-1 pb-1 pt-0 max-h-64 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {availableProviders.map((provider) =>
-          provider.modelGroups.map((group) => (
-            <div key={`${provider.providerId}::${group.modelId}`}>
-              <div className="text-[11px] text-muted-foreground/60 font-medium px-2 py-1 sticky top-0 bg-popover">
-                {group.modelId
-                  ? `${provider.providerName} · ${group.modelName}`
-                  : provider.providerName}
-              </div>
-              {group.voices.map((voice) => {
-                const isActive =
-                  resolved.providerId === provider.providerId &&
-                  resolved.voiceId === voice.id &&
-                  (resolved.modelId || '') === (group.modelId || '');
-                const previewKey = `${provider.providerId}::${voice.id}`;
-                const isPreviewing = previewingId === previewKey;
-                return (
-                  <div
-                    key={previewKey}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-sm transition-colors',
-                      isActive ? 'bg-primary/10' : 'hover:bg-muted',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateAgent(agent.id, {
-                          voiceConfig: {
-                            providerId: provider.providerId,
-                            modelId: group.modelId || undefined,
-                            voiceId: voice.id,
-                          },
-                        });
-                        setPopoverOpen(false);
-                      }}
-                      className={cn(
-                        'flex-1 text-left text-[13px] px-2 py-1.5 min-w-0 truncate',
-                        isActive ? 'text-primary font-medium' : 'text-foreground',
-                      )}
-                    >
-                      {voice.name}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePreview(provider.providerId, voice.id, group.modelId);
-                      }}
-                      className={cn(
-                        'shrink-0 size-6 flex items-center justify-center rounded-sm transition-colors',
-                        isPreviewing
-                          ? 'text-primary'
-                          : 'text-muted-foreground/40 hover:text-muted-foreground',
-                      )}
-                    >
-                      {isPreviewing ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Volume2 className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )),
-        )}
+      <PopoverContent side="bottom" align="end" className="p-0 border-border select-none shadow-2xl rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <VoiceSelectorContent
+          availableProviders={availableProviders}
+          currentProviderId={resolved.providerId}
+          currentVoiceId={resolved.voiceId}
+          currentModelId={resolved.modelId || ''}
+          previewingId={previewingId}
+          onSelect={(pid, vid, mid) => {
+            updateAgent(agent.id, { voiceConfig: { providerId: pid, modelId: mid, voiceId: vid } });
+            setPopoverOpen(false);
+          }}
+          handlePreview={handlePreview}
+        />
       </PopoverContent>
     </Popover>
   );
 }
 
 /**
- * Teacher voice pill — reads/writes global ttsProviderId + ttsVoice (single source of truth).
- * This ensures lecture and discussion use the same voice for the teacher.
+ * Teacher Voice Pill — Global sync
  */
-function TeacherVoicePill({
-  availableProviders,
-  disabled,
-}: {
-  availableProviders: ProviderWithVoices[];
-  disabled?: boolean;
-}) {
+function TeacherVoicePill({ availableProviders, disabled }: { availableProviders: ProviderWithVoices[]; disabled?: boolean; }) {
   const ttsProviderId = useSettingsStore((s) => s.ttsProviderId);
   const ttsVoice = useSettingsStore((s) => s.ttsVoice);
   const setTTSProvider = useSettingsStore((s) => s.setTTSProvider);
@@ -305,19 +369,13 @@ function TeacherVoicePill({
       stopPreview();
       setPreviewingId(key);
 
-      const courseLanguage =
-        (typeof localStorage !== 'undefined' && localStorage.getItem('generationLanguage')) ||
-        'zh-CN';
+      const courseLanguage = (typeof localStorage !== 'undefined' && localStorage.getItem('generationLanguage')) || 'zh-CN';
       const previewText = courseLanguage === 'en-US' ? 'Welcome to AI Classroom' : '欢迎来到AI课堂';
 
       if (providerId === 'browser-native-tts') {
         const { promise, cancel } = playBrowserTTSPreview({ text: previewText, voice: voiceId });
         previewCancelRef.current = cancel;
-        try {
-          await promise;
-        } catch {
-          // ignore abort
-        }
+        try { await promise; } catch { }
         setPreviewingId(null);
         return;
       }
@@ -349,9 +407,7 @@ function TeacherVoicePill({
         audio.addEventListener('ended', () => setPreviewingId(null));
         audio.addEventListener('error', () => setPreviewingId(null));
         await audio.play();
-      } catch {
-        setPreviewingId(null);
-      }
+      } catch { setPreviewingId(null); }
     },
     [previewingId, stopPreview, ttsProvidersConfig],
   );
@@ -360,127 +416,53 @@ function TeacherVoicePill({
 
   if (disabled) {
     return (
-      <div
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        className="flex items-center gap-1.5 h-6 w-[100px] rounded-full bg-muted/40 px-2.5 text-[11px] text-muted-foreground/30 shrink-0 cursor-not-allowed"
-      >
+      <div className="flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-muted/40 text-[11px] text-muted-foreground/30 ring-1 ring-border/20 cursor-not-allowed">
         <VolumeX className="size-3 shrink-0" />
-        <span className="truncate flex-1 text-left">{displayName}</span>
+        <span className="truncate">{displayName}</span>
       </div>
     );
   }
 
+  const currentModelId = ttsProvidersConfig[ttsProviderId]?.modelId || '';
+
   return (
-    <Popover
-      open={popoverOpen}
-      onOpenChange={(open) => {
-        setPopoverOpen(open);
-        if (!open) stopPreview();
-      }}
-    >
+    <Popover open={popoverOpen} onOpenChange={(open) => { setPopoverOpen(open); if (!open) stopPreview(); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 h-6 w-[100px] rounded-full bg-primary/10 hover:bg-primary/20 dark:bg-primary/25 dark:hover:bg-primary/35 px-2.5 text-[11px] text-primary/80 hover:text-primary dark:text-primary/90 transition-colors shrink-0 cursor-pointer"
+          className="group flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 text-[11px] text-blue-600 dark:text-blue-400 font-medium transition-all shrink-0 shadow-sm"
         >
-          <Volume2 className="size-3 shrink-0" />
-          <span className="truncate flex-1 text-left">{displayName}</span>
-          <ChevronDown className="size-3 shrink-0 opacity-50" />
+          <Volume2 className={cn("size-3 shrink-0", previewingId && "animate-pulse")} />
+          <span className="truncate max-w-[60px]">{displayName}</span>
+          <ChevronDown className="size-3 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
         </button>
       </PopoverTrigger>
-      <PopoverContent
-        side="bottom"
-        align="end"
-        sideOffset={4}
-        className="w-56 px-1 pb-1 pt-0 max-h-64 overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {availableProviders.map((provider) =>
-          provider.modelGroups.map((group) => (
-            <div key={`${provider.providerId}::${group.modelId}`}>
-              <div className="text-[11px] text-muted-foreground/60 font-medium px-2 py-1 sticky top-0 bg-popover">
-                {group.modelId
-                  ? `${provider.providerName} · ${group.modelName}`
-                  : provider.providerName}
-              </div>
-              {group.voices.map((voice) => {
-                const currentModelId = ttsProvidersConfig[ttsProviderId]?.modelId || '';
-                const isActive =
-                  ttsProviderId === provider.providerId &&
-                  ttsVoice === voice.id &&
-                  currentModelId === (group.modelId || '');
-                const previewKey = `${provider.providerId}::${voice.id}`;
-                const isPreviewing = previewingId === previewKey;
-                return (
-                  <div
-                    key={previewKey}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded-sm transition-colors',
-                      isActive ? 'bg-primary/10' : 'hover:bg-muted',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTTSProvider(provider.providerId);
-                        setTTSVoice(voice.id);
-                        if (group.modelId) {
-                          setTTSProviderConfig(provider.providerId, { modelId: group.modelId });
-                        }
-                        setPopoverOpen(false);
-                      }}
-                      className={cn(
-                        'flex-1 text-left text-[13px] px-2 py-1.5 min-w-0 truncate',
-                        isActive ? 'text-primary font-medium' : 'text-foreground',
-                      )}
-                    >
-                      {voice.name}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePreview(provider.providerId, voice.id, group.modelId);
-                      }}
-                      className={cn(
-                        'shrink-0 size-6 flex items-center justify-center rounded-sm transition-colors',
-                        isPreviewing
-                          ? 'text-primary'
-                          : 'text-muted-foreground/40 hover:text-muted-foreground',
-                      )}
-                    >
-                      {isPreviewing ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Volume2 className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )),
-        )}
+      <PopoverContent side="bottom" align="end" className="p-0 border-border select-none shadow-2xl rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <VoiceSelectorContent
+          availableProviders={availableProviders}
+          currentProviderId={ttsProviderId}
+          currentVoiceId={ttsVoice}
+          currentModelId={currentModelId}
+          previewingId={previewingId}
+          onSelect={(pid, vid, mid) => {
+            setTTSProvider(pid);
+            setTTSVoice(vid);
+            if (mid) setTTSProviderConfig(pid, { modelId: mid });
+            setPopoverOpen(false);
+          }}
+          handlePreview={handlePreview}
+        />
       </PopoverContent>
     </Popover>
   );
 }
 
-export interface AgentBarProps {
-  inline?: boolean;
-}
-
-export function AgentBar({ inline = false }: AgentBarProps = {}) {
+export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
   const { t } = useI18n();
   const { listAgents } = useAgentRegistry();
   const selectedAgentIds = useSettingsStore((s) => s.selectedAgentIds);
   const setSelectedAgentIds = useSettingsStore((s) => s.setSelectedAgentIds);
-  const maxTurns = useSettingsStore((s) => s.maxTurns);
-  const setMaxTurns = useSettingsStore((s) => s.setMaxTurns);
   const agentMode = useSettingsStore((s) => s.agentMode);
   const setAgentMode = useSettingsStore((s) => s.setAgentMode);
   const ttsProvidersConfig = useSettingsStore((s) => s.ttsProvidersConfig);
@@ -490,7 +472,6 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
   const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load browser native TTS voices
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     const loadVoices = () => setBrowserVoices(speechSynthesis.getVoices());
@@ -499,30 +480,20 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
     return () => speechSynthesis.removeEventListener('voiceschanged', loadVoices);
   }, []);
 
-  const allAgents = listAgents();
-  const agents = allAgents.filter((a) => !a.isGenerated);
+  const agents = listAgents().filter((a) => !a.isGenerated);
   const teacherAgent = agents.find((a) => a.role === 'teacher');
-  const selectedAgents = agents.filter((a) => selectedAgentIds.includes(a.id));
-  const nonTeacherSelected = selectedAgents.filter((a) => a.role !== 'teacher');
+  const otherAgents = agents.filter((a) => a.role !== 'teacher');
 
   const serverProviders = getAvailableProvidersWithVoices(ttsProvidersConfig);
   const availableProviders: ProviderWithVoices[] = [
     ...serverProviders,
     ...(browserVoices.length > 0
-      ? [
-          {
-            providerId: 'browser-native-tts' as TTSProviderId,
-            providerName: 'Browser Native',
-            voices: browserVoices.map((v) => ({ id: v.voiceURI, name: v.name })),
-            modelGroups: [
-              {
-                modelId: '',
-                modelName: 'Browser Native',
-                voices: browserVoices.map((v) => ({ id: v.voiceURI, name: v.name })),
-              },
-            ],
-          },
-        ]
+      ? [{
+          providerId: 'browser-native-tts' as TTSProviderId,
+          providerName: 'Browser Native',
+          voices: browserVoices.map((v) => ({ id: v.voiceURI, name: v.name })),
+          modelGroups: [{ modelId: '', modelName: 'Browser Native', voices: browserVoices.map((v) => ({ id: v.voiceURI, name: v.name })) }],
+        }]
       : []),
   ];
   const showVoice = availableProviders.length > 0;
@@ -530,10 +501,8 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (containerRef.current && containerRef.current.contains(target)) return;
-      // Don't close if clicking inside a Radix portal (Popover, Select, etc.)
-      if ((target as Element).closest?.('[data-radix-popper-content-wrapper]')) return;
+      if (containerRef.current && containerRef.current.contains(e.target as Node)) return;
+      if ((e.target as Element).closest?.('[data-radix-popper-content-wrapper]')) return;
       setOpen(false);
     };
     document.addEventListener('mousedown', handler);
@@ -543,24 +512,13 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
   const handleModeChange = (mode: 'preset' | 'auto') => {
     setAgentMode(mode);
     if (mode === 'preset') {
-      // Remove stale auto-generated agent IDs that may linger from a previous auto classroom
       const presetIds = selectedAgentIds.filter((id) => agents.some((a) => a.id === id));
-      const hasTeacher = presetIds.some((id) => {
-        const a = agents.find((agent) => agent.id === id);
-        return a?.role === 'teacher';
-      });
-      if (!hasTeacher && teacherAgent) {
-        presetIds.unshift(teacherAgent.id);
-      }
-      setSelectedAgentIds(
-        presetIds.length > 0 ? presetIds : ['default-1', 'default-2', 'default-3'],
-      );
+      if (teacherAgent && !presetIds.includes(teacherAgent.id)) presetIds.unshift(teacherAgent.id);
+      setSelectedAgentIds(presetIds.length > 0 ? presetIds : ['default-1', 'default-2', 'default-3']);
     }
   };
 
   const toggleAgent = (agentId: string) => {
-    const agent = agents.find((a) => a.id === agentId);
-    if (agent?.role === 'teacher') return;
     if (selectedAgentIds.includes(agentId)) {
       setSelectedAgentIds(selectedAgentIds.filter((id) => id !== agentId));
     } else {
@@ -568,203 +526,126 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
     }
   };
 
-  const getAgentName = (agent: { id: string; name: string }) => {
-    const key = `settings.agentNames.${agent.id}`;
-    const translated = t(key);
-    return translated !== key ? translated : agent.name;
-  };
-
-  const getAgentRole = (agent: { role: string }) => {
-    const key = `settings.agentRoles.${agent.role}`;
-    const translated = t(key);
-    return translated !== key ? translated : agent.role;
-  };
-
-  const avatarRow = (
-    <div className="flex items-center gap-1.5 shrink-0">
+  const contentNode = (
+    <div className={cn("flex flex-col gap-3", !inline && "w-[400px] p-4 bg-white dark:bg-slate-900 ring-1 ring-border/50 shadow-2xl rounded-2xl z-[100]")}>
+      {/* ─── Teacher Card — Always Prominent ─── */}
       {teacherAgent && (
-        <div className="size-8 rounded-full overflow-hidden ring-2 ring-blue-400/40 dark:ring-blue-500/30 shrink-0">
-          <img
-            src={teacherAgent.avatar}
-            alt={getAgentName(teacherAgent)}
-            className="size-full object-cover"
-          />
-        </div>
-      )}
-
-      {agentMode === 'auto' ? (
-        <>
-          <div className="flex -space-x-2">
-            {agents.find((a) => a.role === 'assistant') && (
-              <div className="size-6 rounded-full overflow-hidden ring-[1.5px] ring-background">
-                <img
-                  src={agents.find((a) => a.role === 'assistant')!.avatar}
-                  alt=""
-                  className="size-full object-cover"
-                />
+        <div className="relative group overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/20 dark:to-slate-800/40 border border-blue-200/50 dark:border-blue-900/30 transition-all hover:shadow-lg">
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="size-16 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-xl shrink-0 transition-transform group-hover:scale-105">
+              <img src={teacherAgent.avatar} alt={teacherAgent.name} className="size-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <h4 className="text-[17px] font-bold text-slate-900 dark:text-white tracking-tight">
+                  {teacherAgent.name}
+                </h4>
+                <RoleBadge role="teacher" />
               </div>
-            )}
-          </div>
-          <Shuffle className="size-4 text-violet-400 dark:text-violet-500" />
-        </>
-      ) : (
-        <>
-          {nonTeacherSelected.length > 0 && (
-            <div className="flex -space-x-2">
-              {nonTeacherSelected.slice(0, 4).map((agent) => (
-                <div
-                  key={agent.id}
-                  className="size-6 rounded-full overflow-hidden ring-[1.5px] ring-background"
-                >
-                  <img
-                    src={agent.avatar}
-                    alt={getAgentName(agent)}
-                    className="size-full object-cover"
-                  />
-                </div>
-              ))}
-              {nonTeacherSelected.length > 4 && (
-                <div className="size-6 rounded-full bg-muted ring-[1.5px] ring-background flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-muted-foreground">
-                    +{nonTeacherSelected.length - 4}
-                  </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-normal line-clamp-2">
+                主讲教师 · 负责课堂大纲、核心讲解及课堂推进
+              </p>
+              {showVoice && (
+                <div className="mt-1">
+                  <TeacherVoicePill availableProviders={availableProviders} disabled={!ttsEnabled} />
                 </div>
               )}
             </div>
-          )}
-        </>
+          </div>
+          {/* Subtle background icon */}
+          <GraduationCap className="absolute -right-4 -bottom-4 size-24 text-blue-500/5 dark:text-blue-400/5 rotate-12" />
+        </div>
       )}
-      {showVoice &&
-        (ttsEnabled ? (
-          <Volume2 className="size-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors" />
-        ) : (
-          <VolumeX className="size-3.5 text-muted-foreground/30" />
-        ))}
-    </div>
-  );
 
-  const renderAgentRow = (agent: AgentConfig, agentIndex: number, isTeacher: boolean) => {
-    const isSelected = isTeacher || selectedAgentIds.includes(agent.id);
-    return (
-      <div
-        key={agent.id}
-        onClick={isTeacher ? undefined : () => toggleAgent(agent.id)}
-        className={cn(
-          'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors',
-          isTeacher ? 'bg-primary/5' : 'cursor-pointer',
-          !isTeacher && isSelected && 'bg-primary/5',
-          !isTeacher && !isSelected && 'hover:bg-muted/50',
-        )}
-      >
-        <Checkbox
-          checked={isSelected}
-          disabled={isTeacher}
-          className={cn('pointer-events-none', isTeacher && 'opacity-50')}
-        />
-        <div
-          className="size-7 rounded-full overflow-hidden shrink-0 ring-1 ring-border/40"
-          style={{ boxShadow: isSelected ? `0 0 0 2px ${agent.color}30` : undefined }}
+      {/* ─── Mode Selection Tabs ─── */}
+      <div className="flex p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-border/40">
+        <button
+          onClick={() => handleModeChange('preset')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-bold rounded-lg transition-all",
+            agentMode === 'preset' ? "bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-black/5" : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          <img src={agent.avatar} alt={getAgentName(agent)} className="size-full object-cover" />
-        </div>
-        <span className="text-[13px] font-medium truncate min-w-0 flex-1">
-          {getAgentName(agent)}
-        </span>
-        <span className="text-[10px] text-muted-foreground/50 shrink-0 w-[52px] text-right">
-          {getAgentRole(agent)}
-        </span>
-        {showVoice && (
-          <AgentVoicePill
-            agent={agent}
-            agentIndex={agentIndex}
-            availableProviders={availableProviders}
-            disabled={!ttsEnabled}
-          />
-        )}
+          <Users className="size-3.5" />
+          {t('settings.agentModePreset') || '预设角色'}
+        </button>
+        <button
+          onClick={() => handleModeChange('auto')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-bold rounded-lg transition-all",
+            agentMode === 'auto' ? "bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-black/5" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Sparkles className="size-3.5" />
+          {t('settings.agentModeAuto') || '自动配置'}
+        </button>
       </div>
-    );
-  };
 
-  const contentNode = (
-    <div className={cn("flex flex-col gap-2", !inline && "w-96")}>
-      <div className={cn(
-        "rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm",
-        !inline && "ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_8px_-2px_rgba(0,0,0,0.3)] px-2 py-1.5",
-        inline && "p-1"
-      )}>
-        {/* Teacher — always visible */}
-        {teacherAgent && (
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 mb-2">
-            <div
-              className="size-7 rounded-full overflow-hidden shrink-0 ring-1 ring-border/40"
-              style={{ boxShadow: `0 0 0 2px ${teacherAgent.color}30` }}
-            >
-              <img
-                src={teacherAgent.avatar}
-                alt={getAgentName(teacherAgent)}
-                className="size-full object-cover"
-              />
-            </div>
-            <span className="text-[13px] font-medium truncate min-w-0 flex-1">
-              {getAgentName(teacherAgent)}
-            </span>
-            {showVoice && (
-              <TeacherVoicePill
-                availableProviders={availableProviders}
-                disabled={!ttsEnabled}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Mode tabs */}
-        <div className="flex rounded-lg border bg-muted/30 p-0.5 mb-2">
-          <button
-            onClick={() => handleModeChange('preset')}
-            className={cn(
-              'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center',
-              agentMode === 'preset'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {t('settings.agentModePreset')}
-          </button>
-          <button
-            onClick={() => handleModeChange('auto')}
-            className={cn(
-              'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center flex items-center justify-center gap-1',
-              agentMode === 'auto'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <Sparkles className="h-3 w-3" />
-            {t('settings.agentModeAuto')}
-          </button>
-        </div>
-
+      {/* ─── Roles Container ─── */}
+      <div className="flex flex-col gap-2 min-h-[160px]">
         {agentMode === 'preset' ? (
-          <div className="max-h-[300px] overflow-y-auto -mx-0.5">
-            {agents
-              .filter((a) => a.role !== 'teacher')
-              .map((agent, idx) => renderAgentRow(agent, idx + 1, false))}
+          <div className="grid grid-cols-1 gap-2 max-h-[360px] overflow-y-auto px-0.5 py-0.5 custom-scrollbar">
+            {otherAgents.map((agent, idx) => {
+              const isSelected = selectedAgentIds.includes(agent.id);
+              return (
+                <div
+                  key={agent.id}
+                  onClick={() => toggleAgent(agent.id)}
+                  className={cn(
+                    "group flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden",
+                    isSelected
+                      ? "bg-white dark:bg-slate-800 border-primary/40 shadow-md ring-1 ring-primary/10"
+                      : "bg-slate-50/50 dark:bg-transparent border-transparent hover:bg-white dark:hover:bg-slate-800/50 hover:border-border/60"
+                  )}
+                >
+                  <div className="size-10 rounded-xl overflow-hidden shadow-sm shrink-0 ring-1 ring-border/20">
+                    <img src={agent.avatar} alt={agent.name} className="size-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={cn("text-[13px] font-bold truncate", isSelected ? "text-primary" : "text-foreground")}>
+                        {agent.name}
+                      </span>
+                      <RoleBadge role={agent.role} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1 italic">
+                      {agent.role === 'assistant' ? '协助讲解 / 答疑补位' : '模拟学生提问与思考'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isSelected && (
+                      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                        <AgentVoicePill agent={agent} agentIndex={idx + 1} availableProviders={availableProviders} disabled={!ttsEnabled} />
+                      </motion.div>
+                    )}
+                    <Checkbox
+                      checked={isSelected}
+                      className={cn("pointer-events-none rounded-md", !isSelected && "opacity-40")}
+                    />
+                  </div>
+                  {/* Active highlight bar */}
+                  {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full my-3" />}
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div className="flex flex-col items-center pt-6 pb-3 gap-4">
-            <div className="relative flex items-center justify-center">
-              <div className="absolute size-10 rounded-full bg-violet-400/10 dark:bg-violet-400/15 animate-ping [animation-duration:3s]" />
-              <div className="absolute size-12 rounded-full bg-violet-400/5 dark:bg-violet-400/10 animate-pulse [animation-duration:2.5s]" />
-              <Shuffle className="relative size-5 text-violet-400 dark:text-violet-500" />
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center rounded-2xl border border-dashed border-violet-200 dark:border-violet-900/30 bg-violet-50/20 dark:bg-violet-950/10">
+            <div className="relative mb-4">
+              <div className="absolute inset-0 bg-violet-400/20 rounded-full animate-ping [animation-duration:3s]" />
+              <div className="relative size-12 flex items-center justify-center bg-violet-500 rounded-2xl shadow-lg shadow-violet-500/20">
+                <Shuffle className="size-6 text-white" />
+              </div>
             </div>
-            <div className="flex-1" />
-            <div className="text-center space-y-1">
-              <p className="text-[11px] text-muted-foreground/60">
-                {t('settings.agentModeAutoDesc')}
-              </p>
-              <p className="text-[10px] text-muted-foreground/40">
-                {t('agentBar.voiceAutoAssign')}
-              </p>
+            <h5 className="text-[14px] font-bold text-violet-600 dark:text-violet-400 mb-1 flex items-center justify-center gap-2">
+              <Sparkles className="size-3.5" /> 智能模式开启
+            </h5>
+            <p className="text-[11px] text-muted-foreground/80 leading-relaxed max-w-[240px]">
+              系统将根据输入的课程内容，自动为您匹配最合适的助教与学伴组合。
+            </p>
+            <div className="mt-4 px-3 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/10 text-[10px] text-violet-500 font-bold uppercase tracking-widest">
+              Dynamic orchestration
             </div>
           </div>
         )}
@@ -772,47 +653,48 @@ export function AgentBar({ inline = false }: AgentBarProps = {}) {
     </div>
   );
 
-  if (inline) {
-    return contentNode;
-  }
+  if (inline) return contentNode;
 
   return (
-    <div ref={containerRef} className="relative w-96">
+    <div ref={containerRef} className="relative inline-block">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            className={cn(
-              'group flex items-center gap-2 cursor-pointer rounded-full px-2.5 py-2 transition-all w-full',
-              'border border-border/50 text-muted-foreground/70 hover:text-foreground hover:bg-muted/60',
-            )}
             onClick={() => setOpen(!open)}
-          >
-            <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground transition-colors hidden sm:block font-medium flex-1 text-left truncate">
-              {open ? t('agentBar.expandedTitle') : t('agentBar.readyToLearn')}
-            </span>
-            {avatarRow}
-            {open ? (
-              <ChevronUp className="size-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
-            ) : (
-              <ChevronDown className="size-3 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+            className={cn(
+              "group flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all border shadow-sm h-10",
+              open
+                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xl"
+                : "bg-white dark:bg-slate-800 border-border/50 hover:border-primary/40 hover:bg-slate-50 dark:hover:bg-slate-700/50"
             )}
+          >
+            <div className="size-7 rounded-full overflow-hidden shrink-0 border border-border/20 shadow-inner">
+               <img src={teacherAgent?.avatar} alt="" className="size-full object-cover" />
+            </div>
+            <div className="hidden sm:flex flex-col items-start leading-tight min-w-[70px]">
+               <span className="text-[11px] font-bold truncate">
+                 {open ? '正在设置' : (teacherAgent?.name || '教师设置')}
+               </span>
+               <span className={cn("text-[9px] font-medium opacity-60", !open && "text-primary/80")}>
+                 {agentMode === 'auto' ? '自动编排中' : `已选 ${selectedAgentIds.length} 位角色`}
+               </span>
+            </div>
+            <div className={cn("size-6 rounded-full flex items-center justify-center transition-transform duration-300 bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700", open && "rotate-180 bg-white/20 dark:bg-slate-900/10")}>
+               <ChevronDown className="size-3.5" />
+            </div>
           </button>
         </TooltipTrigger>
-        {!open && (
-          <TooltipContent side="bottom" sideOffset={4}>
-            {t('agentBar.configTooltip')}
-          </TooltipContent>
-        )}
+        {!open && <TooltipContent side="bottom" sideOffset={8}>配置课堂角色与音色</TooltipContent>}
       </Tooltip>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="absolute right-0 top-full mt-1 z-50 w-96"
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute left-0 mt-3 z-[100]"
           >
             {contentNode}
           </motion.div>
