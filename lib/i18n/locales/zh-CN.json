@@ -9,6 +9,32 @@
     "slogan": "智能互动课堂与文书生成",
     "greetingWithName": "嗨，{{name}}"
   },
+  "landing": {
+    "badge": "AI 驱动的课件平台",
+    "subtitle": "将任意主题变为沉浸式、多智能体互动学习体验。上传 PDF 或描述内容，其余交给 AI。",
+    "getStarted": "免费开始",
+    "learnMore": "了解功能",
+    "featuresTitle": "为深度互动而设计",
+    "featuresSubtitle": "基于最新 AI 模型，为互动教学原生打造。",
+    "feature": {
+      "aiGeneration": "AI 课件生成",
+      "aiGenerationDesc": "上传 PDF 或描述主题，数秒内生成多场景沉浸式互动课件。",
+      "multiLang": "多语言支持",
+      "multiLangDesc": "支持中、英、日、韩、法等多种语言生成课件，并自动语音合成。",
+      "interactive": "互动课堂",
+      "interactiveDesc": "测验、PBL、白板与多智能体讨论，沉浸式学习体验。",
+      "tts": "语音合成与识别",
+      "ttsDesc": "每页自然朗读，并支持语音驱动的课堂互动。",
+      "share": "分享与协作",
+      "shareDesc": "通过链接分享课件——只读浏览或可编辑副本协作。",
+      "playback": "演示播放",
+      "playbackDesc": "流畅动画、智能体圆桌与自动播放，轻松演示课件。"
+    },
+    "ctaTitle": "开启未来教学",
+    "ctaDesc": "与全球教育者一起，用 {{brand}} 打造深度互动课件。",
+    "signIn": "启动 {{brand}}",
+    "footer": "© {{year}} {{brand}}。保留所有权利。"
+  },
   "toolbar": {
     "languageHint": "课程将以此语言生成",
     "pdfParser": "解析器",
@@ -27,7 +53,9 @@
     "ttsTitle": "语音合成",
     "ttsHint": "选择 AI 教师的朗读音色",
     "ttsPreview": "试听",
-    "ttsPreviewing": "播放中..."
+    "ttsPreviewing": "播放中...",
+    "toggleChat": "切换聊天面板",
+    "openChatPanel": "打开聊天面板"
   },
   "export": {
     "pptx": "导出 PPTX",

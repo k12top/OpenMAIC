@@ -9,6 +9,32 @@
     "slogan": "Ruang kelas interaktif & pembuatan dokumen AI",
     "greetingWithName": "Halo, {{name}}"
   },
+  "landing": {
+    "badge": "Platform kursus bertenaga AI",
+    "subtitle": "Ubah topik apa pun menjadi pengalaman belajar multi-agen yang imersif. Unggah PDF atau jelaskan konten Anda — sisanya diurus AI.",
+    "getStarted": "Mulai gratis",
+    "learnMore": "Jelajahi fitur",
+    "featuresTitle": "Dirancang untuk keterlibatan maksimal",
+    "featuresSubtitle": "Didukung model AI terbaru, dibuat khusus untuk pendidikan interaktif.",
+    "feature": {
+      "aiGeneration": "Pembuatan kursus AI",
+      "aiGenerationDesc": "Unggah PDF atau jelaskan topik — AI menghasilkan materi interaktif multi-adegan dalam hitungan detik.",
+      "multiLang": "Multibahasa",
+      "multiLangDesc": "Buat dalam bahasa Mandarin, Inggris, Jepang, Korea, Prancis, dan banyak lagi dengan TTS otomatis.",
+      "interactive": "Kelas interaktif",
+      "interactiveDesc": "Kuis, PBL, papan tulis, dan diskusi multi-agen — pengalaman belajar yang mendalam.",
+      "tts": "Teks ke suara & ASR",
+      "ttsDesc": "Narasi alami untuk setiap slide dengan pengenalan suara untuk interaksi.",
+      "share": "Bagikan & kolaborasi",
+      "shareDesc": "Bagikan lewat tautan — hanya baca untuk siapa saja atau salinan yang dapat diedit.",
+      "playback": "Pemutaran presentasi",
+      "playbackDesc": "Tampilkan materi dengan animasi halus, diskusi agen, dan putar otomatis."
+    },
+    "ctaTitle": "Mulai mengajar masa depan",
+    "ctaDesc": "Bergabung dengan ribuan pendidik yang membangun materi menarik dengan {{brand}}.",
+    "signIn": "Buka {{brand}}",
+    "footer": "© {{year}} {{brand}}. Hak cipta dilindungi."
+  },
   "toolbar": {
     "languageHint": "Kursus akan dibuat dalam bahasa ini",
     "pdfParser": "Parser",
@@ -27,7 +53,9 @@
     "ttsTitle": "Teks-ke-Suara",
     "ttsHint": "Pilih suara untuk guru AI",
     "ttsPreview": "Pratinjau",
-    "ttsPreviewing": "Memutar..."
+    "ttsPreviewing": "Memutar...",
+    "toggleChat": "Alihkan panel obrolan",
+    "openChatPanel": "Buka panel obrolan"
   },
   "export": {
     "pptx": "Ekspor PPTX",

@@ -9,6 +9,32 @@
     "slogan": "Interactive classroom & AI document creation",
     "greetingWithName": "Hi, {{name}}"
   },
+  "landing": {
+    "badge": "AI-Powered Courseware Platform",
+    "subtitle": "Transform any topic into an immersive, multi-agent interactive learning experience. Upload a PDF or describe your content — AI does the rest.",
+    "getStarted": "Get Started Free",
+    "learnMore": "Explore Features",
+    "featuresTitle": "Designed for maximum engagement",
+    "featuresSubtitle": "Powered by the latest AI models, built natively for interactive education.",
+    "feature": {
+      "aiGeneration": "AI Courseware Generation",
+      "aiGenerationDesc": "Upload a PDF or describe your topic — AI generates immersive, multi-scene interactive courseware in seconds.",
+      "multiLang": "Multi-Language Support",
+      "multiLangDesc": "Generate courseware in Chinese, English, Japanese, Korean, French, and many more languages with auto TTS.",
+      "interactive": "Interactive Classroom",
+      "interactiveDesc": "Quizzes, PBL projects, whiteboard, and multi-agent discussion — a fully immersive learning experience.",
+      "tts": "Text-to-Speech & ASR",
+      "ttsDesc": "Natural voice narration for every slide with speech recognition for voice-driven interaction.",
+      "share": "Share & Collaborate",
+      "shareDesc": "Share courseware via link — read-only for anyone or editable copies for collaborators.",
+      "playback": "Presentation Playback",
+      "playbackDesc": "Present your courseware with smooth animations, agent roundtable discussions, and auto-play."
+    },
+    "ctaTitle": "Start teaching the future",
+    "ctaDesc": "Join thousands of educators leveraging {{brand}} to build deeply engaging interactive courseware.",
+    "signIn": "Launch {{brand}}",
+    "footer": "© {{year}} {{brand}}. All rights reserved."
+  },
   "toolbar": {
     "languageHint": "Course will be generated in this language",
     "pdfParser": "Parser",
@@ -27,7 +53,9 @@
     "ttsTitle": "Text-to-Speech",
     "ttsHint": "Choose a voice for the AI teacher",
     "ttsPreview": "Preview",
-    "ttsPreviewing": "Playing..."
+    "ttsPreviewing": "Playing...",
+    "toggleChat": "Toggle chat panel",
+    "openChatPanel": "Open chat panel"
   },
   "export": {
     "pptx": "Export PPTX",

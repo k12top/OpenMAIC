@@ -9,6 +9,32 @@
     "slogan": "Salle de classe interactive et création de documents par l'IA",
     "greetingWithName": "Bonjour, {{name}}"
   },
+  "landing": {
+    "badge": "Plateforme de cours assistée par l'IA",
+    "subtitle": "Transformez n'importe quel sujet en apprentissage immersif multi-agents. Téléchargez un PDF ou décrivez votre contenu — l'IA fait le reste.",
+    "getStarted": "Commencer gratuitement",
+    "learnMore": "Découvrir les fonctionnalités",
+    "featuresTitle": "Conçu pour l'engagement maximal",
+    "featuresSubtitle": "Propulsé par les derniers modèles d'IA, pensé nativement pour l'éducation interactive.",
+    "feature": {
+      "aiGeneration": "Génération de cours par l'IA",
+      "aiGenerationDesc": "Téléchargez un PDF ou décrivez votre sujet — l'IA génère un cours interactif multi-scènes en quelques secondes.",
+      "multiLang": "Multilingue",
+      "multiLangDesc": "Générez en chinois, anglais, japonais, coréen, français et bien d'autres langues avec TTS automatique.",
+      "interactive": "Classe interactive",
+      "interactiveDesc": "Quiz, PBL, tableau blanc et discussion multi-agents — une expérience d'apprentissage immersive.",
+      "tts": "Synthèse vocale et reconnaissance",
+      "ttsDesc": "Narration naturelle pour chaque diapositive et interaction pilotée par la voix.",
+      "share": "Partager et collaborer",
+      "shareDesc": "Partagez par lien — lecture seule pour tous ou copies modifiables pour les collaborateurs.",
+      "playback": "Présentation",
+      "playbackDesc": "Présentez avec animations fluides, table ronde d'agents et lecture automatique."
+    },
+    "ctaTitle": "Enseignez le futur",
+    "ctaDesc": "Rejoignez des milliers d'éducateurs qui créent des cours engageants avec {{brand}}.",
+    "signIn": "Lancer {{brand}}",
+    "footer": "© {{year}} {{brand}}. Tous droits réservés."
+  },
   "toolbar": {
     "languageHint": "Le cours sera généré dans cette langue",
     "pdfParser": "Analyseur",
@@ -27,7 +53,9 @@
     "ttsTitle": "Synthèse vocale",
     "ttsHint": "Choisissez une voix pour l'enseignant IA",
     "ttsPreview": "Aperçu",
-    "ttsPreviewing": "Lecture en cours..."
+    "ttsPreviewing": "Lecture en cours...",
+    "toggleChat": "Afficher ou masquer le chat",
+    "openChatPanel": "Ouvrir le panneau de chat"
   },
   "export": {
     "pptx": "Exporter en PPTX",

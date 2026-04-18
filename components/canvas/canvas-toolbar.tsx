@@ -421,15 +421,21 @@ export function CanvasToolbar({
         )}
         {onToggleChat && (
           <button
+            type="button"
             onClick={onToggleChat}
             className={cn(
               ctrlBtn,
               'w-6 h-6',
               chatCollapsed
-                ? 'text-gray-400 dark:text-gray-500'
+                ? 'text-violet-600 dark:text-violet-400 ring-2 ring-violet-400/35 dark:ring-violet-500/40 rounded-md'
                 : 'text-gray-600 dark:text-gray-300',
             )}
-            aria-label="Toggle chat"
+            aria-label={
+              chatCollapsed ? t('toolbar.openChatPanel') : t('toolbar.toggleChat')
+            }
+            title={
+              chatCollapsed ? t('toolbar.openChatPanel') : t('toolbar.toggleChat')
+            }
           >
             <MessageSquare className="w-3.5 h-3.5" />
           </button>

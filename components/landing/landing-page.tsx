@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useScroll, useTransform } from 'motion/react';
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import {
   BookOpen,
   Globe,
@@ -10,8 +10,14 @@ import {
   Sparkles,
   Play,
   ArrowRight,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { useTheme } from '@/lib/hooks/use-theme';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { cn } from '@/lib/utils';
 import { BRAND_NAME } from '@/lib/constants/brand';
 
 const FEATURES = [
@@ -19,49 +25,55 @@ const FEATURES = [
     icon: Sparkles,
     titleKey: 'landing.feature.aiGeneration',
     descKey: 'landing.feature.aiGenerationDesc',
-    fallbackTitle: 'AI Courseware Generation',
-    fallbackDesc: 'Upload a PDF or describe your topic — AI generates immersive, multi-scene interactive courseware in seconds.',
   },
   {
     icon: Globe,
     titleKey: 'landing.feature.multiLang',
     descKey: 'landing.feature.multiLangDesc',
-    fallbackTitle: 'Multi-Language Support',
-    fallbackDesc: 'Generate courseware in Chinese, English, Japanese, Korean, French, and many more languages with auto TTS.',
   },
   {
     icon: BookOpen,
     titleKey: 'landing.feature.interactive',
     descKey: 'landing.feature.interactiveDesc',
-    fallbackTitle: 'Interactive Classroom',
-    fallbackDesc: 'Quizzes, PBL projects, whiteboard, and multi-agent discussion — a fully immersive learning experience.',
   },
   {
     icon: Mic,
     titleKey: 'landing.feature.tts',
     descKey: 'landing.feature.ttsDesc',
-    fallbackTitle: 'Text-to-Speech & ASR',
-    fallbackDesc: 'Natural voice narration for every slide with speech recognition for voice-driven interaction.',
   },
   {
     icon: Share2,
     titleKey: 'landing.feature.share',
     descKey: 'landing.feature.shareDesc',
-    fallbackTitle: 'Share & Collaborate',
-    fallbackDesc: 'Share courseware via link — read-only for anyone or editable copies for collaborators.',
   },
   {
     icon: Play,
     titleKey: 'landing.feature.playback',
     descKey: 'landing.feature.playbackDesc',
-    fallbackTitle: 'Presentation Playback',
-    fallbackDesc: 'Present your courseware with smooth animations, agent roundtable discussions, and auto-play.',
   },
 ];
 
 export function LandingPage() {
   const { t } = useI18n();
+  const { theme, setTheme } = useTheme();
+  const [themeOpen, setThemeOpen] = useState(false);
+  const themeRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
+
+  const handleClickOutside = useCallback(
+    (e: MouseEvent) => {
+      if (themeOpen && themeRef.current && !themeRef.current.contains(e.target as Node)) {
+        setThemeOpen(false);
+      }
+    },
+    [themeOpen],
+  );
+
+  useEffect(() => {
+    if (!themeOpen) return;
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [themeOpen, handleClickOutside]);
 
   // Parallax transforms based on window scroll
   const yBlob1 = useTransform(scrollY, [0, 1000], [0, 250]);
@@ -72,14 +84,76 @@ export function LandingPage() {
   const yHeroText = useTransform(scrollY, [0, 500], [0, 100]);
   const opacityHero = useTransform(scrollY, [0, 400], [1, 0]);
 
-  const safeT = (key: string, fallback: string) => {
-    const val = t(key);
-    return val === key ? fallback : val;
-  };
-
   return (
     <div className="min-h-[100dvh] w-full bg-[#FAFAFA] dark:bg-[#0A0A0B] flex flex-col items-center overflow-x-hidden relative selection:bg-violet-500/30">
-      
+      {/* Language & theme (fixed) */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2 sm:gap-3 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md px-2 py-1.5 rounded-full border border-black/5 dark:border-white/10 shadow-sm">
+        <LanguageSwitcher onOpen={() => setThemeOpen(false)} />
+        <div className="w-px h-4 bg-gray-200 dark:bg-gray-600" />
+        <div className="relative" ref={themeRef}>
+          <button
+            type="button"
+            onClick={() => setThemeOpen(!themeOpen)}
+            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-all"
+            aria-label={t('settings.theme')}
+            title={t('settings.theme')}
+          >
+            {theme === 'light' && <Sun className="size-4" />}
+            {theme === 'dark' && <Moon className="size-4" />}
+            {theme === 'system' && <Monitor className="size-4" />}
+          </button>
+          {themeOpen && (
+            <div className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-50 min-w-[140px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('light');
+                  setThemeOpen(false);
+                }}
+                className={cn(
+                  'w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2',
+                  theme === 'light' &&
+                    'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+                )}
+              >
+                <Sun className="size-4" />
+                {t('settings.themeOptions.light')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('dark');
+                  setThemeOpen(false);
+                }}
+                className={cn(
+                  'w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2',
+                  theme === 'dark' &&
+                    'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+                )}
+              >
+                <Moon className="size-4" />
+                {t('settings.themeOptions.dark')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('system');
+                  setThemeOpen(false);
+                }}
+                className={cn(
+                  'w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2',
+                  theme === 'system' &&
+                    'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+                )}
+              >
+                <Monitor className="size-4" />
+                {t('settings.themeOptions.system')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ═══ Parallax Background Elements ═══ */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
@@ -116,7 +190,7 @@ export function LandingPage() {
         >
           <Sparkles className="size-4 text-violet-600 dark:text-violet-400" />
           <span className="text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent">
-            {safeT('landing.badge', 'AI-Powered Courseware Platform')}
+            {t('landing.badge')}
           </span>
         </motion.div>
 
@@ -135,7 +209,7 @@ export function LandingPage() {
           transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mb-12 leading-relaxed"
         >
-          {safeT('landing.subtitle', 'Transform any topic into an immersive, multi-agent interactive learning experience. Upload a PDF or describe your content — AI does the rest.')}
+          {t('landing.subtitle')}
         </motion.p>
 
         <motion.div
@@ -148,7 +222,7 @@ export function LandingPage() {
             href="/api/auth/login"
             className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-95"
           >
-            <span className="relative z-10">{safeT('landing.getStarted', 'Get Started Free')}</span>
+            <span className="relative z-10">{t('landing.getStarted')}</span>
             <ArrowRight className="relative z-10 size-4 transition-transform group-hover:translate-x-1" />
             <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 opacity-0 group-hover:opacity-100 dark:from-violet-400 dark:to-indigo-400 transition-opacity duration-300" />
           </a>
@@ -156,7 +230,7 @@ export function LandingPage() {
             href="#features"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-md border border-black/5 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold hover:bg-white/60 dark:hover:bg-white/10 transition-all hover:scale-105 active:scale-95"
           >
-            {safeT('landing.learnMore', 'Explore Features')}
+            {t('landing.learnMore')}
           </a>
         </motion.div>
       </motion.div>
@@ -187,10 +261,10 @@ export function LandingPage() {
           className="text-center mb-20"
         >
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
-            {safeT('landing.featuresTitle', 'Designed for maximum engagement')}
+            {t('landing.featuresTitle')}
           </h2>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            {safeT('landing.featuresSubtitle', 'Powered by the latest AI models, built natively for interactive education.')}
+            {t('landing.featuresSubtitle')}
           </p>
         </motion.div>
 
@@ -210,10 +284,10 @@ export function LandingPage() {
                   <feature.icon className="size-6" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-                  {safeT(feature.titleKey, feature.fallbackTitle)}
+                  {t(feature.titleKey)}
                 </h3>
                 <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {safeT(feature.descKey, feature.fallbackDesc)}
+                  {t(feature.descKey)}
                 </p>
               </div>
             </motion.div>
@@ -238,16 +312,16 @@ export function LandingPage() {
           
           <div className="relative z-10">
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white dark:text-slate-900 mb-6">
-              {safeT('landing.ctaTitle', 'Start teaching the future')}
+              {t('landing.ctaTitle')}
             </h2>
             <p className="text-lg text-slate-300 dark:text-slate-600 mb-10 max-w-xl mx-auto">
-              {safeT('landing.ctaDesc', 'Join thousands of educators leveraging 翔宇文书 to build deeply engaging interactive courseware.')}
+              {t('landing.ctaDesc', { brand: BRAND_NAME })}
             </p>
             <a
               href="/api/auth/login"
               className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold text-lg hover:scale-105 active:scale-95 transition-transform shadow-xl"
             >
-              {safeT('landing.signIn', 'Launch 翔宇文书')}
+              {t('landing.signIn', { brand: BRAND_NAME })}
               <Sparkles className="size-5" />
             </a>
           </div>
@@ -256,7 +330,7 @@ export function LandingPage() {
 
       {/* Footer */}
       <div className="relative z-10 w-full py-8 text-center text-sm font-medium text-slate-400 dark:text-slate-600 border-t border-black/5 dark:border-white/5">
-        &copy; {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
+        {t('landing.footer', { year: new Date().getFullYear(), brand: BRAND_NAME })}
       </div>
     </div>
   );

@@ -9,6 +9,32 @@
     "slogan": "インタラクティブ授業とドキュメント生成",
     "greetingWithName": "こんにちは、{{name}}さん"
   },
+  "landing": {
+    "badge": "AI 授業コンテンツプラットフォーム",
+    "subtitle": "あらゆるテーマを没入型マルチエージェント学習へ。PDF をアップロードするか内容を説明するだけで、AI がサポートします。",
+    "getStarted": "無料で始める",
+    "learnMore": "機能を見る",
+    "featuresTitle": "高いエンゲージメントのために設計",
+    "featuresSubtitle": "最新の AI モデルを活用し、インタラクティブ教育のためにネイティブに構築。",
+    "feature": {
+      "aiGeneration": "AI 授業コンテンツ生成",
+      "aiGenerationDesc": "PDF をアップロードするかテーマを入力 — 数秒でマルチシーンのインタラクティブ教材を生成。",
+      "multiLang": "多言語対応",
+      "multiLangDesc": "中国語・英語・日本語・韓国語・フランス語など多数の言語で生成。自動 TTS に対応。",
+      "interactive": "インタラクティブ教室",
+      "interactiveDesc": "クイズ、PBL、ホワイトボード、マルチエージェント討論 — 没入型の学習体験。",
+      "tts": "音声合成と音声認識",
+      "ttsDesc": "各スライドを自然な音声で読み上げ、音声操作のインタラクションに対応。",
+      "share": "共有とコラボ",
+      "shareDesc": "リンクで教材を共有 — 閲覧のみ、または共同編集用のコピー。",
+      "playback": "プレゼン再生",
+      "playbackDesc": "スムーズなアニメーション、エージェント討論、自動再生で教材を提示。"
+    },
+    "ctaTitle": "未来の授業を始めよう",
+    "ctaDesc": "世界中の教育者とともに、{{brand}} で深く魅力的な教材を。",
+    "signIn": "{{brand}} を起動",
+    "footer": "© {{year}} {{brand}}。無断複写・転載を禁じます。"
+  },
   "toolbar": {
     "languageHint": "コースはこの言語で生成されます",
     "pdfParser": "パーサー",
@@ -27,7 +53,9 @@
     "ttsTitle": "音声合成",
     "ttsHint": "AI教師の声を選択",
     "ttsPreview": "プレビュー",
-    "ttsPreviewing": "再生中..."
+    "ttsPreviewing": "再生中...",
+    "toggleChat": "チャットパネルの表示を切り替え",
+    "openChatPanel": "チャットパネルを開く"
   },
   "export": {
     "pptx": "PPTXエクスポート",

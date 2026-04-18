@@ -915,11 +915,10 @@ export function Stage({
       }
     : null;
 
-  // Calculate scene viewer height (subtract Header's 80px height)
+  // Canvas fills space below Header; Roundtable in playback is absolute overlay (no height deduction)
   const sceneViewerHeight = (() => {
     const headerHeight = isPresenting ? 0 : 80; // Header h-20 = 80px
-    const roundtableHeight = mode === 'playback' && !isPresenting ? 192 : 0;
-    return `calc(100% - ${headerHeight + roundtableHeight}px)`;
+    return `calc(100% - ${headerHeight}px)`;
   })();
 
   return (
@@ -989,14 +988,18 @@ export function Stage({
           />
         </div>
 
-        {/* Roundtable Area */}
+        {/* Roundtable: overlay at bottom; right inset when chat panel open */}
         {mode === 'playback' && (
           <div
             className={cn(
-              'transition-opacity duration-300',
-              !isPresenting && 'shrink-0',
-              isPresenting && 'absolute inset-x-0 bottom-0 z-20',
+              'transition-opacity duration-300 absolute bottom-0 z-20',
+              isPresenting ? 'left-0 right-0' : 'left-0',
             )}
+            style={
+              !isPresenting
+                ? { right: chatAreaCollapsed ? 0 : chatAreaWidth }
+                : undefined
+            }
           >
             <Roundtable
               mode={mode}
