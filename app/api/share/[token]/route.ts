@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import { readClassroom } from '@/lib/server/classroom-storage';
 import type { Scene, Stage } from '@/lib/types/stage';
 
 export async function GET(
@@ -22,29 +23,43 @@ export async function GET(
     return NextResponse.json({ error: 'Share not found' }, { status: 404 });
   }
 
-  // Check expiration
   if (share.expiresAt && new Date(share.expiresAt) < new Date()) {
     return NextResponse.json({ error: 'Share link has expired' }, { status: 410 });
   }
 
-  // Get the classroom data
-  const classroom = await db.query.classrooms.findFirst({
+  const dbRow = await db.query.classrooms.findFirst({
     where: eq(schema.classrooms.id, share.classroomId),
   });
 
-  if (!classroom) {
+  if (dbRow) {
+    return NextResponse.json({
+      mode: share.mode,
+      classroom: {
+        id: dbRow.id,
+        title: dbRow.title,
+        language: dbRow.language,
+        stage: dbRow.stageJson as Stage,
+        scenes: dbRow.scenesJson as Scene[],
+        createdAt: dbRow.createdAt,
+      },
+    });
+  }
+
+  const fsData = await readClassroom(share.classroomId);
+  if (!fsData) {
     return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
   }
 
+  const stageObj = fsData.stage as Stage;
   return NextResponse.json({
     mode: share.mode,
     classroom: {
-      id: classroom.id,
-      title: classroom.title,
-      language: classroom.language,
-      stage: classroom.stageJson as Stage,
-      scenes: classroom.scenesJson as Scene[],
-      createdAt: classroom.createdAt,
+      id: fsData.id,
+      title: stageObj.name || '',
+      language: (stageObj as unknown as Record<string, string>).language || 'en-US',
+      stage: fsData.stage,
+      scenes: fsData.scenes,
+      createdAt: fsData.createdAt,
     },
   });
 }

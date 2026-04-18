@@ -23,30 +23,55 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+/** Sentinel value indicating credits are unlimited (DB not configured). */
+export const UNLIMITED_CREDITS = -1;
+
 /**
  * Get the current credit balance for a user.
- * Returns the balance or 0 if credits are not configured / user not found.
+ * Returns UNLIMITED_CREDITS (-1) when the DB is not configured or tables are missing.
  */
 export async function getBalance(userId: string): Promise<number> {
-  if (!isDbConfigured()) return Infinity;
+  if (!isDbConfigured()) return UNLIMITED_CREDITS;
 
-  const db = getDb();
-  const row = await db.query.credits.findFirst({
-    where: eq(schema.credits.userId, userId),
-  });
-
-  return row?.balance ?? 0;
+  try {
+    const db = getDb();
+    const row = await db.query.credits.findFirst({
+      where: eq(schema.credits.userId, userId),
+    });
+    return row?.balance ?? 0;
+  } catch (err) {
+    if (isTableMissingError(err)) {
+      log.warn('Credits table does not exist yet — run migrations. Treating as unlimited.');
+      return UNLIMITED_CREDITS;
+    }
+    throw err;
+  }
 }
 
 /**
  * Check if the user has enough credits. Throws InsufficientCreditsError if not.
+ * When DB is not configured, credits are unlimited (always passes).
  */
 export async function checkCredits(userId: string): Promise<number> {
   const balance = await getBalance(userId);
-  if (balance !== Infinity && balance <= 0) {
+  if (balance === UNLIMITED_CREDITS) return balance;
+  if (balance <= 0) {
     throw new InsufficientCreditsError(balance);
   }
   return balance;
+}
+
+/** Detect PostgreSQL "relation does not exist" errors (code 42P01). */
+function isTableMissingError(err: unknown): boolean {
+  if (err && typeof err === 'object' && 'cause' in err) {
+    const cause = (err as { cause?: { code?: string } }).cause;
+    if (cause?.code === '42P01') return true;
+  }
+  if (err && typeof err === 'object' && 'code' in err) {
+    if ((err as { code?: string }).code === '42P01') return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return msg.includes('does not exist') && msg.includes('relation');
 }
 
 /**
@@ -67,10 +92,9 @@ export async function consumeCredits(
   const cost = calculateCost(opts);
   if (cost <= 0) return;
 
-  const db = getDb();
-
   try {
-    // Deduct from balance
+    const db = getDb();
+
     const current = await db.query.credits.findFirst({
       where: eq(schema.credits.userId, userId),
     });
@@ -89,7 +113,6 @@ export async function consumeCredits(
       })
       .where(eq(schema.credits.userId, userId));
 
-    // Record transaction
     await db.insert(schema.creditTransactions).values({
       userId,
       amount: -cost,
@@ -101,6 +124,10 @@ export async function consumeCredits(
 
     log.info(`Consumed ${cost} credits from user ${userId} (${opts.type})`);
   } catch (err) {
+    if (isTableMissingError(err)) {
+      log.warn('Credits tables do not exist yet — run migrations. Skipping deduction.');
+      return;
+    }
     log.error(`Failed to consume credits for user ${userId}:`, err);
   }
 }
@@ -137,18 +164,25 @@ export async function saveCheckpoint(
 ): Promise<string | null> {
   if (!isDbConfigured()) return null;
 
-  const db = getDb();
-  const [row] = await db
-    .insert(schema.checkpoints)
-    .values({
-      userId,
-      classroomId,
-      step,
-      stateJson,
-    })
-    .returning({ id: schema.checkpoints.id });
-
-  return row?.id || null;
+  try {
+    const db = getDb();
+    const [row] = await db
+      .insert(schema.checkpoints)
+      .values({
+        userId,
+        classroomId,
+        step,
+        stateJson,
+      })
+      .returning({ id: schema.checkpoints.id });
+    return row?.id || null;
+  } catch (err) {
+    if (isTableMissingError(err)) {
+      log.warn('Checkpoints table does not exist yet — run migrations.');
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -161,11 +195,19 @@ export async function getTransactions(
 ) {
   if (!isDbConfigured()) return [];
 
-  const db = getDb();
-  return db.query.creditTransactions.findMany({
-    where: eq(schema.creditTransactions.userId, userId),
-    orderBy: desc(schema.creditTransactions.createdAt),
-    limit,
-    offset,
-  });
+  try {
+    const db = getDb();
+    return await db.query.creditTransactions.findMany({
+      where: eq(schema.creditTransactions.userId, userId),
+      orderBy: desc(schema.creditTransactions.createdAt),
+      limit,
+      offset,
+    });
+  } catch (err) {
+    if (isTableMissingError(err)) {
+      log.warn('Credit transactions table does not exist yet — run migrations.');
+      return [];
+    }
+    throw err;
+  }
 }

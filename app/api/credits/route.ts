@@ -1,25 +1,17 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
-import { getBalance, CREDIT_RATES } from '@/lib/server/credits';
-import { isDbConfigured } from '@/lib/db';
+import { getBalance, CREDIT_RATES, UNLIMITED_CREDITS } from '@/lib/server/credits';
 
 export async function GET() {
   try {
     const user = await requireAuth();
-
-    if (!isDbConfigured()) {
-      return NextResponse.json({
-        balance: Infinity,
-        rates: CREDIT_RATES,
-        configured: false,
-      });
-    }
-
     const balance = await getBalance(user.id);
+    const unlimited = balance === UNLIMITED_CREDITS;
+
     return NextResponse.json({
-      balance,
+      balance: unlimited ? -1 : balance,
+      unlimited,
       rates: CREDIT_RATES,
-      configured: true,
     });
   } catch (err) {
     if (err instanceof UnauthenticatedError) {

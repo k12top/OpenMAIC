@@ -3,6 +3,8 @@ import { nanoid } from 'nanoid';
 import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
+import { readClassroom } from '@/lib/server/classroom-storage';
+import type { Stage } from '@/lib/types/stage';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,10 +25,28 @@ export async function POST(req: NextRequest) {
 
     const db = getDb();
 
-    // Verify the user owns the classroom
-    const classroom = await db.query.classrooms.findFirst({
+    let classroom = await db.query.classrooms.findFirst({
       where: eq(schema.classrooms.id, classroomId),
     });
+
+    if (!classroom) {
+      const fsData = await readClassroom(classroomId);
+      if (fsData) {
+        const stageObj = fsData.stage as Stage & Record<string, unknown>;
+        await db.insert(schema.classrooms).values({
+          id: fsData.id,
+          userId: user.id,
+          title: stageObj.name || '',
+          language: (stageObj.language as string) || 'en-US',
+          stageJson: fsData.stage,
+          scenesJson: fsData.scenes,
+          status: 'completed',
+        });
+        classroom = await db.query.classrooms.findFirst({
+          where: eq(schema.classrooms.id, classroomId),
+        });
+      }
+    }
 
     if (!classroom || classroom.userId !== user.id) {
       return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });

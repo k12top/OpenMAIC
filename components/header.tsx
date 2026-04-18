@@ -19,7 +19,7 @@ import { LanguageSwitcher } from './language-switcher';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SettingsDialog } from './settings';
-import { ShareDialog } from './share/share-dialog';
+import { ShareDialog } from '@/components/share/share-dialog';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store/stage';
 import { useMediaGenerationStore } from '@/lib/store/media-generation';
@@ -37,12 +37,22 @@ export function Header({ currentSceneTitle }: HeaderProps) {
   const [themeOpen, setThemeOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditsUnlimited, setCreditsUnlimited] = useState(false);
 
   useEffect(() => {
     fetch('/api/credits')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then((data) => {
-        if (data.balance !== undefined) setCreditBalance(data.balance);
+        if (!data) return;
+        if (data.unlimited) {
+          setCreditsUnlimited(true);
+          setCreditBalance(-1);
+        } else if (data.balance !== undefined) {
+          setCreditBalance(data.balance);
+        }
       })
       .catch(() => {});
   }, []);
@@ -187,16 +197,25 @@ export function Header({ currentSceneTitle }: HeaderProps) {
           </div>
 
           {/* Credits Badge */}
-          {creditBalance !== null && creditBalance !== Infinity && (
+          {creditBalance !== null && (
             <>
               <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
               <button
                 onClick={() => router.push('/credits')}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
+                  creditsUnlimited
+                    ? 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
+                    : creditBalance <= 10
+                      ? 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
+                      : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
+                )}
                 title="Credits"
               >
                 <Coins className="size-3" />
-                <span className="tabular-nums">{creditBalance}</span>
+                <span className="tabular-nums">
+                  {creditsUnlimited ? '∞' : creditBalance}
+                </span>
               </button>
             </>
           )}

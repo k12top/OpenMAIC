@@ -8,6 +8,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  Coins,
   Copy,
   ImagePlus,
   Pencil,
@@ -50,6 +51,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
+import { LandingPage } from '@/components/landing/landing-page';
 import { BRAND_NAME } from '@/lib/constants/brand';
 
 const log = createLogger('Home');
@@ -89,6 +91,28 @@ function HomePage() {
   // Model setup state
   const currentModelId = useSettingsStore((s) => s.modelId);
   const [recentOpen, setRecentOpen] = useState(true);
+
+  // Credits
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditsUnlimited, setCreditsUnlimited] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/credits')
+      .then((r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (!data) return;
+        if (data.unlimited) {
+          setCreditsUnlimited(true);
+          setCreditBalance(-1);
+        } else if (data.balance !== undefined) {
+          setCreditBalance(data.balance);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
   /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */
@@ -416,6 +440,30 @@ function HomePage() {
             <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" />
           </button>
         </div>
+
+        {/* Credits Badge */}
+        {creditBalance !== null && (
+          <>
+            <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+            <button
+              onClick={() => router.push('/credits')}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
+                creditsUnlimited
+                  ? 'text-green-700 dark:text-green-300 bg-green-50/80 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
+                  : creditBalance <= 10
+                    ? 'text-red-700 dark:text-red-300 bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
+                    : 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
+              )}
+              title="Credits"
+            >
+              <Coins className="size-3" />
+              <span className="tabular-nums">
+                {creditsUnlimited ? '∞' : creditBalance}
+              </span>
+            </button>
+          </>
+        )}
       </div>
       <SettingsDialog
         open={settingsOpen}
@@ -1208,8 +1256,5 @@ export default function Page() {
 }
 
 function LandingPageView() {
-  const { LandingPage } = require('@/components/landing/landing-page') as {
-    LandingPage: React.ComponentType;
-  };
   return <LandingPage />;
 }

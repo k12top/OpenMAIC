@@ -5,6 +5,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/',
   '/api/auth',
   '/api/health',
+  '/api/share/',
   '/share',
   '/_next',
   '/favicon',

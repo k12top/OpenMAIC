@@ -22,6 +22,7 @@ export default function CreditsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const [balance, setBalance] = useState<number | null>(null);
+  const [unlimited, setUnlimited] = useState(false);
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +32,12 @@ export default function CreditsPage() {
       fetch('/api/credits/transactions').then((r) => r.json()),
     ])
       .then(([creditsData, txData]) => {
-        setBalance(creditsData.balance ?? 0);
+        if (creditsData.unlimited) {
+          setUnlimited(true);
+          setBalance(-1);
+        } else {
+          setBalance(creditsData.balance ?? 0);
+        }
         setTransactions(txData.transactions ?? []);
       })
       .catch(() => {})
@@ -96,13 +102,17 @@ export default function CreditsPage() {
           <div className="text-4xl font-bold">
             {loading ? (
               <RefreshCw className="size-6 animate-spin" />
-            ) : balance === Infinity ? (
-              <span className="text-2xl">Unlimited</span>
+            ) : unlimited ? (
+              <span className="text-2xl">∞ Unlimited</span>
             ) : (
               balance?.toLocaleString()
             )}
           </div>
-          <p className="text-xs opacity-70 mt-1">Available credits for AI operations</p>
+          <p className="text-xs opacity-70 mt-1">
+            {unlimited
+              ? 'Credits tracking is not enabled (no database configured)'
+              : 'Available credits for AI operations'}
+          </p>
         </div>
 
         {/* Transactions */}
