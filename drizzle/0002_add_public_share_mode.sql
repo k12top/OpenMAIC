@@ -1,6 +1,6 @@
--- Add 'public' value to the share_mode enum
+-- Add 'public' value to the share_mode enum (applied 2026-04-18)
 -- PostgreSQL requires ALTER TYPE ... ADD VALUE which cannot run inside a transaction block.
--- drizzle-kit generate/push handles this automatically, but if you apply manually:
---   psql $DATABASE_URL -c "ALTER TYPE share_mode ADD VALUE IF NOT EXISTS 'public';"
+-- This migration has already been applied to the remote database.
+-- If setting up a fresh database, run drizzle-kit push which handles this automatically.
 
 ALTER TYPE "share_mode" ADD VALUE IF NOT EXISTS 'public';
