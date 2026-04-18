@@ -288,7 +288,7 @@ export async function generatePBLContent(
       model,
       system: systemPrompt,
       prompt:
-        language === 'zh-CN'
+        language?.startsWith('zh')
           ? `请设计一个PBL项目。现在从 project_info 模式开始，先设置项目标题和描述。`
           : `Design a PBL project. Start in project_info mode by setting the project title and description.`,
       tools: pblTools,
@@ -361,7 +361,7 @@ async function postProcessPBL(
     callbacks?.onProgress?.('Generating initial questions for first issue...');
 
     const context =
-      language === 'zh-CN'
+      language?.startsWith('zh')
         ? `## 任务信息
 
 **标题**: ${firstIssue.title}
@@ -411,7 +411,7 @@ Format your response as a numbered list.`;
 
     // Add welcome message to chat
     const welcomeMessage =
-      language === 'zh-CN'
+      language?.startsWith('zh')
         ? `你好！我是这个任务的提问助手："${firstIssue.title}"\n\n为了引导你的学习，我准备了一些问题：\n\n${generatedQuestions}\n\n随时 @question 我来获取帮助或澄清！`
         : `Hello! I'm your Question Agent for this issue: "${firstIssue.title}"\n\nTo help guide your work, I've prepared some questions for you:\n\n${generatedQuestions}\n\nFeel free to @question me anytime if you need help or clarification!`;
 

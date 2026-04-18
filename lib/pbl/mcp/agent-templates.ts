@@ -5,14 +5,14 @@
  */
 
 export function getQuestionAgentPrompt(language: string = 'en-US'): string {
-  if (language === 'zh-CN') {
+  if (language?.startsWith('zh')) {
     return QUESTION_AGENT_TEMPLATE_PROMPT_ZH;
   }
   return QUESTION_AGENT_TEMPLATE_PROMPT;
 }
 
 export function getJudgeAgentPrompt(language: string = 'en-US'): string {
-  if (language === 'zh-CN') {
+  if (language?.startsWith('zh')) {
     return JUDGE_AGENT_TEMPLATE_PROMPT_ZH;
   }
   return JUDGE_AGENT_TEMPLATE_PROMPT;

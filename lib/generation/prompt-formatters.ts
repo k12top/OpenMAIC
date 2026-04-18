@@ -82,7 +82,7 @@ export function formatImageDescription(img: PdfImage, language: string): string 
     dimInfo = ` | 尺寸: ${img.width}×${img.height} (宽高比${ratio})`;
   }
   const desc = img.description ? ` | ${img.description}` : '';
-  return language === 'zh-CN'
+  return language.startsWith('zh')
     ? `- **${img.id}**: 来自PDF第${img.pageNumber}页${dimInfo}${desc}`
     : `- **${img.id}**: from PDF page ${img.pageNumber}${dimInfo}${desc}`;
 }
@@ -97,7 +97,7 @@ export function formatImagePlaceholder(img: PdfImage, language: string): string 
     const ratio = (img.width / img.height).toFixed(2);
     dimInfo = ` | 尺寸: ${img.width}×${img.height} (宽高比${ratio})`;
   }
-  return language === 'zh-CN'
+  return language.startsWith('zh')
     ? `- **${img.id}**: PDF第${img.pageNumber}页的图片${dimInfo} [参见附图]`
     : `- **${img.id}**: image from PDF page ${img.pageNumber}${dimInfo} [see attached]`;
 }

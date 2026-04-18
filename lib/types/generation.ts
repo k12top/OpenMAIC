@@ -43,7 +43,7 @@ export interface StylePreferences {
   interactivityLevel: 'low' | 'medium' | 'high';
   includeExamples: boolean;
   includePractice: boolean;
-  language: string; // 'zh-CN', 'en-US'
+  language: CourseLanguage;
 }
 
 export interface UploadedDocument {
@@ -59,12 +59,18 @@ export interface UploadedDocument {
 }
 
 /**
+ * BCP-47 course language tag. Common values: 'zh-CN', 'en-US', 'ja-JP',
+ * 'ko-KR', 'fr-FR', 'de-DE', 'es-ES', 'pt-BR', 'ru-RU', 'ar-SA', etc.
+ */
+export type CourseLanguage = string;
+
+/**
  * Simplified user requirements for course generation
  * All details (topic, duration, style, etc.) should be included in the requirement text
  */
 export interface UserRequirements {
   requirement: string; // Single free-form text for all user input
-  language: 'zh-CN' | 'en-US'; // Course language - critical for generation
+  language: CourseLanguage; // Course language - BCP-47 tag
   userNickname?: string; // Student nickname for personalization
   userBio?: string; // Student background for personalization
   webSearch?: boolean; // Enable web search for richer context
@@ -100,7 +106,7 @@ export interface SceneOutline {
   teachingObjective?: string;
   estimatedDuration?: number; // seconds
   order: number;
-  language?: 'zh-CN' | 'en-US'; // Generation language (inherited from requirements)
+  language?: CourseLanguage; // Generation language (inherited from requirements)
   // Suggested image IDs (from PDF-extracted images)
   suggestedImageIds?: string[]; // e.g., ["img_1", "img_3"]
   // AI-generated media requests (when PDF images are insufficient)
@@ -124,7 +130,7 @@ export interface SceneOutline {
     projectDescription: string;
     targetSkills: string[];
     issueCount?: number;
-    language: 'zh-CN' | 'en-US';
+    language: CourseLanguage;
   };
 }
 

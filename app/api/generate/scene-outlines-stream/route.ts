@@ -24,6 +24,7 @@ import {
 import type { AgentInfo } from '@/lib/generation/generation-pipeline';
 import { MAX_PDF_CONTENT_CHARS, MAX_VISION_IMAGES } from '@/lib/constants/generation';
 import { nanoid } from 'nanoid';
+import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
 import type {
   UserRequirements,
   PdfImage,
@@ -97,6 +98,9 @@ function extractNewOutlines(buffer: string, alreadyParsed: number): SceneOutline
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let requirementSnippet: string | undefined;
   let resolvedModelString: string | undefined;
   try {
@@ -124,8 +128,8 @@ export async function POST(req: NextRequest) {
     const hasVision = !!modelInfo?.capabilities?.vision;
 
     // Build prompt (same logic as generateSceneOutlinesFromRequirements)
-    let availableImagesText =
-      requirements.language === 'zh-CN' ? '无可用图片' : 'No images available';
+    const isChinese = requirements.language?.startsWith('zh');
+    let availableImagesText = isChinese ? '无可用图片' : 'No images available';
     let visionImages: Array<{ id: string; src: string }> | undefined;
 
     if (pdfImages && pdfImages.length > 0) {
@@ -181,11 +185,11 @@ export async function POST(req: NextRequest) {
       language: requirements.language,
       pdfContent: pdfText
         ? pdfText.substring(0, MAX_PDF_CONTENT_CHARS)
-        : requirements.language === 'zh-CN'
+        : isChinese
           ? '无'
           : 'None',
       availableImages: availableImagesText,
-      researchContext: researchContext || (requirements.language === 'zh-CN' ? '无' : 'None'),
+      researchContext: researchContext || (isChinese ? '无' : 'None'),
       mediaGenerationPolicy,
       teacherContext,
     });

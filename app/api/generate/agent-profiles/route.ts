@@ -12,6 +12,7 @@ import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
 import { AGENT_COLOR_PALETTE } from '@/lib/constants/agent-defaults';
+import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
 
 const log = createLogger('Agent Profiles API');
 
@@ -36,6 +37,9 @@ function stripCodeFences(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let stageName: string | undefined;
   let modelString: string | undefined;
   try {

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { casdoorSDK, casdoorConfig, getPublicAppOrigin } from '@/lib/auth/casdoor';
+import { isDbConfigured, getDb, schema } from '@/lib/db';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -13,16 +15,22 @@ export async function GET(request: Request) {
 
   try {
     const token = await casdoorSDK.getAuthToken(code);
-    const _user = casdoorSDK.parseJwtToken(token.access_token);
+    const casdoorUser = casdoorSDK.parseJwtToken(token.access_token);
 
-    // Default redirect to home (use public origin so we never send users to 0.0.0.0)
+    // Sync user to PostgreSQL on login
+    if (isDbConfigured()) {
+      try {
+        await syncUserOnLogin(casdoorUser);
+      } catch (err) {
+        console.error('Failed to sync user to DB:', err);
+      }
+    }
+
     let redirectUrl = publicOrigin;
 
-    // Check if we have a valid returnUrl in state
     if (state && state !== casdoorConfig.appName) {
       try {
         const decodedState = decodeURIComponent(state);
-        // Security: only redirect to internal paths or same origin (public)
         if (decodedState.startsWith('/') || decodedState.startsWith(publicOrigin)) {
           redirectUrl = decodedState;
         }
@@ -32,20 +40,50 @@ export async function GET(request: Request) {
     }
 
     const response = NextResponse.redirect(redirectUrl);
-    
-    // In a real production app, consider encrypting this or using a session store.
-    // For minimal integration, we store the raw JWT or a simplified payload for the client to read.
+
     response.cookies.set('casdoor_token', token.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return response;
   } catch (error) {
     console.error('Casdoor authentication error:', error);
     return NextResponse.redirect(`${publicOrigin}/?error=auth_failed`);
+  }
+}
+
+async function syncUserOnLogin(casdoorUser: Record<string, string>) {
+  const db = getDb();
+  const userId = casdoorUser.id || casdoorUser.name || casdoorUser.sub || '';
+  if (!userId) return;
+
+  const existing = await db.query.users.findFirst({
+    where: eq(schema.users.id, userId),
+  });
+
+  if (!existing) {
+    await db.insert(schema.users).values({
+      id: userId,
+      casdoorName: casdoorUser.name || '',
+      nickname: casdoorUser.displayName || casdoorUser.name || '',
+      avatar: casdoorUser.avatar || '',
+      email: casdoorUser.email || '',
+    });
+    const initialCredits = parseInt(process.env.INITIAL_CREDITS || '100', 10);
+    await db.insert(schema.credits).values({
+      userId,
+      balance: initialCredits,
+      totalEarned: initialCredits,
+    });
+    await db.insert(schema.creditTransactions).values({
+      userId,
+      amount: initialCredits,
+      type: 'grant',
+      description: 'Welcome bonus',
+    });
   }
 }

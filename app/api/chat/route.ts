@@ -20,31 +20,20 @@ import type { ThinkingConfig } from '@/lib/types/provider';
 import { apiError } from '@/lib/server/api-response';
 import { createLogger } from '@/lib/logger';
 import { resolveModel } from '@/lib/server/resolve-model';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 const log = createLogger('Chat API');
 
 // Allow streaming responses up to 60 seconds
 export const maxDuration = 60;
 
-/**
- * POST /api/chat
- * Send a message and receive SSE stream of generation events
- *
- * Request body: StatelessChatRequest
- * {
- *   messages: UIMessage[],
- *   storeState: { stage, scenes, currentSceneId, mode },
- *   config: { agentIds, sessionType? },
- *   apiKey: string,
- *   baseUrl?: string,
- *   model?: string
- * }
- *
- * Response: SSE stream of StatelessEvent
- */
 export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let chatModel: string | undefined;
   let chatMessageCount: number | undefined;
+
+  // Auth + credit check
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
 
   try {
     const body: StatelessChatRequest = await req.json();
@@ -138,6 +127,13 @@ export async function POST(req: NextRequest) {
         }
 
         stopHeartbeat();
+        // Record approximate token usage for credits
+        recordUsage(auth.user.id, {
+          type: 'llm',
+          tokenCount: 1000,
+          apiRoute: '/api/chat',
+          description: 'Chat conversation',
+        }).catch(() => {});
         await writer.close();
       } catch (error) {
         stopHeartbeat();

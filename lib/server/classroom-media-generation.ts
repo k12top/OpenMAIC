@@ -27,6 +27,7 @@ import {
   resolveTTSApiKey,
   resolveTTSBaseUrl,
 } from '@/lib/server/provider-config';
+import { getStorageProvider } from '@/lib/storage';
 import type { SceneOutline } from '@/lib/types/generation';
 import type { Scene } from '@/lib/types/stage';
 import type { SpeechAction } from '@/lib/types/action';
@@ -36,6 +37,17 @@ import type { TTSProviderId } from '@/lib/audio/types';
 import { splitLongSpeechActions } from '@/lib/audio/tts-utils';
 
 const log = createLogger('ClassroomMedia');
+
+async function uploadToStorage(hash: string, buf: Buffer, type: 'media' | 'audio', mimeType?: string): Promise<string> {
+  try {
+    const provider = getStorageProvider();
+    const url = await provider.upload(hash, buf, type, mimeType);
+    if (url) return url;
+  } catch {
+    // Storage not configured or failed — fall through to local
+  }
+  return '';
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -122,7 +134,9 @@ export async function generateMediaForClassroom(
 
         const filename = `${req.elementId}.${ext}`;
         await fs.writeFile(path.join(mediaDir, filename), buf);
-        mediaMap[req.elementId] = mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
+        // Upload to MinIO if configured
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', `image/${ext}`);
+        mediaMap[req.elementId] = storageUrl || mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
         log.info(`Generated image: ${filename}`);
       } catch (err) {
         log.warn(`Image generation failed for ${req.elementId}:`, err);
@@ -155,7 +169,8 @@ export async function generateMediaForClassroom(
         const buf = await downloadToBuffer(result.url);
         const filename = `${req.elementId}.mp4`;
         await fs.writeFile(path.join(mediaDir, filename), buf);
-        mediaMap[req.elementId] = mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', 'video/mp4');
+        mediaMap[req.elementId] = storageUrl || mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
         log.info(`Generated video: ${filename}`);
       } catch (err) {
         log.warn(`Video generation failed for ${req.elementId}:`, err);
@@ -205,6 +220,7 @@ export async function generateTTSForClassroom(
   scenes: Scene[],
   classroomId: string,
   baseUrl: string,
+  courseLanguage?: string,
 ): Promise<void> {
   const audioDir = path.join(CLASSROOMS_DIR, classroomId, 'audio');
   await ensureDir(audioDir);
@@ -225,7 +241,26 @@ export async function generateTTSForClassroom(
     return;
   }
   const ttsBaseUrl = resolveTTSBaseUrl(providerId) || TTS_PROVIDERS[providerId]?.defaultBaseUrl;
-  const voice = DEFAULT_TTS_VOICES[providerId] || 'default';
+
+  // Language-aware voice selection: try to find a voice for the course language
+  let voice = DEFAULT_TTS_VOICES[providerId] || 'default';
+  if (courseLanguage) {
+    try {
+      const { findBestTTSVoice } = require('@/lib/audio/language-support') as {
+        findBestTTSVoice: (lang: string, pid: TTSProviderId) => { voiceId: string; matched: boolean } | null;
+      };
+      const best = findBestTTSVoice(courseLanguage, providerId);
+      if (best) {
+        voice = best.voiceId;
+        if (!best.matched) {
+          log.info(`TTS language ${courseLanguage} not natively supported by ${providerId}, using fallback voice: ${voice}`);
+        }
+      }
+    } catch {
+      // language-support module may not be available
+    }
+  }
+
   const format = TTS_PROVIDERS[providerId]?.supportedFormats?.[0] || 'mp3';
 
   for (const scene of scenes) {
@@ -254,11 +289,13 @@ export async function generateTTSForClassroom(
         );
 
         const filename = `${audioId}.${format}`;
-        await fs.writeFile(path.join(audioDir, filename), result.audio);
+        const audioBuf = Buffer.from(result.audio);
+        await fs.writeFile(path.join(audioDir, filename), audioBuf);
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, audioBuf, 'audio', `audio/${format}`);
 
         speechAction.audioId = audioId;
-        speechAction.audioUrl = mediaServingUrl(baseUrl, classroomId, `audio/${filename}`);
-        log.info(`Generated TTS: ${filename} (${result.audio.length} bytes)`);
+        speechAction.audioUrl = storageUrl || mediaServingUrl(baseUrl, classroomId, `audio/${filename}`);
+        log.info(`Generated TTS: ${filename} (${audioBuf.length} bytes)`);
       } catch (err) {
         log.warn(`TTS generation failed for action ${action.id}:`, err);
       }

@@ -16,7 +16,7 @@ export interface PBLSystemPromptConfig {
 export function buildPBLSystemPrompt(config: PBLSystemPromptConfig): string {
   const { projectTopic, projectDescription, targetSkills, issueCount = 3, language } = config;
 
-  if (language === 'zh-CN') {
+  if (language?.startsWith('zh')) {
     return buildPBLSystemPromptZH(config);
   }
 

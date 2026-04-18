@@ -5,11 +5,56 @@ services:
       - "3000:3000"
     env_file:
       - .env.local
+    environment:
+      DATABASE_URL: postgresql://openmaic:${POSTGRES_PASSWORD:-openmaic}@postgres:5432/openmaic
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-openmaic}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-openmaic123}
+      MINIO_BUCKET: openmaic
+      MINIO_USE_SSL: "false"
     volumes:
       # Optional: mount server-providers.yml for provider config
       # - ./server-providers.yml:/app/server-providers.yml:ro
       - openmaic-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: openmaic
+      POSTGRES_USER: openmaic
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openmaic}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openmaic"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-openmaic}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-openmaic123}
+    volumes:
+      - miniodata:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     restart: unless-stopped
 
 volumes:
   openmaic-data:
+  pgdata:
+  miniodata:

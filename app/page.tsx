@@ -61,7 +61,7 @@ const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
 interface FormState {
   pdfFile: File | null;
   requirement: string;
-  language: 'zh-CN' | 'en-US';
+  language: string;
   webSearch: boolean;
 }
 
@@ -104,11 +104,12 @@ function HomePage() {
       const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       const updates: Partial<FormState> = {};
       if (savedWebSearch === 'true') updates.webSearch = true;
-      if (savedLanguage === 'zh-CN' || savedLanguage === 'en-US') {
+      if (savedLanguage) {
         updates.language = savedLanguage;
       } else {
-        const detected = navigator.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
-        updates.language = detected;
+        // Auto-detect from browser language
+        const browserLang = navigator.language || 'en-US';
+        updates.language = browserLang;
       }
       if (Object.keys(updates).length > 0) {
         setForm((prev) => ({ ...prev, ...updates }));
@@ -1183,5 +1184,32 @@ function ClassroomCard({
 }
 
 export default function Page() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => setIsAuthenticated(!!data.authenticated))
+      .catch(() => setIsAuthenticated(false));
+  }, []);
+
+  // Show nothing while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPageView />;
+  }
+
   return <HomePage />;
+}
+
+function LandingPageView() {
+  const { LandingPage } = require('@/components/landing/landing-page') as {
+    LandingPage: React.ComponentType;
+  };
+  return <LandingPage />;
 }

@@ -17,10 +17,14 @@ import {
 } from '@/lib/server/search-query-builder';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
 import type { AICallFn } from '@/lib/generation/pipeline-types';
+import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
 
 const log = createLogger('WebSearch');
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let query: string | undefined;
   try {
     const body = await req.json();

@@ -10,6 +10,8 @@ import {
   Download,
   FileDown,
   Package,
+  Coins,
+  Share2,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useTheme } from '@/lib/hooks/use-theme';
@@ -17,6 +19,7 @@ import { LanguageSwitcher } from './language-switcher';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SettingsDialog } from './settings';
+import { ShareDialog } from './share/share-dialog';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store/stage';
 import { useMediaGenerationStore } from '@/lib/store/media-generation';
@@ -32,6 +35,17 @@ export function Header({ currentSceneTitle }: HeaderProps) {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/credits')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.balance !== undefined) setCreditBalance(data.balance);
+      })
+      .catch(() => {});
+  }, []);
 
   // Export
   const { exporting: isExporting, exportPPTX, exportResourcePack } = useExportPPTX();
@@ -171,7 +185,31 @@ export function Header({ currentSceneTitle }: HeaderProps) {
               <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" />
             </button>
           </div>
+
+          {/* Credits Badge */}
+          {creditBalance !== null && creditBalance !== Infinity && (
+            <>
+              <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={() => router.push('/credits')}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                title="Credits"
+              >
+                <Coins className="size-3" />
+                <span className="tabular-nums">{creditBalance}</span>
+              </button>
+            </>
+          )}
         </div>
+
+        {/* Share Button */}
+        <button
+          onClick={() => setShareOpen(true)}
+          className="shrink-0 p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm transition-all"
+          title="Share"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
 
         {/* Export Dropdown */}
         <div className="relative" ref={exportRef}>
@@ -232,6 +270,7 @@ export function Header({ currentSceneTitle }: HeaderProps) {
         </div>
       </header>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
     </>
   );
 }

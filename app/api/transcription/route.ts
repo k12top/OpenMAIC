@@ -5,11 +5,15 @@ import type { ASRProviderId } from '@/lib/audio/types';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 const log = createLogger('Transcription');
 
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let resolvedProviderId: string | undefined;
   let resolvedModelId: string | undefined;
   try {

@@ -98,8 +98,18 @@ function createInMemoryStore(stage: Stage): StageStore {
   };
 }
 
-function normalizeLanguage(language?: string): 'zh-CN' | 'en-US' {
-  return language === 'en-US' ? 'en-US' : 'zh-CN';
+/**
+ * Normalize language to a valid BCP-47 tag. Accepts any BCP-47 string.
+ * Falls back to 'en-US' if empty or invalid.
+ */
+function normalizeLanguage(language?: string): string {
+  if (!language || language.trim().length === 0) return 'en-US';
+  // Basic BCP-47 validation: xx or xx-XX pattern
+  const cleaned = language.trim();
+  if (/^[a-zA-Z]{2,3}(-[a-zA-Z]{2,4})?$/.test(cleaned)) {
+    return cleaned;
+  }
+  return 'en-US';
 }
 
 function stripCodeFences(text: string): string {

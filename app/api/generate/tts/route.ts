@@ -14,12 +14,16 @@ import type { TTSProviderId } from '@/lib/audio/types';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 
 const log = createLogger('TTS API');
 
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let ttsProviderId: string | undefined;
   let ttsVoice: string | undefined;
   let audioId: string | undefined;
@@ -87,6 +91,14 @@ export async function POST(req: NextRequest) {
 
     // Convert to base64
     const base64 = Buffer.from(audio).toString('base64');
+
+    // Record credit usage based on text length
+    recordUsage(auth.user.id, {
+      type: 'tts',
+      unitCount: text.length,
+      apiRoute: '/api/generate/tts',
+      description: `TTS generation (${ttsProviderId})`,
+    }).catch(() => {});
 
     return apiSuccess({ audioId, base64, format });
   } catch (error) {

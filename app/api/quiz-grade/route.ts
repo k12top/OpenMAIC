@@ -10,6 +10,7 @@ import { callLLM } from '@/lib/ai/llm';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
+import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
 const log = createLogger('Quiz Grade');
 
 interface GradeRequest {
@@ -26,6 +27,9 @@ interface GradeResponse {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let questionSnippet: string | undefined;
   let resolvedPoints: number | undefined;
   try {
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
     // Resolve model from request headers
     const { model: languageModel } = resolveModelFromHeaders(req);
 
-    const isZh = language === 'zh-CN';
+    const isZh = language?.startsWith('zh');
 
     const systemPrompt = isZh
       ? `你是一位专业的教育评估专家。请根据题目和学生答案进行评分并给出简短评语。

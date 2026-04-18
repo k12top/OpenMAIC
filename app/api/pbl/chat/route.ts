@@ -11,6 +11,7 @@ import type { PBLAgent, PBLIssue } from '@/lib/pbl/types';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
+import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
 const log = createLogger('PBL Chat');
 
 interface PBLChatRequest {
@@ -23,6 +24,8 @@ interface PBLChatRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
   let agentName: string | undefined;
   let resolvedAgentType: string | undefined;
   try {

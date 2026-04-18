@@ -18,12 +18,16 @@ import type { SceneOutline, PdfImage, ImageMapping } from '@/lib/types/generatio
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 
 const log = createLogger('Scene Content API');
 
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  const auth = await withAuthAndCredits();
+  if (!auth.ok) return auth.response;
+
   let outlineTitle: string | undefined;
   let resolvedModelString: string | undefined;
   try {
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
     // Ensure outline has language from stageInfo (fallback for older outlines)
     const outline: SceneOutline = {
       ...rawOutline,
-      language: rawOutline.language || (stageInfo?.language as 'zh-CN' | 'en-US') || 'zh-CN',
+      language: rawOutline.language || stageInfo?.language || 'en-US',
     };
 
     // ── Model resolution from request headers ──
@@ -162,6 +166,13 @@ export async function POST(req: NextRequest) {
     }
 
     log.info(`Content generated successfully: "${effectiveOutline.title}"`);
+
+    recordUsage(auth.user.id, {
+      type: 'llm',
+      tokenCount: 2000,
+      apiRoute: '/api/generate/scene-content',
+      description: `Scene content: ${effectiveOutline.title}`,
+    }).catch(() => {});
 
     return apiSuccess({ content, effectiveOutline });
   } catch (error) {
