@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowLeft, Eye, Copy, LogIn, Loader2 } from 'lucide-react';
+import { ArrowLeft, Eye, Copy, LogIn, Globe, Loader2, Lock } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/constants/brand';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -27,17 +27,27 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'readonly' | 'editable'>('readonly');
+  const [requiresAuth, setRequiresAuth] = useState(false);
+  const [mode, setMode] = useState<'public' | 'readonly' | 'editable'>('public');
   const [classroom, setClassroom] = useState<SharedClassroom | null>(null);
   const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     fetch(`/api/share/${token}`)
-      .then((r) => {
+      .then(async (r) => {
+        if (r.status === 401) {
+          const data = await r.json().catch(() => ({}));
+          if (data.requiresAuth) {
+            setRequiresAuth(true);
+            return null;
+          }
+          throw new Error('Authentication required');
+        }
         if (!r.ok) throw new Error(r.status === 404 ? 'Share not found' : 'Failed to load');
         return r.json();
       })
       .then((data) => {
+        if (!data) return;
         setMode(data.mode);
         setClassroom(data.classroom);
       })
@@ -69,6 +79,34 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Login required for non-public shares
+  if (requiresAuth) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-sm"
+        >
+          <div className="size-16 mx-auto mb-4 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Lock className="size-7 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h1 className="text-xl font-semibold text-foreground mb-2">Login Required</h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            This shared classroom requires you to be signed in to view it.
+          </p>
+          <a
+            href={`/api/auth/login?returnUrl=/share/${token}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
+          >
+            <LogIn className="size-3.5" />
+            Sign In to View
+          </a>
+        </motion.div>
       </div>
     );
   }
@@ -109,13 +147,19 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
               <span
                 className={cn(
                   'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium',
-                  mode === 'readonly'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                    : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+                  mode === 'public'
+                    ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                    : mode === 'readonly'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
                 )}
               >
-                <Eye className="size-3" />
-                {mode === 'readonly' ? 'Read Only' : 'Editable'}
+                {mode === 'public' ? (
+                  <Globe className="size-3" />
+                ) : (
+                  <Eye className="size-3" />
+                )}
+                {mode === 'public' ? 'Public' : mode === 'readonly' ? 'Read Only' : 'Editable'}
               </span>
               <span className="text-xs text-muted-foreground/60">
                 {classroom.scenes.length} scenes · {classroom.language}
@@ -191,10 +235,12 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
             </div>
           )}
 
-          {mode === 'readonly' && (
+          {(mode === 'readonly' || mode === 'public') && (
             <div className="mt-8 p-6 rounded-2xl bg-muted/30 border border-border/30 text-center">
               <p className="text-sm text-muted-foreground/70 mb-4">
-                This is a read-only shared view. Log in to create your own courseware.
+                {mode === 'public'
+                  ? 'This is a publicly shared view. Sign in to create and share your own courseware.'
+                  : 'This is a read-only shared view. Log in to create your own courseware.'}
               </p>
               <a
                 href="/api/auth/login"

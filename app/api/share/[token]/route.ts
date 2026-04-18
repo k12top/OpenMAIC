@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { readClassroom } from '@/lib/server/classroom-storage';
+import { optionalAuth } from '@/lib/server/auth-guard';
 import type { Scene, Stage } from '@/lib/types/stage';
 
 export async function GET(
@@ -25,6 +26,17 @@ export async function GET(
 
   if (share.expiresAt && new Date(share.expiresAt) < new Date()) {
     return NextResponse.json({ error: 'Share link has expired' }, { status: 410 });
+  }
+
+  // Non-public shares require the viewer to be authenticated
+  if (share.mode !== 'public') {
+    const user = await optionalAuth();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Login required to view this shared classroom', requiresAuth: true },
+        { status: 401 },
+      );
+    }
   }
 
   const dbRow = await db.query.classrooms.findFirst({

@@ -64,6 +64,7 @@ interface StageState {
   generationStatus: 'idle' | 'generating' | 'paused' | 'completed' | 'error';
   currentGeneratingOrder: number;
   failedOutlines: SceneOutline[];
+  creditsInsufficient: boolean;
 
   // Actions
   setStage: (stage: Stage) => void;
@@ -83,6 +84,7 @@ interface StageState {
   addFailedOutline: (outline: SceneOutline) => void;
   clearFailedOutlines: () => void;
   retryFailedOutline: (outlineId: string) => void;
+  setCreditsInsufficient: (value: boolean) => void;
 
   // Getters
   getCurrentScene: () => Scene | null;
@@ -109,6 +111,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   generationStatus: 'idle' as const,
   currentGeneratingOrder: -1,
   failedOutlines: [],
+  creditsInsufficient: false,
 
   // Actions
   setStage: (stage) => {
@@ -231,6 +234,8 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
     });
   },
 
+  setCreditsInsufficient: (value) => set({ creditsInsufficient: value }),
+
   // Getters
   getCurrentScene: () => {
     const { scenes, currentSceneId } = get();
@@ -330,6 +335,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       currentGeneratingOrder: -1,
       failedOutlines: [],
       generatingOutlines: [],
+      creditsInsufficient: false,
     }));
     log.info('Store cleared');
   },

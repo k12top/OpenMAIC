@@ -88,7 +88,7 @@ async function syncUserToDb(user: AuthUser) {
       email: user.email,
     });
     // Also create initial credits for new user
-    const initialCredits = parseInt(process.env.INITIAL_CREDITS || '100', 10);
+    const initialCredits = parseInt(process.env.INITIAL_CREDITS || '10000', 10);
     await db.insert(schema.credits).values({
       userId: user.id,
       balance: initialCredits,
@@ -116,6 +116,25 @@ async function syncUserToDb(user: AuthUser) {
           updatedAt: new Date(),
         })
         .where(eq(schema.users.id, user.id));
+    }
+
+    // Ensure credits row exists (may be missing if DB was unavailable at first login)
+    const creditsRow = await db.query.credits.findFirst({
+      where: eq(schema.credits.userId, user.id),
+    });
+    if (!creditsRow) {
+      const initialCredits = parseInt(process.env.INITIAL_CREDITS || '10000', 10);
+      await db.insert(schema.credits).values({
+        userId: user.id,
+        balance: initialCredits,
+        totalEarned: initialCredits,
+      });
+      await db.insert(schema.creditTransactions).values({
+        userId: user.id,
+        amount: initialCredits,
+        type: 'grant',
+        description: 'Welcome bonus (retroactive)',
+      });
     }
   }
 }

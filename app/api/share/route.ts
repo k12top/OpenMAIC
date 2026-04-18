@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { classroomId, mode = 'readonly' } = body as {
+    const { classroomId, mode = 'public' } = body as {
       classroomId: string;
-      mode?: 'readonly' | 'editable';
+      mode?: 'public' | 'readonly' | 'editable';
     };
 
     if (!classroomId) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       classroomId,
       userId: user.id,
       shareToken,
-      mode: mode as 'readonly' | 'editable',
+      mode: mode as 'public' | 'readonly' | 'editable',
     });
 
     return NextResponse.json({

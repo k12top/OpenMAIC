@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link2, Copy, Check, Eye, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { X, Link2, Copy, Check, Eye, Pencil, Trash2, Loader2, Globe, Lock } from 'lucide-react';
 import { useStageStore } from '@/lib/store/stage';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -14,13 +14,13 @@ interface ShareDialogProps {
 interface ShareItem {
   id: string;
   shareToken: string;
-  mode: 'readonly' | 'editable';
+  mode: 'public' | 'readonly' | 'editable';
   url: string;
   createdAt: string;
 }
 
 export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
-  const [mode, setMode] = useState<'readonly' | 'editable'>('readonly');
+  const [mode, setMode] = useState<'public' | 'readonly' | 'editable'>('public');
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -109,6 +109,18 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         <div className="px-5 py-4 border-b border-border/20">
           <div className="flex items-center gap-2 mb-3">
             <button
+              onClick={() => setMode('public')}
+              className={cn(
+                'flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+                mode === 'public'
+                  ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300'
+                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
+              )}
+            >
+              <Globe className="size-3" />
+              Public
+            </button>
+            <button
               onClick={() => setMode('readonly')}
               className={cn(
                 'flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
@@ -117,7 +129,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                   : 'border-border/40 text-muted-foreground hover:bg-muted/30',
               )}
             >
-              <Eye className="size-3" />
+              <Lock className="size-3" />
               Read Only
             </button>
             <button
@@ -130,13 +142,15 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               )}
             >
               <Pencil className="size-3" />
-              Editable (Copy)
+              Editable
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground/60 mb-3">
-            {mode === 'readonly'
-              ? 'Anyone with the link can view the courseware (no login required).'
-              : 'Logged-in users can copy this courseware to their account and edit it.'}
+            {mode === 'public'
+              ? 'Anyone can view this link without logging in.'
+              : mode === 'readonly'
+                ? 'Requires login to view. Viewers can browse but not edit or copy.'
+                : 'Requires login. Viewers can copy this courseware to their account and edit it.'}
           </p>
           <button
             onClick={createShare}
@@ -168,9 +182,11 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                       <span
                         className={cn(
                           'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium',
-                          share.mode === 'readonly'
-                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                            : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+                          share.mode === 'public'
+                            ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                            : share.mode === 'readonly'
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                              : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
                         )}
                       >
                         {share.mode}

@@ -16,7 +16,7 @@ export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [
   'recharge',
 ]);
 
-export const shareModeEnum = pgEnum('share_mode', ['readonly', 'editable']);
+export const shareModeEnum = pgEnum('share_mode', ['public', 'readonly', 'editable']);
 
 export const classroomStatusEnum = pgEnum('classroom_status', [
   'generating',

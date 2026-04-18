@@ -11,6 +11,7 @@ import {
   Globe,
   AlertCircle,
   RefreshCw,
+  Coins,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRAND_NAME } from '@/lib/constants/brand';
@@ -42,6 +43,7 @@ export function SceneSidebar({
   const { scenes, currentSceneId, setCurrentSceneId, generatingOutlines, generationStatus } =
     useStageStore();
   const failedOutlines = useStageStore.use.failedOutlines();
+  const creditsInsufficient = useStageStore.use.creditsInsufficient();
   const viewportSize = useCanvasStore.use.viewportSize();
   const viewportRatio = useCanvasStore.use.viewportRatio();
 
@@ -138,6 +140,27 @@ export function SceneSidebar({
             <PanelLeftClose className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Insufficient Credits Banner */}
+        {creditsInsufficient && (
+          <div className="mx-2 mb-1 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700/40 flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                Insufficient Credits
+              </span>
+            </div>
+            <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 leading-snug">
+              Generation paused. Please recharge to continue.
+            </p>
+            <a
+              href="/credits"
+              className="text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Go to Credits →
+            </a>
+          </div>
+        )}
 
         {/* Scenes List */}
         <div
@@ -395,7 +418,21 @@ export function SceneSidebar({
                     )}
                   >
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
-                      {isFailed ? (
+                      {creditsInsufficient && isPaused ? (
+                        <div className="flex flex-col items-center gap-1 px-1">
+                          <Coins className="w-4 h-4 text-amber-500" />
+                          <span className="text-[9px] font-medium text-amber-600 dark:text-amber-400 text-center leading-tight">
+                            Insufficient Credits
+                          </span>
+                          <a
+                            href="/credits"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[8px] text-blue-500 hover:underline"
+                          >
+                            Recharge
+                          </a>
+                        </div>
+                      ) : isFailed ? (
                         <div className="flex items-center gap-1 text-xs font-medium text-red-500/90 dark:text-red-400">
                           {onRetryOutline ? (
                             <button

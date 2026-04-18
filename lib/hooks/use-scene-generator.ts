@@ -85,6 +85,9 @@ async function fetchSceneContent(
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({ error: 'Request failed' }));
+    if (response.status === 402) {
+      return { success: false, error: 'INSUFFICIENT_CREDITS' };
+    }
     return { success: false, error: data.error || `HTTP ${response.status}` };
   }
 
@@ -113,6 +116,9 @@ async function fetchSceneActions(
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({ error: 'Request failed' }));
+    if (response.status === 402) {
+      return { success: false, error: 'INSUFFICIENT_CREDITS' };
+    }
     return { success: false, error: data.error || `HTTP ${response.status}` };
   }
 
@@ -253,6 +259,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
       if (generatingRef.current) return;
       generatingRef.current = true;
       abortRef.current = false;
+      store.getState().setCreditsInsufficient(false);
       const removeGeneratingOutline = (outlineId: string) => {
         const current = store.getState().generatingOutlines;
         if (!current.some((o) => o.id === outlineId)) return;
@@ -337,6 +344,12 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               pausedByFailureOrAbort = true;
               break;
             }
+            if (contentResult.error === 'INSUFFICIENT_CREDITS') {
+              store.getState().setCreditsInsufficient(true);
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+              break;
+            }
             store.getState().addFailedOutline(outline);
             options.onSceneFailed?.(outline, contentResult.error || 'Content generation failed');
             store.getState().setGenerationStatus('paused');
@@ -400,6 +413,12 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               pausedByFailureOrAbort = true;
               break;
             }
+            if (actionsResult.error === 'INSUFFICIENT_CREDITS') {
+              store.getState().setCreditsInsufficient(true);
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+              break;
+            }
             store.getState().addFailedOutline(outline);
             options.onSceneFailed?.(outline, actionsResult.error || 'Actions generation failed');
             store.getState().setGenerationStatus('paused');
@@ -457,6 +476,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
 
       // Remove from failed list and mark as generating
       store.getState().retryFailedOutline(outlineId);
+      store.getState().setCreditsInsufficient(false);
       store.getState().setGenerationStatus('generating');
       const currentGenerating = store.getState().generatingOutlines;
       if (!currentGenerating.some((o) => o.id === outline.id)) {
@@ -482,6 +502,11 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
         );
 
         if (!contentResult.success || !contentResult.content) {
+          if (contentResult.error === 'INSUFFICIENT_CREDITS') {
+            store.getState().setCreditsInsufficient(true);
+            store.getState().setGenerationStatus('paused');
+            return;
+          }
           store.getState().addFailedOutline(outline);
           return;
         }
@@ -509,6 +534,11 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
         );
 
         if (!actionsResult.success || !actionsResult.scene) {
+          if (actionsResult.error === 'INSUFFICIENT_CREDITS') {
+            store.getState().setCreditsInsufficient(true);
+            store.getState().setGenerationStatus('paused');
+            return;
+          }
           store.getState().addFailedOutline(outline);
           return;
         }
