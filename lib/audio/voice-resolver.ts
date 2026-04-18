@@ -87,7 +87,7 @@ export function getAvailableProvidersWithVoices(
 ): ProviderWithVoices[] {
   const result: ProviderWithVoices[] = [];
 
-  const EXCLUDED_PROVIDERS: TTSProviderId[] = ['qwen-tts', 'glm-tts'];
+  const EXCLUDED_PROVIDERS: TTSProviderId[] = ['glm-tts'];
 
   for (const [id, config] of Object.entries(TTS_PROVIDERS)) {
     const providerId = id as TTSProviderId;
