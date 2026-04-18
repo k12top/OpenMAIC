@@ -12,6 +12,7 @@ import { useWhiteboardHistoryStore } from '@/lib/store/whiteboard-history';
 import { createLogger } from '@/lib/logger';
 import { MediaStageProvider } from '@/lib/contexts/media-stage-context';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
+import { InsufficientCreditsDialog } from '@/components/credits/insufficient-credits-dialog';
 
 const log = createLogger('Classroom');
 
@@ -23,6 +24,17 @@ export default function ClassroomDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creditsDialogOpen, setCreditsDialogOpen] = useState(false);
+
+  const creditsInsufficient = useStageStore.use.creditsInsufficient();
+  const setCreditsInsufficient = useStageStore.use.setCreditsInsufficient();
+
+  // Auto-show dialog when credits run out during generation
+  useEffect(() => {
+    if (creditsInsufficient) {
+      setCreditsDialogOpen(true);
+    }
+  }, [creditsInsufficient]);
 
   const generationStartedRef = useRef(false);
 
@@ -219,6 +231,14 @@ export default function ClassroomDetailPage() {
             <Stage onRetryOutline={retrySingleOutline} />
           )}
         </div>
+
+        <InsufficientCreditsDialog
+          open={creditsDialogOpen}
+          onClose={() => {
+            setCreditsDialogOpen(false);
+            setCreditsInsufficient(false);
+          }}
+        />
       </MediaStageProvider>
     </ThemeProvider>
   );
