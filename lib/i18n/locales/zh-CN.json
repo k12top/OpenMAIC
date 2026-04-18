@@ -7,7 +7,10 @@
   },
   "home": {
     "slogan": "智能互动课堂与文书生成",
-    "greetingWithName": "嗨，{{name}}"
+    "greetingWithName": "嗨，{{name}}!",
+    "logout": "退出登录",
+    "workspace": "工作空间",
+    "sidebarBranding": "翔宇文书"
   },
   "landing": {
     "badge": "AI 驱动的课件平台",
@@ -55,7 +58,8 @@
     "ttsPreview": "试听",
     "ttsPreviewing": "播放中...",
     "toggleChat": "切换聊天面板",
-    "openChatPanel": "打开聊天面板"
+    "openChatPanel": "打开聊天面板",
+    "voiceSettings": "音色设置"
   },
   "export": {
     "pptx": "导出 PPTX",
@@ -410,7 +414,10 @@
     "agentRoles": {
       "teacher": "教师",
       "assistant": "助教",
-      "student": "学生"
+      "student": "学生",
+      "teacherShortDesc": "主讲教师 · 负责课堂大纲、核心讲解及课堂推进",
+      "assistantShortDesc": "协助讲解 / 答疑补位",
+      "studentShortDesc": "模拟学生提问与思考"
     },
     "agentDescriptions": {
       "default-1": "主讲教师，清晰有条理地讲解知识",
@@ -882,6 +889,12 @@
   },
   "profile": {
     "title": "个人资料",
+    "editProfile": "编辑个人资料",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "输入你的昵称...",
+    "editNickname": "修改资料",
+    "bio": "个人简介",
+    "defaultBioDesc": "在这里分享你的学习格言...",
     "defaultNickname": "同学",
     "chooseAvatar": "选择头像",
     "uploadAvatar": "上传",

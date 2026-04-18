@@ -22,6 +22,8 @@ import {
   ChevronUp,
   LogIn,
   LogOut,
+  Volume2,
+  CheckCircle2,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { LanguageSwitcher } from '@/components/language-switcher';
@@ -29,6 +31,8 @@ import { createLogger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Textarea as UITextarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SettingsDialog } from '@/components/settings';
 import { GenerationToolbar } from '@/components/generation/generation-toolbar';
 import { AgentBar } from '@/components/agent/agent-bar';
@@ -78,6 +82,7 @@ const initialFormState: FormState = {
 function HomePage() {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
+  const { nickname } = useUserProfileStore();
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -445,9 +450,7 @@ function HomePage() {
               title="Credits"
             >
               <Coins className="size-3" />
-              <span className="tabular-nums">
-                {creditsUnlimited ? '∞' : creditBalance}
-              </span>
+              <span className="tabular-nums">{creditsUnlimited ? '∞' : creditBalance}</span>
             </button>
           </>
         )}
@@ -468,15 +471,16 @@ function HomePage() {
           <div className="mb-8 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden">
-                <img src="/logos/xiangyu-logo.png" alt={BRAND_NAME} className="size-full object-cover scale-110" />
+                <img
+                  src="/logos/xiangyu-logo.png"
+                  alt={BRAND_NAME}
+                  className="size-full object-cover scale-110"
+                />
               </div>
               <div className="flex flex-col">
                 <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white leading-tight uppercase select-none">
                   {BRAND_NAME}
                 </h1>
-                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-[0.2em] leading-tight">
-                  Premium SaaS
-                </p>
               </div>
             </div>
           </div>
@@ -522,7 +526,6 @@ function HomePage() {
       {/* ═══ Right Main Workspace Panel (70%) ═══ */}
       <div className="flex-1 h-full overflow-y-auto bg-slate-50/40 dark:bg-slate-950/40 z-10 relative scrollbar-hide flex flex-col">
         <div className="w-full max-w-5xl mx-auto px-4 py-8 md:px-10 md:py-12 flex flex-col gap-10 flex-1">
-          
           {/* Main Prompt Card */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -530,11 +533,15 @@ function HomePage() {
             transition={{ duration: 0.4 }}
             className="w-full relative shadow-sm"
           >
-            <div className="relative z-20 flex items-center justify-between mb-4">
-              <GreetingBar />
+            <div className="relative z-20 flex items-center justify-between mb-4 h-12">
+              <div className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-2 duration-700">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                  {t('home.greetingWithName', { name: nickname || t('profile.defaultNickname') })}
+                </h2>
+              </div>
             </div>
 
-            <div className="w-full rounded-2xl border border-border/80 bg-white dark:bg-slate-900 shadow-xl shadow-black/[0.02] dark:shadow-black/20 focus-within:shadow-violet-500/[0.08] focus-within:border-violet-500/40 transition-all duration-300 overflow-hidden flex flex-col">
+            <div className="w-full rounded-2xl border border-slate-200 dark:border-border/80 bg-white dark:bg-slate-900 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/20 focus-within:shadow-violet-500/[0.08] focus-within:border-violet-500/40 transition-all duration-300 overflow-hidden flex flex-col">
               <textarea
                 ref={textareaRef}
                 placeholder={t('upload.requirementPlaceholder')}
@@ -543,7 +550,7 @@ function HomePage() {
                 onChange={(e) => updateForm('requirement', e.target.value)}
                 onKeyDown={handleKeyDown}
               />
-              
+
               <div className="px-6 pb-4 pt-4 flex items-center justify-between border-t border-border/30 bg-slate-50/50 dark:bg-slate-900/50">
                 <div className="flex items-center gap-3">
                   <SpeechButton
@@ -572,7 +579,7 @@ function HomePage() {
                     onPdfError={setError}
                   />
                 </div>
-                
+
                 <button
                   onClick={handleGenerate}
                   disabled={!canGenerate}
@@ -604,7 +611,6 @@ function HomePage() {
               )}
             </AnimatePresence>
           </motion.div>
-
           {/* Historic Library Section */}
           <div className="flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-6">
@@ -619,37 +625,39 @@ function HomePage() {
 
             {classrooms.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
-                 {classrooms.map((classroom, i) => (
-                    <motion.div
-                      key={classroom.id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        delay: Math.min(i * 0.04, 0.4),
-                        duration: 0.4,
-                      }}
-                    >
-                      <ClassroomCard
-                        classroom={classroom}
-                        slide={thumbnails[classroom.id]}
-                        formatDate={formatDate}
-                        onDelete={handleDelete}
-                        onRename={handleRename}
-                        confirmingDelete={pendingDeleteId === classroom.id}
-                        onConfirmDelete={() => confirmDelete(classroom.id)}
-                        onCancelDelete={() => setPendingDeleteId(null)}
-                        onClick={() => router.push(`/classroom/${classroom.id}`)}
-                      />
-                    </motion.div>
-                  ))}
+                {classrooms.map((classroom, i) => (
+                  <motion.div
+                    key={classroom.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: Math.min(i * 0.04, 0.4),
+                      duration: 0.4,
+                    }}
+                  >
+                    <ClassroomCard
+                      classroom={classroom}
+                      slide={thumbnails[classroom.id]}
+                      formatDate={formatDate}
+                      onDelete={handleDelete}
+                      onRename={handleRename}
+                      confirmingDelete={pendingDeleteId === classroom.id}
+                      onConfirmDelete={() => confirmDelete(classroom.id)}
+                      onCancelDelete={() => setPendingDeleteId(null)}
+                      onClick={() => router.push(`/classroom/${classroom.id}`)}
+                    />
+                  </motion.div>
+                ))}
               </div>
             ) : (
               <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
-                 <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
-                    <BookOpen className="size-8" />
-                 </div>
-                 <h3 className="text-lg font-semibold text-foreground/80 mb-2">No Documents Yet</h3>
-                 <p className="text-sm text-muted-foreground max-w-xs">Use the prompt workspace above to generate your first interactive document!</p>
+                <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
+                  <BookOpen className="size-8" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground/80 mb-2">No Documents Yet</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Use the prompt workspace above to generate your first interactive document!
+                </p>
               </div>
             )}
           </div>
@@ -660,333 +668,181 @@ function HomePage() {
 }
 
 // ─── Greeting Bar — avatar + "Hi, Name", click to edit in-place ────
-const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
-
-function isCustomAvatar(src: string) {
-  return src.startsWith('data:');
-}
-
-function GreetingBar() {
+function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
   const { t } = useI18n();
-  const avatar = useUserProfileStore((s) => s.avatar);
-  const nickname = useUserProfileStore((s) => s.nickname);
-  const bio = useUserProfileStore((s) => s.bio);
-  const setAvatar = useUserProfileStore((s) => s.setAvatar);
-  const setNickname = useUserProfileStore((s) => s.setNickname);
-  const setBio = useUserProfileStore((s) => s.setBio);
-
-  const [open, setOpen] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState('');
-  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [casdoorUser, setCasdoorUser] = useState<any>(null);
+  const { nickname, bio, avatar, setNickname, setBio, setAvatar } = useUserProfileStore();
+  const [editing, setEditing] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState(nickname);
+  const [bioDraft, setBioDraft] = useState(bio);
+  const [avatarDraft, setAvatarDraft] = useState(avatar);
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.authenticated && data.user) {
-          setCasdoorUser(data.user);
-          // Sync Casdoor user gently to local store
-          if (!nickname || nickname === t('profile.defaultNickname')) {
-            setNickname(data.user.nickname || data.user.id);
-          }
-          if (data.user.avatar && avatar === AVATAR_OPTIONS[0]) {
-            setAvatar(data.user.avatar);
-          }
-        }
-      })
-      .catch((err) => console.error('Failed to fetch Casdoor profile:', err));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setNicknameDraft(nickname);
+    setBioDraft(bio);
+    setAvatarDraft(avatar);
+  }, [nickname, bio, avatar]);
 
-  const displayName = nickname || t('profile.defaultNickname');
-
-  // Click-outside to collapse
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setEditingName(false);
-        setAvatarPickerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const startEditName = () => {
-    setNameDraft(nickname);
-    setEditingName(true);
-    setTimeout(() => nameInputRef.current?.focus(), 50);
-  };
-
-  const commitName = () => {
-    setNickname(nameDraft.trim());
-    setEditingName(false);
-  };
-
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_AVATAR_SIZE) {
-      toast.error(t('profile.fileTooLarge'));
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('profile.invalidFileType'));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 128;
-        canvas.height = 128;
-        const ctx = canvas.getContext('2d')!;
-        const scale = Math.max(128 / img.width, 128 / img.height);
-        const w = img.width * scale;
-        const h = img.height * scale;
-        ctx.drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
-        setAvatar(canvas.toDataURL('image/jpeg', 0.85));
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+  const handleSave = () => {
+    setNickname(nicknameDraft);
+    setBio(bioDraft);
+    setAvatar(avatarDraft);
+    setEditing(false);
   };
 
   return (
-    <div ref={containerRef} className="relative pl-4 pr-2 pt-3.5 pb-1 w-auto">
-      <input
-        ref={avatarInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleAvatarUpload}
-      />
-
-      {/* ── Collapsed pill (always in flow) ── */}
-      {!open && (
-        <div
-          className="flex items-center gap-2.5 cursor-pointer transition-all duration-200 group rounded-full px-2.5 py-1.5 border border-border/50 text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 active:scale-[0.97]"
-          onClick={() => setOpen(true)}
-        >
-          <div className="shrink-0 relative">
-            <div className="size-8 rounded-full overflow-hidden ring-[1.5px] ring-border/30 group-hover:ring-violet-400/60 dark:group-hover:ring-violet-400/40 transition-all duration-300">
-              <img src={avatar} alt="" className="size-full object-cover" />
-            </div>
-            <div className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full bg-white dark:bg-slate-800 border border-border/40 flex items-center justify-center opacity-60 group-hover:opacity-100 transition-opacity">
-              <Pencil className="size-[7px] text-muted-foreground/70" />
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="leading-none select-none flex items-center gap-1">
-                  <span className="text-[13px] font-semibold text-foreground/85 group-hover:text-foreground transition-colors">
-                    {t('home.greetingWithName', { name: displayName })}
-                  </span>
-                  <ChevronDown className="size-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" sideOffset={4}>
-                {t('profile.editTooltip')}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      )}
-
-      {/* ── Expanded panel (absolute, floating) ── */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="absolute left-4 top-3.5 z-50 w-64"
+    <div className={cn('flex items-center gap-3 transition-all', isSidebar ? 'w-full' : 'w-fit')}>
+      {/* ── Avatar Dropdown ── */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <div
+            className={cn(
+              'relative group cursor-pointer shrink-0 transition-transform hover:scale-105 active:scale-95',
+              isSidebar ? 'size-9' : 'size-11',
+            )}
           >
-            <div className="rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_8px_-2px_rgba(0,0,0,0.3)] px-2.5 py-2">
-              {/* ── Row: avatar + name ── */}
-              <div
-                className="flex items-center gap-2.5 cursor-pointer transition-all duration-200"
-                onClick={() => {
-                  setOpen(false);
-                  setEditingName(false);
-                  setAvatarPickerOpen(false);
-                }}
-              >
-                {/* Avatar */}
-                <div
-                  className="shrink-0 relative cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAvatarPickerOpen(!avatarPickerOpen);
-                  }}
-                >
-                  <div className="size-8 rounded-full overflow-hidden ring-[1.5px] ring-violet-300/70 dark:ring-violet-500/40 transition-all duration-300">
-                    <img src={avatar} alt="" className="size-full object-cover" />
-                  </div>
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full bg-white dark:bg-slate-800 border border-border/60 flex items-center justify-center"
+            <div className="size-full rounded-2xl overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-xl">
+              <img src={avatar} alt="Avatar" className="size-full object-cover" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 size-5 bg-emerald-500 rounded-lg flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm animate-in zoom-in duration-300">
+              <CheckCircle2 className="size-3 text-white" />
+            </div>
+          </div>
+        </PopoverTrigger>
+        <PopoverContent
+          align={isSidebar ? 'start' : 'center'}
+          side={isSidebar ? 'right' : 'bottom'}
+          sideOffset={12}
+          className="w-56 p-1 rounded-2xl border-border/60 shadow-2xl"
+        >
+          <div className="p-2 flex flex-col gap-1">
+            <div className="px-2 py-1.5 mb-1 pb-2 border-b border-border/30">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                {t('profile.title')}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setEditing(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-foreground/80 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
+            >
+              <Pencil className="size-3.5" />
+              {t('profile.editNickname') || '修改资料'}
+            </button>
+            <button
+              onClick={async () => {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.reload();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all"
+            >
+              <LogOut className="size-3.5" />
+              {t('home.logout') || '退出登录'}
+            </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* ── Nickname & Bio (Editable) ── */}
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div
+          className="flex items-center gap-2 group cursor-pointer"
+          onClick={() => setEditing(true)}
+        >
+          <h2
+            className={cn(
+              'font-black text-slate-900 dark:text-white tracking-tight leading-none truncate',
+              isSidebar ? 'text-[14px]' : 'text-[17px]',
+            )}
+          >
+            {nickname || t('profile.defaultNickname')}
+          </h2>
+          {!isSidebar && (
+            <Pencil className="size-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
+        </div>
+        <p
+          className={cn(
+            'text-muted-foreground leading-none truncate hover:text-foreground/80 transition-colors cursor-pointer',
+            isSidebar ? 'text-[10px]' : 'text-[11px]',
+          )}
+          onClick={() => setEditing(true)}
+        >
+          {bio || t('profile.defaultBioDesc') || '在这里分享你的学习格言...'}
+        </p>
+      </div>
+
+      {/* ── Edit Modal ── */}
+      <Dialog open={editing} onOpenChange={setEditing}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">
+              {t('profile.editProfile') || '编辑个人资料'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            {/* Avatar Selection */}
+            <div className="grid gap-3">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {t('profile.chooseAvatar')}
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {AVATAR_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setAvatarDraft(opt)}
+                    className={cn(
+                      'size-12 rounded-xl overflow-hidden ring-2 transition-all',
+                      avatarDraft === opt
+                        ? 'ring-violet-500 scale-110 shadow-lg'
+                        : 'ring-transparent opacity-60 hover:opacity-100',
+                    )}
                   >
-                    <ChevronDown
-                      className={cn(
-                        'size-2 text-muted-foreground/70 transition-transform duration-200',
-                        avatarPickerOpen && 'rotate-180',
-                      )}
-                    />
-                  </motion.div>
-                </div>
-
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  {editingName ? (
-                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        ref={nameInputRef}
-                        value={nameDraft}
-                        onChange={(e) => setNameDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitName();
-                          if (e.key === 'Escape') {
-                            setEditingName(false);
-                          }
-                        }}
-                        onBlur={commitName}
-                        maxLength={20}
-                        placeholder={t('profile.defaultNickname')}
-                        className="flex-1 min-w-0 h-6 bg-transparent border-b border-border/80 text-[13px] font-semibold text-foreground outline-none placeholder:text-muted-foreground/40"
-                      />
-                      <button
-                        onClick={commitName}
-                        className="shrink-0 size-5 rounded flex items-center justify-center text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900/30"
-                      >
-                        <Check className="size-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEditName();
-                      }}
-                      className="group/name inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="text-[13px] font-semibold text-foreground/85 group-hover/name:text-foreground transition-colors">
-                        {displayName}
-                      </span>
-                      <Pencil className="size-2.5 text-muted-foreground/30 opacity-0 group-hover/name:opacity-100 transition-opacity" />
-                    </span>
-                  )}
-                </div>
-
-                {/* Collapse arrow */}
-                <motion.div
-                  initial={{ opacity: 0, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="shrink-0 size-6 rounded-full flex items-center justify-center hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                >
-                  <ChevronUp className="size-3.5 text-muted-foreground/50" />
-                </motion.div>
-              </div>
-
-              {/* ── Expandable content ── */}
-              <div className="pt-2" onClick={(e) => e.stopPropagation()}>
-                {/* Avatar picker */}
-                <AnimatePresence>
-                  {avatarPickerOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.15, ease: 'easeInOut' }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-1 pb-2.5 flex items-center gap-1.5 flex-wrap">
-                        {AVATAR_OPTIONS.map((url) => (
-                          <button
-                            key={url}
-                            onClick={() => setAvatar(url)}
-                            className={cn(
-                              'size-7 rounded-full overflow-hidden bg-gray-50 dark:bg-gray-800 cursor-pointer transition-all duration-150',
-                              'hover:scale-110 active:scale-95',
-                              avatar === url
-                                ? 'ring-2 ring-violet-400 dark:ring-violet-500 ring-offset-0'
-                                : 'hover:ring-1 hover:ring-muted-foreground/30',
-                            )}
-                          >
-                            <img src={url} alt="" className="size-full" />
-                          </button>
-                        ))}
-                        <label
-                          className={cn(
-                            'size-7 rounded-full flex items-center justify-center cursor-pointer transition-all duration-150 border border-dashed',
-                            'hover:scale-110 active:scale-95',
-                            isCustomAvatar(avatar)
-                              ? 'ring-2 ring-violet-400 dark:ring-violet-500 ring-offset-0 border-violet-300 dark:border-violet-600 bg-violet-50 dark:bg-violet-900/30'
-                              : 'border-muted-foreground/30 text-muted-foreground/50 hover:border-muted-foreground/50',
-                          )}
-                          onClick={() => avatarInputRef.current?.click()}
-                          title={t('profile.uploadAvatar')}
-                        >
-                          <ImagePlus className="size-3" />
-                        </label>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Bio */}
-                <UITextarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder={t('profile.bioPlaceholder')}
-                  maxLength={200}
-                  rows={2}
-                  className="resize-none border-border/40 bg-transparent min-h-[72px] !text-[13px] !leading-relaxed placeholder:!text-[11px] placeholder:!leading-relaxed focus-visible:ring-1 focus-visible:ring-border/60"
-                />
-
-                {/* Casdoor Auth Actions */}
-                <div className="pt-3 pb-1 flex justify-end">
-                  {casdoorUser ? (
-                    <button
-                      onClick={async () => {
-                        await fetch('/api/auth/logout', { method: 'POST' });
-                        window.location.reload();
-                      }}
-                      className="flex items-center gap-1.5 text-[12px] text-red-500/80 hover:text-red-600 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
-                    >
-                      <LogOut className="size-3" />
-                      Logout
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        window.location.href = '/api/auth/login';
-                      }}
-                      className="flex items-center gap-1.5 text-[12px] text-violet-500/80 hover:text-violet-600 transition-colors cursor-pointer px-2 py-1 rounded hover:bg-violet-50 dark:hover:bg-violet-950/30"
-                    >
-                      <LogIn className="size-3" />
-                      Login via Casdoor
-                    </button>
-                  )}
-                </div>
+                    <img src={opt} alt="Option" className="size-full object-cover" />
+                  </button>
+                ))}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+            <div className="grid gap-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {t('profile.nickname') || '昵称'}
+              </label>
+              <input
+                value={nicknameDraft}
+                onChange={(e) => setNicknameDraft(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-border/60 bg-slate-50 dark:bg-slate-900 focus:border-violet-500 outline-none font-bold"
+                placeholder={t('profile.nicknamePlaceholder')}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {t('profile.bio') || '个人简介'}
+              </label>
+              <textarea
+                value={bioDraft}
+                onChange={(e) => setBioDraft(e.target.value)}
+                className="w-full min-h-[100px] px-4 py-3 rounded-xl border border-border/60 bg-slate-50 dark:bg-slate-900 focus:border-violet-500 outline-none text-sm resize-none"
+                placeholder={t('profile.bioPlaceholder')}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setEditing(false)}
+              className="px-6 py-2.5 rounded-xl font-bold text-sm text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-6 py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm shadow-lg shadow-violet-600/20 hover:bg-violet-700 transition-all"
+            >
+              {t('common.save')}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1009,28 +865,22 @@ function SidebarFooter() {
   }, []);
 
   return (
-    <div className="mt-auto pt-6 border-t border-border/30">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-muted-foreground/40 font-medium tracking-wide">
-          {BRAND_NAME} &middot; Workspace
+    <div className="mt-auto pt-6 flex flex-col gap-4 border-t border-border/30">
+      {/* Profile Bar */}
+      <div className="px-1">
+        <GreetingBar isSidebar={true} />
+      </div>
+
+      <div className="flex items-center justify-between opacity-60">
+        <span className="text-[10px] text-muted-foreground/80 font-bold uppercase tracking-[0.15em]">
+          {t('home.sidebarBranding')} &middot; {t('home.workspace')}
         </span>
-        {casdoorUser ? (
-          <button
-            onClick={async () => {
-              await fetch('/api/auth/logout', { method: 'POST' });
-              window.location.reload();
-            }}
-            className="flex items-center gap-1.5 text-[11px] text-red-500/70 hover:text-red-600 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
-          >
-            <LogOut className="size-3" />
-            {t('home.logout') || '退出登录'}
-          </button>
-        ) : (
+        {!casdoorUser && (
           <button
             onClick={() => {
               window.location.href = '/api/auth/login';
             }}
-            className="flex items-center gap-1.5 text-[11px] text-violet-500/70 hover:text-violet-600 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30"
+            className="flex items-center gap-1.5 text-[11px] text-violet-500/70 hover:text-violet-600 transition-colors cursor-pointer px-2 py-1 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30"
           >
             <LogIn className="size-3" />
             Login

@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   }
 }
 
-async function syncUserOnLogin(casdoorUser: Record<string, string>) {
+async function syncUserOnLogin(casdoorUser: any) {
   const db = getDb();
   const userId = casdoorUser.id || casdoorUser.name || casdoorUser.sub || '';
   if (!userId) return;

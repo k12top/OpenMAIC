@@ -131,9 +131,9 @@ function VoiceSelectorContent({
 }) {
   const { t } = useI18n();
   return (
-    <div className="w-64 max-h-[320px] overflow-y-auto p-1.5 flex flex-col gap-1 custom-scrollbar">
+    <div className="w-[320px] max-h-[400px] overflow-y-auto p-2 flex flex-col gap-1.5 custom-scrollbar bg-white dark:bg-slate-900">
       <div className="px-2 py-2 mb-1 border-b border-border/40">
-        <h4 className="text-[12px] font-bold text-foreground flex items-center gap-2">
+        <h4 className="text-[13px] font-bold text-foreground flex items-center gap-2">
           <Volume2 className="size-3.5 text-primary" />
           {t('toolbar.voiceSettings') || '选择音色'}
         </h4>
@@ -543,7 +543,7 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
                 <RoleBadge role="teacher" />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-normal line-clamp-2">
-                主讲教师 · 负责课堂大纲、核心讲解及课堂推进
+                {t('settings.agentRoles.teacherShortDesc')}
               </p>
               {showVoice && (
                 <div className="mt-1">
@@ -601,29 +601,31 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
                   <div className="size-10 rounded-xl overflow-hidden shadow-sm shrink-0 ring-1 ring-border/20">
                     <img src={agent.avatar} alt={agent.name} className="size-full object-cover" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={cn("text-[13px] font-bold truncate", isSelected ? "text-primary" : "text-foreground")}>
-                        {agent.name}
-                      </span>
-                      <RoleBadge role={agent.role} />
+                    <div className="flex-1 min-w-0 pr-2">
+                      <div className="flex items-center gap-2 mb-0.5 overflow-hidden">
+                        <span className={cn("text-[13px] font-bold truncate", isSelected ? "text-primary" : "text-foreground")}>
+                          {agent.name}
+                        </span>
+                        <div className="shrink-0">
+                          <RoleBadge role={agent.role} />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 italic shrink-0">
+                        {agent.role === 'assistant' ? t('settings.agentRoles.assistantShortDesc') : t('settings.agentRoles.studentShortDesc')}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1 italic">
-                      {agent.role === 'assistant' ? '协助讲解 / 答疑补位' : '模拟学生提问与思考'}
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {isSelected && (
-                      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                        <AgentVoicePill agent={agent} agentIndex={idx + 1} availableProviders={availableProviders} disabled={!ttsEnabled} />
-                      </motion.div>
-                    )}
-                    <Checkbox
-                      checked={isSelected}
-                      className={cn("pointer-events-none rounded-md", !isSelected && "opacity-40")}
-                    />
-                  </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-auto">
+                      {isSelected && (
+                        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="shrink-0">
+                          <AgentVoicePill agent={agent} agentIndex={idx + 1} availableProviders={availableProviders} disabled={!ttsEnabled} />
+                        </motion.div>
+                      )}
+                      <Checkbox
+                        checked={isSelected}
+                        className={cn("pointer-events-none rounded-md shrink-0 border-2", !isSelected && "opacity-20")}
+                      />
+                    </div>
                   {/* Active highlight bar */}
                   {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-full my-3" />}
                 </div>

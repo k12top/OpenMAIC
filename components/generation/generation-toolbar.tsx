@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Bot, Check, ChevronLeft, Globe, Paperclip, FileText, X, Globe2 } from 'lucide-react';
+import { Bot, Check, ChevronLeft, ChevronDown, Globe, Paperclip, FileText, X, Globe2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -28,16 +28,16 @@ const MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024;
 
 // ─── Supported Course Languages ──────────────────────────────
 const COURSE_LANGUAGES = [
-  { code: 'zh-CN', label: '中文' },
-  { code: 'en-US', label: 'English' },
-  { code: 'ja-JP', label: '日本語' },
-  { code: 'ko-KR', label: '한국어' },
-  { code: 'fr-FR', label: 'Français' },
-  { code: 'de-DE', label: 'Deutsch' },
-  { code: 'es-ES', label: 'Español' },
-  { code: 'pt-BR', label: 'Português' },
-  { code: 'ru-RU', label: 'Русский' },
-  { code: 'ar-SA', label: 'العربية' },
+  { code: 'zh-CN', label: '中文', flag: '🇨🇳' },
+  { code: 'en-US', label: 'English', flag: '🇺🇸' },
+  { code: 'ja-JP', label: '日本語', flag: '🇯🇵' },
+  { code: 'ko-KR', label: '한국어', flag: '🇰🇷' },
+  { code: 'fr-FR', label: 'Français', flag: '🇫🇷' },
+  { code: 'de-DE', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'es-ES', label: 'Español', flag: '🇪🇸' },
+  { code: 'pt-BR', label: 'Português', flag: '🇧🇷' },
+  { code: 'ru-RU', label: 'Русский', flag: '🇷🇺' },
+  { code: 'ar-SA', label: 'العربية', flag: '🇸🇦' },
 ] as const;
 
 // ─── Types ───────────────────────────────────────────────────
@@ -126,9 +126,9 @@ export function GenerationToolbar({
 
   // ─── Pill button helper ─────────────────────────────
   const pillCls =
-    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all cursor-pointer select-none whitespace-nowrap border';
-  const pillMuted = `${pillCls} border-border/50 text-muted-foreground/70 hover:text-foreground hover:bg-muted/60`;
-  const pillActive = `${pillCls} border-violet-200/60 dark:border-violet-700/50 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300`;
+    'inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all cursor-pointer select-none whitespace-nowrap bg-white dark:bg-slate-800 shadow-sm hover:shadow-md';
+  const pillMuted = `${pillCls} border border-border/60 text-muted-foreground/80 hover:text-foreground hover:bg-slate-50 dark:hover:bg-slate-700/50`;
+  const pillActive = `${pillCls} border border-violet-500/50 bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400 ring-4 ring-violet-500/10`;
 
   return (
     <div className={cn("flex items-center gap-2", layoutMode === 'bottom' && "gap-3")}>
@@ -167,29 +167,47 @@ export function GenerationToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
-                <button className={pillMuted}>
-                  <Globe className="size-3.5" />
-                  <span>{COURSE_LANGUAGES.find((l) => l.code === language)?.label || language}</span>
+                <button
+                  className={cn(
+                    pillCls,
+                    'bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-border/30 px-2.5 flex items-center gap-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group'
+                  )}
+                >
+                  <span className="size-5 rounded flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-xs shrink-0">
+                    {COURSE_LANGUAGES.find((l) => l.code === language)?.flag || '🌐'}
+                  </span>
+                  <span className="truncate flex-1 text-left font-bold">
+                    {COURSE_LANGUAGES.find((l) => l.code === language)?.label || language}
+                  </span>
+                  <ChevronDown className="size-3 opacity-40 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </button>
               </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent>{t('toolbar.languageHint')}</TooltipContent>
           </Tooltip>
-          <PopoverContent align="start" sideOffset={8} className="w-48 p-1">
-            <div className="max-h-60 overflow-y-auto">
+          <PopoverContent align="start" sideOffset={8} className="w-56 p-2 rounded-xl border-border/80 shadow-2xl">
+            <div className="max-h-64 overflow-y-auto pr-1 custom-scrollbar flex flex-col gap-1">
               {COURSE_LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => onLanguageChange(lang.code)}
                   className={cn(
-                    'w-full px-3 py-1.5 text-left text-sm rounded-md transition-colors flex items-center justify-between',
+                    'w-full px-3 py-2 text-left text-sm rounded-lg transition-all flex items-center gap-3',
                     language === lang.code
-                      ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
-                      : 'hover:bg-muted/50 text-foreground',
+                      ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/20'
+                      : 'hover:bg-muted text-foreground',
                   )}
                 >
-                  <span>{lang.label}</span>
-                  <span className="text-[10px] text-muted-foreground/60">{lang.code}</span>
+                  <span className="size-6 rounded-md bg-white/10 flex items-center justify-center text-sm shadow-inner shrink-0">
+                    {lang.flag}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold truncate">{lang.label}</div>
+                    <div className={cn("text-[10px] uppercase tracking-widest opacity-60", language === lang.code ? "text-white/80" : "text-muted-foreground")}>
+                      {lang.code}
+                    </div>
+                  </div>
+                  {language === lang.code && <Check className="size-3.5 shrink-0" />}
                 </button>
               ))}
             </div>
