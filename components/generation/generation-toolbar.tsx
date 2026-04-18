@@ -51,6 +51,8 @@ export interface GenerationToolbarProps {
   pdfFile: File | null;
   onPdfFileChange: (file: File | null) => void;
   onPdfError: (error: string | null) => void;
+  // Layout mode handling
+  layoutMode?: 'left' | 'bottom' | 'all';
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -63,6 +65,7 @@ export function GenerationToolbar({
   pdfFile,
   onPdfFileChange,
   onPdfError,
+  layoutMode = 'all',
 }: GenerationToolbarProps) {
   const { t } = useI18n();
   const currentProviderId = useSettingsStore((s) => s.providerId);
@@ -128,9 +131,9 @@ export function GenerationToolbar({
   const pillActive = `${pillCls} border-violet-200/60 dark:border-violet-700/50 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300`;
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {/* ── Model selector ── */}
-      {configuredProviders.length > 0 ? (
+    <div className={cn("flex items-center gap-2", layoutMode === 'bottom' && "gap-3")}>
+      {/* Model selector (All only — not in left sidebar) */}
+      {layoutMode === 'all' && (configuredProviders.length > 0 ? (
         <ModelSelectorPopover
           configuredProviders={configuredProviders}
           currentProviderId={currentProviderId}
@@ -156,16 +159,89 @@ export function GenerationToolbar({
           </TooltipTrigger>
           <TooltipContent>{t('toolbar.configureProviderHint')}</TooltipContent>
         </Tooltip>
+      ))}
+
+      {/* Language selector (Left / All) */}
+      {(layoutMode === 'all' || layoutMode === 'left') && (
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <button className={pillMuted}>
+                  <Globe className="size-3.5" />
+                  <span>{COURSE_LANGUAGES.find((l) => l.code === language)?.label || language}</span>
+                </button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{t('toolbar.languageHint')}</TooltipContent>
+          </Tooltip>
+          <PopoverContent align="start" sideOffset={8} className="w-48 p-1">
+            <div className="max-h-60 overflow-y-auto">
+              {COURSE_LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => onLanguageChange(lang.code)}
+                  className={cn(
+                    'w-full px-3 py-1.5 text-left text-sm rounded-md transition-colors flex items-center justify-between',
+                    language === lang.code
+                      ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
+                      : 'hover:bg-muted/50 text-foreground',
+                  )}
+                >
+                  <span>{lang.label}</span>
+                  <span className="text-[10px] text-muted-foreground/60">{lang.code}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
 
-      {/* ── Separator ── */}
-      <div className="w-px h-4 bg-border/60 mx-1" />
+      {/* Model selector (Bottom only) */}
+      {layoutMode === 'bottom' && (configuredProviders.length > 0 ? (
+        <ModelSelectorPopover
+          configuredProviders={configuredProviders}
+          currentProviderId={currentProviderId}
+          currentModelId={currentModelId}
+          currentProviderConfig={currentProviderConfig}
+          setModel={setModel}
+          t={t}
+        />
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onSettingsOpen('providers')}
+              className={cn(
+                pillCls,
+                'text-amber-600 dark:text-amber-400 animate-pulse',
+                'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50',
+              )}
+            >
+              <Bot className="size-3.5" />
+              <span>{t('toolbar.configureProvider')}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('toolbar.configureProviderHint')}</TooltipContent>
+        </Tooltip>
+      ))}
 
-      {/* ── PDF (parser + upload) combined Popover ── */}
-      <Popover>
-        <PopoverTrigger asChild>
+      {/* PDF upload simple button (Bottom / All) */}
+      {(layoutMode === 'all' || layoutMode === 'bottom') && (
+        <>
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFileSelect(f);
+              e.target.value = '';
+            }}
+          />
           {pdfFile ? (
-            <button className={pillActive}>
+            <button className={pillActive} onClick={() => fileInputRef.current?.click()}>
               <Paperclip className="size-3.5" />
               <span className="max-w-[100px] truncate">{pdfFile.name}</span>
               <span
@@ -180,246 +256,40 @@ export function GenerationToolbar({
               </span>
             </button>
           ) : (
-            <button className={pillMuted}>
-              <Paperclip className="size-3.5" />
-            </button>
-          )}
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 p-0">
-          {/* Parser selector */}
-          <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-            <span className="text-xs font-medium text-muted-foreground shrink-0">
-              {t('toolbar.pdfParser')}
-            </span>
-            <Select value={pdfProviderId} onValueChange={(v) => setPDFProvider(v as PDFProviderId)}>
-              <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(PDF_PROVIDERS).map((provider) => {
-                  const cfg = pdfProvidersConfig[provider.id];
-                  const available =
-                    !provider.requiresApiKey || !!cfg?.apiKey || !!cfg?.isServerConfigured;
-                  return (
-                    <SelectItem key={provider.id} value={provider.id} disabled={!available}>
-                      <div className={cn('flex items-center gap-1.5', !available && 'opacity-50')}>
-                        {provider.icon && (
-                          <img src={provider.icon} alt={provider.name} className="w-3.5 h-3.5" />
-                        )}
-                        {provider.name}
-                        {cfg?.isServerConfigured && (
-                          <span className="text-[9px] px-1 py-0 rounded border text-muted-foreground">
-                            {t('settings.serverConfigured')}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Upload area / file info */}
-          <div className="px-3 pb-3">
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept=".pdf"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleFileSelect(f);
-                e.target.value = '';
-              }}
-            />
-            {pdfFile ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="size-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-                    <FileText className="size-4 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{pdfFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onPdfFileChange(null)}
-                  className="w-full text-xs text-destructive hover:underline text-left"
-                >
-                  {t('toolbar.removePdf')}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className={pillMuted} onClick={() => fileInputRef.current?.click()}>
+                  <Paperclip className="size-3.5" />
                 </button>
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  'flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 transition-colors cursor-pointer',
-                  isDragging
-                    ? 'border-violet-400 bg-violet-50 dark:bg-violet-950/20'
-                    : 'border-muted-foreground/20 hover:border-violet-300',
-                )}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  const f = e.dataTransfer.files?.[0];
-                  if (f) handleFileSelect(f);
-                }}
-              >
-                <Paperclip className="size-5 text-muted-foreground/50 mb-1.5" />
-                <p className="text-xs font-medium">{t('toolbar.pdfUpload')}</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                  {t('upload.pdfSizeLimit')}
-                </p>
-              </div>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-
-      {/* ── Web Search ── */}
-      {webSearchAvailable ? (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className={webSearch ? pillActive : pillMuted}>
-              <Globe2 className={cn('size-3.5', webSearch && 'animate-pulse')} />
-              {webSearch && (
-                <span>{WEB_SEARCH_PROVIDERS[webSearchProviderId]?.name || 'Search'}</span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-64 p-3 space-y-3">
-            {/* Toggle */}
-            <button
-              onClick={() => onWebSearchChange(!webSearch)}
-              className={cn(
-                'w-full flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all',
-                webSearch
-                  ? 'bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800'
-                  : 'border-border hover:bg-muted/50',
-              )}
-            >
-              <Globe2
-                className={cn(
-                  'size-4 shrink-0',
-                  webSearch ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground',
-                )}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium">
-                  {webSearch ? t('toolbar.webSearchOn') : t('toolbar.webSearchOff')}
-                </p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                  {t('toolbar.webSearchDesc')}
-                </p>
-              </div>
-            </button>
-
-            {/* Provider selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground shrink-0">
-                {t('toolbar.webSearchProvider')}
-              </span>
-              <Select
-                value={webSearchProviderId}
-                onValueChange={(v) => setWebSearchProvider(v as WebSearchProviderId)}
-              >
-                <SelectTrigger className="h-7 text-xs flex-1 min-w-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(WEB_SEARCH_PROVIDERS).map((provider) => {
-                    const cfg = webSearchProvidersConfig[provider.id];
-                    const available =
-                      !provider.requiresApiKey || !!cfg?.apiKey || !!cfg?.isServerConfigured;
-                    return (
-                      <SelectItem key={provider.id} value={provider.id} disabled={!available}>
-                        <div
-                          className={cn('flex items-center gap-1.5', !available && 'opacity-50')}
-                        >
-                          {provider.name}
-                          {cfg?.isServerConfigured && (
-                            <span className="text-[9px] px-1 py-0 rounded border text-muted-foreground">
-                              {t('settings.serverConfigured')}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button className={cn(pillCls, 'text-muted-foreground/40 cursor-not-allowed')} disabled>
-              <Globe2 className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('toolbar.webSearchNoProvider')}</TooltipContent>
-        </Tooltip>
+              </TooltipTrigger>
+              <TooltipContent>{t('toolbar.pdfUpload')}</TooltipContent>
+            </Tooltip>
+          )}
+        </>
       )}
 
-      {/* ── Language selector (dropdown) ── */}
-      <Popover>
+      {/* Web Search simple toggle (Bottom / All) */}
+      {(layoutMode === 'all' || layoutMode === 'bottom') && webSearchAvailable && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <button className={pillMuted}>
-                <Globe className="size-3.5" />
-                <span>{COURSE_LANGUAGES.find((l) => l.code === language)?.label || language}</span>
-              </button>
-            </PopoverTrigger>
+            <button
+              className={webSearch ? pillActive : pillMuted}
+              onClick={() => onWebSearchChange(!webSearch)}
+            >
+              <Globe2 className={cn('size-3.5', webSearch && 'animate-pulse')} />
+            </button>
           </TooltipTrigger>
-          <TooltipContent>{t('toolbar.languageHint')}</TooltipContent>
+          <TooltipContent>
+            {webSearch ? t('toolbar.webSearchOn') : t('toolbar.webSearchOff')}
+          </TooltipContent>
         </Tooltip>
-        <PopoverContent
-          align="start"
-          sideOffset={8}
-          className="w-48 p-1"
-        >
-          <div className="max-h-60 overflow-y-auto">
-            {COURSE_LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => onLanguageChange(lang.code)}
-                className={cn(
-                  'w-full px-3 py-1.5 text-left text-sm rounded-md transition-colors flex items-center justify-between',
-                  language === lang.code
-                    ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400'
-                    : 'hover:bg-muted/50 text-foreground',
-                )}
-              >
-                <span>{lang.label}</span>
-                <span className="text-[10px] text-muted-foreground/60">{lang.code}</span>
-              </button>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
-
-      {/* ── Separator ── */}
-      <div className="w-px h-4 bg-border/60 mx-1" />
-
-      {/* ── Media popover ── */}
-      <MediaPopover onSettingsOpen={onSettingsOpen} />
+      )}
     </div>
   );
 }
 
 // ─── ModelSelectorPopover (two-level: provider → model) ─────
-interface ConfiguredProvider {
+export interface ConfiguredProvider {
   id: ProviderId;
   name: string;
   icon?: string;
@@ -427,7 +297,7 @@ interface ConfiguredProvider {
   models: { id: string; name: string }[];
 }
 
-function ModelSelectorPopover({
+export function ModelSelectorPopover({
   configuredProviders,
   currentProviderId,
   currentModelId,

@@ -470,7 +470,11 @@ function TeacherVoicePill({
   );
 }
 
-export function AgentBar() {
+export interface AgentBarProps {
+  inline?: boolean;
+}
+
+export function AgentBar({ inline = false }: AgentBarProps = {}) {
   const { t } = useI18n();
   const { listAgents } = useAgentRegistry();
   const selectedAgentIds = useSettingsStore((s) => s.selectedAgentIds);
@@ -681,6 +685,97 @@ export function AgentBar() {
     );
   };
 
+  const contentNode = (
+    <div className={cn("flex flex-col gap-2", !inline && "w-96")}>
+      <div className={cn(
+        "rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm",
+        !inline && "ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_8px_-2px_rgba(0,0,0,0.3)] px-2 py-1.5",
+        inline && "p-1"
+      )}>
+        {/* Teacher — always visible */}
+        {teacherAgent && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 mb-2">
+            <div
+              className="size-7 rounded-full overflow-hidden shrink-0 ring-1 ring-border/40"
+              style={{ boxShadow: `0 0 0 2px ${teacherAgent.color}30` }}
+            >
+              <img
+                src={teacherAgent.avatar}
+                alt={getAgentName(teacherAgent)}
+                className="size-full object-cover"
+              />
+            </div>
+            <span className="text-[13px] font-medium truncate min-w-0 flex-1">
+              {getAgentName(teacherAgent)}
+            </span>
+            {showVoice && (
+              <TeacherVoicePill
+                availableProviders={availableProviders}
+                disabled={!ttsEnabled}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Mode tabs */}
+        <div className="flex rounded-lg border bg-muted/30 p-0.5 mb-2">
+          <button
+            onClick={() => handleModeChange('preset')}
+            className={cn(
+              'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center',
+              agentMode === 'preset'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t('settings.agentModePreset')}
+          </button>
+          <button
+            onClick={() => handleModeChange('auto')}
+            className={cn(
+              'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center flex items-center justify-center gap-1',
+              agentMode === 'auto'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Sparkles className="h-3 w-3" />
+            {t('settings.agentModeAuto')}
+          </button>
+        </div>
+
+        {agentMode === 'preset' ? (
+          <div className="max-h-[300px] overflow-y-auto -mx-0.5">
+            {agents
+              .filter((a) => a.role !== 'teacher')
+              .map((agent, idx) => renderAgentRow(agent, idx + 1, false))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center pt-6 pb-3 gap-4">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute size-10 rounded-full bg-violet-400/10 dark:bg-violet-400/15 animate-ping [animation-duration:3s]" />
+              <div className="absolute size-12 rounded-full bg-violet-400/5 dark:bg-violet-400/10 animate-pulse [animation-duration:2.5s]" />
+              <Shuffle className="relative size-5 text-violet-400 dark:text-violet-500" />
+            </div>
+            <div className="flex-1" />
+            <div className="text-center space-y-1">
+              <p className="text-[11px] text-muted-foreground/60">
+                {t('settings.agentModeAutoDesc')}
+              </p>
+              <p className="text-[10px] text-muted-foreground/40">
+                {t('agentBar.voiceAutoAssign')}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (inline) {
+    return contentNode;
+  }
+
   return (
     <div ref={containerRef} className="relative w-96">
       <Tooltip>
@@ -719,135 +814,7 @@ export function AgentBar() {
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
             className="absolute right-0 top-full mt-1 z-50 w-96"
           >
-            <div className="rounded-2xl bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_1px_8px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_8px_-2px_rgba(0,0,0,0.3)] px-2 py-1.5">
-              {/* Teacher — always visible */}
-              {teacherAgent && (
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-primary/5 mb-2">
-                  <div
-                    className="size-7 rounded-full overflow-hidden shrink-0 ring-1 ring-border/40"
-                    style={{ boxShadow: `0 0 0 2px ${teacherAgent.color}30` }}
-                  >
-                    <img
-                      src={teacherAgent.avatar}
-                      alt={getAgentName(teacherAgent)}
-                      className="size-full object-cover"
-                    />
-                  </div>
-                  <span className="text-[13px] font-medium truncate min-w-0 flex-1">
-                    {getAgentName(teacherAgent)}
-                  </span>
-                  {showVoice && (
-                    <TeacherVoicePill
-                      availableProviders={availableProviders}
-                      disabled={!ttsEnabled}
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Mode tabs */}
-              <div className="flex rounded-lg border bg-muted/30 p-0.5 mb-2">
-                <button
-                  onClick={() => handleModeChange('preset')}
-                  className={cn(
-                    'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center',
-                    agentMode === 'preset'
-                      ? 'bg-background shadow-sm text-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {t('settings.agentModePreset')}
-                </button>
-                <button
-                  onClick={() => handleModeChange('auto')}
-                  className={cn(
-                    'flex-1 py-1.5 text-xs font-medium rounded-md transition-all text-center flex items-center justify-center gap-1',
-                    agentMode === 'auto'
-                      ? 'bg-background shadow-sm text-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <Sparkles className="h-3 w-3" />
-                  {t('settings.agentModeAuto')}
-                </button>
-              </div>
-
-              {agentMode === 'preset' ? (
-                <div className="max-h-56 overflow-y-auto -mx-0.5">
-                  {agents
-                    .filter((a) => a.role !== 'teacher')
-                    .map((agent, idx) => renderAgentRow(agent, idx + 1, false))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center pt-6 pb-3 gap-4">
-                  <div className="relative flex items-center justify-center">
-                    <div className="absolute size-10 rounded-full bg-violet-400/10 dark:bg-violet-400/15 animate-ping [animation-duration:3s]" />
-                    <div className="absolute size-12 rounded-full bg-violet-400/5 dark:bg-violet-400/10 animate-pulse [animation-duration:2.5s]" />
-                    <Shuffle className="relative size-5 text-violet-400 dark:text-violet-500" />
-                  </div>
-                  <div className="flex-1" />
-                  <div className="text-center space-y-1">
-                    <p className="text-[11px] text-muted-foreground/60">
-                      {t('settings.agentModeAutoDesc')}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/40">
-                      {t('agentBar.voiceAutoAssign')}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Max turns — compact stepper */}
-              <div className="flex items-center gap-1.5 px-2 py-1 mt-1 border-t border-border/30">
-                <MessageSquare className="size-3 text-muted-foreground/40 shrink-0" />
-                <span className="text-[11px] text-muted-foreground/50 flex-1">
-                  {t('settings.maxTurns')}
-                </span>
-                <div className="flex items-center rounded-full bg-muted/50 h-5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const v = Math.max(1, parseInt(maxTurns || '1') - 1);
-                      setMaxTurns(String(v));
-                    }}
-                    className="size-5 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors rounded-full hover:bg-muted"
-                  >
-                    <Minus className="size-2.5" />
-                  </button>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={maxTurns}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/\D/g, '');
-                      if (!raw) {
-                        setMaxTurns('');
-                        return;
-                      }
-                      const v = Math.min(20, Math.max(1, parseInt(raw)));
-                      setMaxTurns(String(v));
-                    }}
-                    onBlur={() => {
-                      if (!maxTurns || parseInt(maxTurns) < 1) setMaxTurns('1');
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-5 h-5 text-[11px] font-medium tabular-nums text-center bg-transparent outline-none border-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const v = Math.min(20, parseInt(maxTurns || '1') + 1);
-                      setMaxTurns(String(v));
-                    }}
-                    className="size-5 flex items-center justify-center text-muted-foreground/60 hover:text-foreground transition-colors rounded-full hover:bg-muted"
-                  >
-                    <Plus className="size-2.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            {contentNode}
           </motion.div>
         )}
       </AnimatePresence>

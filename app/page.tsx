@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowUp,
+  BookOpen,
   Check,
   ChevronDown,
   Clock,
@@ -358,23 +359,23 @@ function HomePage() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col items-center p-4 pt-16 md:p-8 md:pt-16 overflow-x-hidden">
-      {/* ═══ Top-right pill (unchanged) ═══ */}
+    <div className="h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row overflow-hidden relative">
+      {/* ═══ Background Decor ═══ */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-purple-500/5 rounded-full blur-3xl block" />
+      </div>
+
+      {/* ═══ Top-right pill ═══ */}
       <div
         ref={toolbarRef}
-        className="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-2 py-1.5 rounded-full border border-gray-100/50 dark:border-gray-700/50 shadow-sm"
+        className="fixed top-4 right-6 z-50 flex items-center gap-1 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md px-2 py-1.5 rounded-full border border-gray-100/50 dark:border-gray-700/50 shadow-sm"
       >
-        {/* Language Selector */}
         <LanguageSwitcher onOpen={() => setThemeOpen(false)} />
-
         <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
-
-        {/* Theme Selector */}
         <div className="relative">
           <button
-            onClick={() => {
-              setThemeOpen(!themeOpen);
-            }}
+            onClick={() => setThemeOpen(!themeOpen)}
             className="p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm transition-all"
           >
             {theme === 'light' && <Sun className="w-4 h-4" />}
@@ -428,8 +429,6 @@ function HomePage() {
             </div>
           )}
         </div>
-
-        {/* Credits Badge */}
         {creditBalance !== null && (
           <>
             <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
@@ -462,199 +461,165 @@ function HomePage() {
         initialSection={settingsSection}
       />
 
-      {/* ═══ Background Decor ═══ */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDuration: '4s' }}
-        />
-        <div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDuration: '6s' }}
-        />
-      </div>
+      {/* ═══ Left Configuration Sidebar ═══ */}
+      <div className="w-full md:w-[320px] lg:w-[380px] shrink-0 h-auto md:h-full flex flex-col bg-white dark:bg-slate-900 border-r border-border/40 z-10 relative overflow-y-auto hidden-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div className="p-6 md:p-8 flex flex-col min-h-full">
+          {/* Brand + Profile */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground select-none">
+              {BRAND_NAME}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed font-medium">
+              智能生成助手
+            </p>
+          </div>
 
-      {/* ═══ Hero section: title + input (centered, wider) ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        className={cn(
-          'relative z-20 w-full max-w-[800px] flex flex-col items-center',
-          classrooms.length === 0 ? 'justify-center min-h-[calc(100dvh-8rem)]' : 'mt-[10vh]',
-        )}
-      >
-        {/* ── Brand title (text, no image) ── */}
-        <motion.h1
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            delay: 0.1,
-            type: 'spring',
-            stiffness: 200,
-            damping: 22,
-          }}
-          className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2 select-none"
-        >
-          {BRAND_NAME}
-        </motion.h1>
-
-        {/* ── Tagline ── */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.25 }}
-          className="text-sm text-muted-foreground/60 mb-8"
-        >
-          {t('home.slogan')}
-        </motion.p>
-
-        {/* ── Unified input area ── */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.35 }}
-          className="w-full"
-        >
-          <div className="w-full rounded-2xl border border-border/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xl shadow-black/[0.03] dark:shadow-black/20 transition-shadow focus-within:shadow-2xl focus-within:shadow-violet-500/[0.06]">
-            {/* ── Greeting + Profile + Agents ── */}
-            <div className="relative z-20 flex items-start justify-between">
-              <GreetingBar />
-              <div className="pr-3 pt-3.5 shrink-0">
-                <AgentBar />
-              </div>
+          <div className="flex flex-col gap-6 flex-1">
+            {/* Language Section */}
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                输出语言
+              </h3>
+              <GenerationToolbar
+                layoutMode="left"
+                language={form.language}
+                onLanguageChange={(lang) => updateForm('language', lang)}
+                webSearch={form.webSearch}
+                onWebSearchChange={(v) => updateForm('webSearch', v)}
+                onSettingsOpen={(section) => {
+                  setSettingsSection(section);
+                  setSettingsOpen(true);
+                }}
+                pdfFile={form.pdfFile}
+                onPdfFileChange={(f) => updateForm('pdfFile', f)}
+                onPdfError={setError}
+              />
             </div>
 
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              placeholder={t('upload.requirementPlaceholder')}
-              className="w-full resize-none border-0 bg-transparent px-4 pt-1 pb-2 text-[13px] leading-relaxed placeholder:text-muted-foreground/40 focus:outline-none min-h-[140px] max-h-[300px]"
-              value={form.requirement}
-              onChange={(e) => updateForm('requirement', e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={4}
-            />
-
-            {/* Toolbar row */}
-            <div className="px-3 pb-3 flex items-end gap-2">
-              <div className="flex-1 min-w-0">
-                <GenerationToolbar
-                  language={form.language}
-                  onLanguageChange={(lang) => updateForm('language', lang)}
-                  webSearch={form.webSearch}
-                  onWebSearchChange={(v) => updateForm('webSearch', v)}
-                  onSettingsOpen={(section) => {
-                    setSettingsSection(section);
-                    setSettingsOpen(true);
-                  }}
-                  pdfFile={form.pdfFile}
-                  onPdfFileChange={(f) => updateForm('pdfFile', f)}
-                  onPdfError={setError}
-                />
+            {/* Roles Section */}
+            <div className="flex flex-col gap-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                课堂角色
+              </h3>
+              <div className="p-3 rounded-xl border border-border/60 bg-slate-50/50 dark:bg-slate-800/50">
+                <AgentBar inline={true} />
               </div>
-
-              {/* Voice input */}
-              <SpeechButton
-                size="md"
-                onTranscription={(text) => {
-                  setForm((prev) => {
-                    const next = prev.requirement + (prev.requirement ? ' ' : '') + text;
-                    updateRequirementCache(next);
-                    return { ...prev, requirement: next };
-                  });
-                }}
-              />
-
-              {/* Send button */}
-              <button
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className={cn(
-                  'shrink-0 h-8 rounded-lg flex items-center justify-center gap-1.5 transition-all px-3',
-                  canGenerate
-                    ? 'bg-primary text-primary-foreground hover:opacity-90 shadow-sm cursor-pointer'
-                    : 'bg-muted text-muted-foreground/40 cursor-not-allowed',
-                )}
-              >
-                <span className="text-xs font-medium">{t('toolbar.enterClassroom')}</span>
-                <ArrowUp className="size-3.5" />
-              </button>
             </div>
           </div>
-        </motion.div>
 
-        {/* ── Error ── */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-3 w-full p-3 bg-destructive/10 border border-destructive/20 rounded-lg"
-            >
-              <p className="text-sm text-destructive">{error}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+          {/* Footer with Logout */}
+          <SidebarFooter />
+        </div>
+      </div>
 
-      {/* ═══ Recent classrooms — collapsible ═══ */}
-      {classrooms.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="relative z-10 mt-10 w-full max-w-6xl flex flex-col items-center"
-        >
-          {/* Trigger — divider-line with centered text */}
-          <button
-            onClick={() => {
-              const next = !recentOpen;
-              setRecentOpen(next);
-              try {
-                localStorage.setItem(RECENT_OPEN_STORAGE_KEY, String(next));
-              } catch {
-                /* ignore */
-              }
-            }}
-            className="group w-full flex items-center gap-4 py-2 cursor-pointer"
+      {/* ═══ Right Main Workspace Panel (70%) ═══ */}
+      <div className="flex-1 h-full overflow-y-auto bg-slate-50/40 dark:bg-slate-950/40 z-10 relative scrollbar-hide flex flex-col">
+        <div className="w-full max-w-5xl mx-auto px-4 py-8 md:px-10 md:py-12 flex flex-col gap-10 flex-1">
+          
+          {/* Main Prompt Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full relative shadow-sm"
           >
-            <div className="flex-1 h-px bg-border/40 group-hover:bg-border/70 transition-colors" />
-            <span className="shrink-0 flex items-center gap-2 text-[13px] text-muted-foreground/60 group-hover:text-foreground/70 transition-colors select-none">
-              <Clock className="size-3.5" />
-              {t('classroom.recentClassrooms')}
-              <span className="text-[11px] tabular-nums opacity-60">{classrooms.length}</span>
-              <motion.div
-                animate={{ rotate: recentOpen ? 180 : 0 }}
-                transition={{ duration: 0.3, ease: 'easeInOut' }}
-              >
-                <ChevronDown className="size-3.5" />
-              </motion.div>
-            </span>
-            <div className="flex-1 h-px bg-border/40 group-hover:bg-border/70 transition-colors" />
-          </button>
+            <div className="relative z-20 flex items-center justify-between mb-4">
+              <GreetingBar />
+            </div>
 
-          {/* Expandable content */}
-          <AnimatePresence>
-            {recentOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-                className="w-full overflow-hidden"
-              >
-                <div className="pt-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-8">
-                  {classrooms.map((classroom, i) => (
+            <div className="w-full rounded-2xl border border-border/80 bg-white dark:bg-slate-900 shadow-xl shadow-black/[0.02] dark:shadow-black/20 focus-within:shadow-violet-500/[0.08] focus-within:border-violet-500/40 transition-all duration-300 overflow-hidden flex flex-col">
+              <textarea
+                ref={textareaRef}
+                placeholder={t('upload.requirementPlaceholder')}
+                className="w-full resize-none border-0 bg-transparent px-6 py-6 text-base leading-relaxed text-foreground placeholder:text-muted-foreground/40 focus:outline-none min-h-[160px] md:min-h-[200px]"
+                value={form.requirement}
+                onChange={(e) => updateForm('requirement', e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              
+              <div className="px-6 pb-4 pt-4 flex items-center justify-between border-t border-border/30 bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <SpeechButton
+                    size="md"
+                    onTranscription={(text) => {
+                      setForm((prev) => {
+                        const next = prev.requirement + (prev.requirement ? ' ' : '') + text;
+                        updateRequirementCache(next);
+                        return { ...prev, requirement: next };
+                      });
+                    }}
+                  />
+                  <div className="h-6 w-px bg-border/60" />
+                  <GenerationToolbar
+                    layoutMode="bottom"
+                    language={form.language}
+                    onLanguageChange={(lang) => updateForm('language', lang)}
+                    webSearch={form.webSearch}
+                    onWebSearchChange={(v) => updateForm('webSearch', v)}
+                    onSettingsOpen={(section) => {
+                      setSettingsSection(section);
+                      setSettingsOpen(true);
+                    }}
+                    pdfFile={form.pdfFile}
+                    onPdfFileChange={(f) => updateForm('pdfFile', f)}
+                    onPdfError={setError}
+                  />
+                </div>
+                
+                <button
+                  onClick={handleGenerate}
+                  disabled={!canGenerate}
+                  className={cn(
+                    'h-11 rounded-xl flex items-center justify-center gap-2 transition-all px-8 select-none',
+                    canGenerate
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0 text-sm font-bold tracking-wide'
+                      : 'bg-muted text-muted-foreground/40 cursor-not-allowed text-sm font-bold',
+                  )}
+                >
+                  <span>{t('toolbar.enterClassroom')}</span>
+                  <ArrowUp className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  className="overflow-hidden mt-4"
+                >
+                  <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-xl">
+                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Historic Library Section */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-foreground/80 flex items-center gap-2">
+                <Clock className="size-4 text-violet-500" />
+                {t('classroom.recentClassrooms')}
+                <span className="ml-2 px-2 py-0.5 rounded-md bg-border/40 text-[10px] font-bold text-muted-foreground">
+                  {classrooms.length}
+                </span>
+              </h2>
+            </div>
+
+            {classrooms.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+                 {classrooms.map((classroom, i) => (
                     <motion.div
                       key={classroom.id}
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{
-                        delay: i * 0.04,
-                        duration: 0.35,
-                        ease: 'easeOut',
+                        delay: Math.min(i * 0.04, 0.4),
+                        duration: 0.4,
                       }}
                     >
                       <ClassroomCard
@@ -670,16 +635,18 @@ function HomePage() {
                       />
                     </motion.div>
                   ))}
-                </div>
-              </motion.div>
+              </div>
+            ) : (
+              <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
+                 <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
+                    <BookOpen className="size-8" />
+                 </div>
+                 <h3 className="text-lg font-semibold text-foreground/80 mb-2">No Documents Yet</h3>
+                 <p className="text-sm text-muted-foreground max-w-xs">Use the prompt workspace above to generate your first interactive document!</p>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.div>
-      )}
-
-      {/* Footer — flows with content, at the very end */}
-      <div className="mt-auto pt-12 pb-4 text-center text-xs text-muted-foreground/40">
-        {BRAND_NAME}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1013,6 +980,56 @@ function GreetingBar() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── SidebarFooter — logout + branding at sidebar bottom ────
+function SidebarFooter() {
+  const { t } = useI18n();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [casdoorUser, setCasdoorUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.user) {
+          setCasdoorUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="mt-auto pt-6 border-t border-border/30">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground/40 font-medium tracking-wide">
+          {BRAND_NAME} &middot; Workspace
+        </span>
+        {casdoorUser ? (
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              window.location.reload();
+            }}
+            className="flex items-center gap-1.5 text-[11px] text-red-500/70 hover:text-red-600 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
+          >
+            <LogOut className="size-3" />
+            {t('home.logout') || '退出登录'}
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              window.location.href = '/api/auth/login';
+            }}
+            className="flex items-center gap-1.5 text-[11px] text-violet-500/70 hover:text-violet-600 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30"
+          >
+            <LogIn className="size-3" />
+            Login
+          </button>
+        )}
+      </div>
     </div>
   );
 }
