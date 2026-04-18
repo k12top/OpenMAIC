@@ -7,20 +7,106 @@ import { ArrowLeft, Eye, Copy, LogIn, Globe, Loader2, Lock } from 'lucide-react'
 import { BRAND_NAME } from '@/lib/constants/brand';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Stage } from '@/components/stage';
+import { ThemeProvider } from '@/lib/hooks/use-theme';
+import { useStageStore } from '@/lib/store';
+import { MediaStageProvider } from '@/lib/contexts/media-stage-context';
+import type { Stage as StageType, Scene } from '@/lib/types/stage';
 
 interface SharedClassroom {
   id: string;
   title: string;
   language: string;
-  stage: unknown;
-  scenes: Array<{
-    id: string;
-    type: string;
-    title?: string;
-    content?: unknown;
-  }>;
+  stage: StageType;
+  scenes: Scene[];
   createdAt: string;
 }
+
+// ─── Direct classroom view: used for both 'public' and 'readonly' modes ──────
+// public   → violet banner + Sign In button (no auth needed)
+// readonly → blue banner  + no Sign In button (user is already authenticated)
+
+function DirectClassroomView({
+  classroom,
+  mode,
+  token,
+}: {
+  classroom: SharedClassroom;
+  mode: 'public' | 'readonly';
+  token: string;
+}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    useStageStore.getState().setStage(classroom.stage);
+    useStageStore.setState({
+      scenes: classroom.scenes,
+      currentSceneId: classroom.scenes[0]?.id ?? null,
+      outlines: [],
+      generatingOutlines: [],
+      generationStatus: 'idle',
+      failedOutlines: [],
+    });
+    Promise.resolve().then(() => setReady(true));
+    return () => {
+      useStageStore.getState().clearStore();
+    };
+  }, [classroom]);
+
+  if (!ready) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const isPublic = mode === 'public';
+
+  return (
+    <ThemeProvider>
+      <MediaStageProvider value={classroom.id}>
+        <div className="h-screen flex flex-col overflow-hidden">
+          {/* Mode banner */}
+          <div
+            className={cn(
+              'shrink-0 flex items-center justify-between px-4 py-1.5 text-white text-xs',
+              isPublic
+                ? 'bg-violet-600 dark:bg-violet-700'
+                : 'bg-blue-600 dark:bg-blue-700',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {isPublic ? (
+                <Globe className="size-3.5 shrink-0" />
+              ) : (
+                <Eye className="size-3.5 shrink-0" />
+              )}
+              <span className="font-medium">{classroom.title}</span>
+              <span className="opacity-60">· {isPublic ? 'Public View' : 'Read Only'}</span>
+            </div>
+            {/* Only show Sign In for public (unauthenticated) viewers */}
+            {isPublic && (
+              <a
+                href={`/api/auth/login?returnUrl=/share/${token}`}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors font-medium"
+              >
+                <LogIn className="size-3" />
+                Sign In
+              </a>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Stage />
+          </div>
+        </div>
+      </MediaStageProvider>
+    </ThemeProvider>
+  );
+}
+
+// ─── Main share page ──────────────────────────────────────────────────────────
 
 export default function SharePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -75,6 +161,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     }
   };
 
+  // ── Loading ──
   if (loading) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -83,7 +170,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     );
   }
 
-  // Login required for non-public shares
+  // ── Login required (readonly / editable) ──
   if (requiresAuth) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
@@ -111,6 +198,7 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     );
   }
 
+  // ── Error / Not found ──
   if (error || !classroom) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
@@ -130,6 +218,12 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     );
   }
 
+  // ── Public / Readonly: render Stage directly ──
+  if (mode === 'public' || mode === 'readonly') {
+    return <DirectClassroomView classroom={classroom} mode={mode} token={token} />;
+  }
+
+  // ── Editable: intermediate summary page (for copy action) ──
   return (
     <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col">
       {/* Header */}
@@ -144,22 +238,9 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
           <div>
             <h1 className="text-lg font-semibold text-foreground">{classroom.title}</h1>
             <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium',
-                  mode === 'public'
-                    ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-                    : mode === 'readonly'
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-                )}
-              >
-                {mode === 'public' ? (
-                  <Globe className="size-3" />
-                ) : (
-                  <Eye className="size-3" />
-                )}
-                {mode === 'public' ? 'Public' : mode === 'readonly' ? 'Read Only' : 'Editable'}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                <Copy className="size-3" />
+                Editable
               </span>
               <span className="text-xs text-muted-foreground/60">
                 {classroom.scenes.length} scenes · {classroom.language}
@@ -168,23 +249,17 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
           </div>
         </div>
 
-        {mode === 'editable' && (
-          <button
-            onClick={handleCopy}
-            disabled={copying}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
-          >
-            {copying ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Copy className="size-3.5" />
-            )}
-            Copy to My Classrooms
-          </button>
-        )}
+        <button
+          onClick={handleCopy}
+          disabled={copying}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
+        >
+          {copying ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
+          Copy to My Classrooms
+        </button>
       </div>
 
-      {/* Content */}
+      {/* Scene cards */}
       <div className="flex-1 p-4 md:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -206,51 +281,29 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
                   </span>
                 </div>
                 <h3 className="text-sm font-semibold text-foreground line-clamp-2">
-                  {scene.title || `Scene ${i + 1}`}
+                  {(scene as unknown as { title?: string }).title || `Scene ${i + 1}`}
                 </h3>
               </div>
             ))}
           </div>
 
-          {mode === 'editable' && (
-            <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200/30 dark:border-green-800/30 text-center">
-              <h3 className="text-base font-semibold text-foreground mb-2">
-                Want to edit this courseware?
-              </h3>
-              <p className="text-sm text-muted-foreground/70 mb-4">
-                Copy it to your account and continue editing, adding new content, or chatting with AI agents.
-              </p>
-              <button
-                onClick={handleCopy}
-                disabled={copying}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
-              >
-                {copying ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Copy className="size-3.5" />
-                )}
-                Copy to My Classrooms
-              </button>
-            </div>
-          )}
-
-          {(mode === 'readonly' || mode === 'public') && (
-            <div className="mt-8 p-6 rounded-2xl bg-muted/30 border border-border/30 text-center">
-              <p className="text-sm text-muted-foreground/70 mb-4">
-                {mode === 'public'
-                  ? 'This is a publicly shared view. Sign in to create and share your own courseware.'
-                  : 'This is a read-only shared view. Log in to create your own courseware.'}
-              </p>
-              <a
-                href="/api/auth/login"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all"
-              >
-                <LogIn className="size-3.5" />
-                Sign In
-              </a>
-            </div>
-          )}
+          {/* Editable CTA */}
+          <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200/30 dark:border-green-800/30 text-center">
+            <h3 className="text-base font-semibold text-foreground mb-2">
+              Want to edit this courseware?
+            </h3>
+            <p className="text-sm text-muted-foreground/70 mb-4">
+              Copy it to your account and continue editing, adding new content, or chatting with AI agents.
+            </p>
+            <button
+              onClick={handleCopy}
+              disabled={copying}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
+            >
+              {copying ? <Loader2 className="size-3.5 animate-spin" /> : <Copy className="size-3.5" />}
+              Copy to My Classrooms
+            </button>
+          </div>
         </motion.div>
       </div>
 

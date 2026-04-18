@@ -31,7 +31,10 @@ export async function GET(request: Request) {
     if (state && state !== casdoorConfig.appName) {
       try {
         const decodedState = decodeURIComponent(state);
-        if (decodedState.startsWith('/') || decodedState.startsWith(publicOrigin)) {
+        if (decodedState.startsWith('/')) {
+          // Relative path — must be made absolute for NextResponse.redirect()
+          redirectUrl = `${publicOrigin}${decodedState}`;
+        } else if (decodedState.startsWith(publicOrigin)) {
           redirectUrl = decodedState;
         }
       } catch (err) {
