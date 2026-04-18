@@ -148,6 +148,12 @@ async function generateSingleMedia(
       createdAt: Date.now(),
     });
 
+    // Upload to cloud storage (best-effort, non-blocking)
+    import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
+      const mediaKind = req.type === 'video' ? 'video' : 'image';
+      uploadMediaToServer(stageId, mediaKind, blob, `${req.elementId}.${mimeType.split('/')[1] || 'bin'}`).catch(() => {});
+    });
+
     // Update store with object URL
     const objectUrl = URL.createObjectURL(blob);
     const posterObjectUrl = posterBlob ? URL.createObjectURL(posterBlob) : undefined;

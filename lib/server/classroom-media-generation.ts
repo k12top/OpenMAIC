@@ -28,6 +28,7 @@ import {
   resolveTTSBaseUrl,
 } from '@/lib/server/provider-config';
 import { getStorageProvider } from '@/lib/storage';
+import { isDbConfigured, getDb, schema } from '@/lib/db';
 import type { SceneOutline } from '@/lib/types/generation';
 import type { Scene } from '@/lib/types/stage';
 import type { SpeechAction } from '@/lib/types/action';
@@ -38,10 +39,32 @@ import { splitLongSpeechActions } from '@/lib/audio/tts-utils';
 
 const log = createLogger('ClassroomMedia');
 
-async function uploadToStorage(hash: string, buf: Buffer, type: 'media' | 'audio', mimeType?: string): Promise<string> {
+async function uploadToStorage(
+  key: string,
+  buf: Buffer,
+  type: 'media' | 'audio',
+  mimeType?: string,
+  classroomId?: string,
+): Promise<string> {
   try {
     const provider = getStorageProvider();
-    const url = await provider.upload(hash, buf, type, mimeType);
+    const url = await provider.upload(key, buf, type, mimeType);
+    if (url && classroomId && isDbConfigured()) {
+      try {
+        const db = getDb();
+        const mediaType: 'image' | 'video' | 'audio' | 'tts' =
+          type === 'audio' ? 'tts' : (mimeType?.startsWith('video') ? 'video' : 'image');
+        await db.insert(schema.classroomMedia).values({
+          classroomId,
+          mediaType,
+          minioKey: key,
+          mimeType: mimeType || 'application/octet-stream',
+          sizeBytes: buf.length,
+        });
+      } catch {
+        // Best-effort DB record
+      }
+    }
     if (url) return url;
   } catch {
     // Storage not configured or failed — fall through to local
@@ -135,7 +158,7 @@ export async function generateMediaForClassroom(
         const filename = `${req.elementId}.${ext}`;
         await fs.writeFile(path.join(mediaDir, filename), buf);
         // Upload to MinIO if configured
-        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', `image/${ext}`);
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', `image/${ext}`, classroomId);
         mediaMap[req.elementId] = storageUrl || mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
         log.info(`Generated image: ${filename}`);
       } catch (err) {
@@ -169,7 +192,7 @@ export async function generateMediaForClassroom(
         const buf = await downloadToBuffer(result.url);
         const filename = `${req.elementId}.mp4`;
         await fs.writeFile(path.join(mediaDir, filename), buf);
-        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', 'video/mp4');
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, buf, 'media', 'video/mp4', classroomId);
         mediaMap[req.elementId] = storageUrl || mediaServingUrl(baseUrl, classroomId, `media/${filename}`);
         log.info(`Generated video: ${filename}`);
       } catch (err) {
@@ -291,7 +314,7 @@ export async function generateTTSForClassroom(
         const filename = `${audioId}.${format}`;
         const audioBuf = Buffer.from(result.audio);
         await fs.writeFile(path.join(audioDir, filename), audioBuf);
-        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, audioBuf, 'audio', `audio/${format}`);
+        const storageUrl = await uploadToStorage(`${classroomId}/${filename}`, audioBuf, 'audio', `audio/${format}`, classroomId);
 
         speechAction.audioId = audioId;
         speechAction.audioUrl = storageUrl || mediaServingUrl(baseUrl, classroomId, `audio/${filename}`);

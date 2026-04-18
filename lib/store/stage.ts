@@ -262,6 +262,19 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
         currentSceneId,
         chats,
       });
+
+      // Best-effort cloud sync (fire-and-forget)
+      try {
+        const { syncClassroomToServer, syncChatSessionsToServer } = await import(
+          '@/lib/sync/classroom-sync'
+        );
+        syncClassroomToServer(stage.id, stage, scenes, currentSceneId);
+        if (chats.length > 0) {
+          syncChatSessionsToServer(stage.id, chats);
+        }
+      } catch {
+        // Sync failure should never block local save
+      }
     } catch (error) {
       log.error('Failed to save to storage:', error);
     }

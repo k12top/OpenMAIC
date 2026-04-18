@@ -158,6 +158,13 @@ export async function POST(req: NextRequest) {
       `Scene assembled successfully: "${outline.title}" — ${scene.actions?.length ?? 0} actions`,
     );
 
+    recordUsage(auth.user.id, {
+      type: 'llm',
+      tokenCount: 1500,
+      apiRoute: '/api/generate/scene-actions',
+      description: `Scene actions: ${outline.title}`,
+    }).catch(() => {});
+
     return apiSuccess({ scene, previousSpeeches: outputPreviousSpeeches });
   } catch (error) {
     log.error(

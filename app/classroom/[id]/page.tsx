@@ -40,26 +40,38 @@ export default function ClassroomDetailPage() {
       if (!useStageStore.getState().stage) {
         log.info('No IndexedDB data, trying server-side storage for:', classroomId);
         try {
-          const res = await fetch(`/api/classroom?id=${encodeURIComponent(classroomId)}`);
-          if (res.ok) {
-            const json = await res.json();
-            if (json.success && json.classroom) {
-              const { stage, scenes } = json.classroom;
-              useStageStore.getState().setStage(stage);
-              useStageStore.setState({
-                scenes,
-                currentSceneId: scenes[0]?.id ?? null,
-              });
-              log.info('Loaded from server-side storage:', classroomId);
+          const { loadClassroomFromServer, loadChatSessionsFromServer } = await import(
+            '@/lib/sync/classroom-sync'
+          );
+          const serverData = await loadClassroomFromServer(classroomId);
+          if (serverData) {
+            const { stage, scenes } = serverData;
+            useStageStore.getState().setStage(stage);
+            useStageStore.setState({
+              scenes,
+              currentSceneId: serverData.currentSceneId || (scenes[0]?.id ?? null),
+            });
+            log.info('Loaded from server-side storage:', classroomId);
 
-              // Hydrate server-generated agents into IndexedDB + registry
-              if (stage.generatedAgentConfigs?.length) {
-                const { saveGeneratedAgents } = await import('@/lib/orchestration/registry/store');
-                const { useSettingsStore } = await import('@/lib/store/settings');
-                const agentIds = await saveGeneratedAgents(stage.id, stage.generatedAgentConfigs);
-                useSettingsStore.getState().setSelectedAgentIds(agentIds);
-                log.info('Hydrated server-generated agents:', agentIds);
-              }
+            // Load chat history from server
+            const serverChats = await loadChatSessionsFromServer(classroomId);
+            if (serverChats && serverChats.length > 0) {
+              useStageStore.setState({ chats: serverChats });
+              log.info(`Loaded ${serverChats.length} chat sessions from server`);
+            }
+
+            // Hydrate server-generated agents into IndexedDB + registry
+            if (stage.generatedAgentConfigs?.length) {
+              const { saveGeneratedAgents } = await import(
+                '@/lib/orchestration/registry/store'
+              );
+              const { useSettingsStore } = await import('@/lib/store/settings');
+              const agentIds = await saveGeneratedAgents(
+                stage.id,
+                stage.generatedAgentConfigs,
+              );
+              useSettingsStore.getState().setSelectedAgentIds(agentIds);
+              log.info('Hydrated server-generated agents:', agentIds);
             }
           }
         } catch (fetchErr) {

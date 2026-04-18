@@ -61,6 +61,13 @@ export async function POST(req: NextRequest) {
     // Transcribe using the provider system
     const result = await transcribeAudio(config, buffer);
 
+    recordUsage(auth.user.id, {
+      type: 'asr',
+      unitCount: 1,
+      apiRoute: '/api/transcription',
+      description: `Transcription (${effectiveProviderId})`,
+    }).catch(() => {});
+
     return apiSuccess({ text: result.text });
   } catch (error) {
     log.error(

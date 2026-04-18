@@ -11,7 +11,7 @@ import type { PBLAgent, PBLIssue } from '@/lib/pbl/types';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
-import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 const log = createLogger('PBL Chat');
 
 interface PBLChatRequest {
@@ -72,6 +72,13 @@ export async function POST(req: NextRequest) {
       },
       'pbl-chat',
     );
+
+    recordUsage(auth.user.id, {
+      type: 'llm',
+      tokenCount: 800,
+      apiRoute: '/api/pbl/chat',
+      description: `PBL chat with ${agent.name}`,
+    }).catch(() => {});
 
     return apiSuccess({ message: result.text, agentName: agent.name });
   } catch (error) {

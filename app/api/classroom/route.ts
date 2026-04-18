@@ -7,6 +7,7 @@ import {
   persistClassroom,
   readClassroom,
 } from '@/lib/server/classroom-storage';
+import { optionalAuth } from '@/lib/server/auth-guard';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('Classroom API');
@@ -15,6 +16,7 @@ export async function POST(request: NextRequest) {
   let stageId: string | undefined;
   let sceneCount: number | undefined;
   try {
+    const user = await optionalAuth();
     const body = await request.json();
     const { stage, scenes } = body;
     stageId = stage?.id;
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
     const id = stage.id || randomUUID();
     const baseUrl = buildRequestOrigin(request);
 
-    const persisted = await persistClassroom({ id, stage: { ...stage, id }, scenes }, baseUrl);
+    const persisted = await persistClassroom({ id, stage: { ...stage, id }, scenes, userId: user?.id }, baseUrl);
 
     return apiSuccess({ id: persisted.id, url: persisted.url }, 201);
   } catch (error) {

@@ -127,6 +127,69 @@ export const shares = pgTable(
   (table) => [index('idx_share_token').on(table.shareToken)],
 );
 
+// ─── Chat Sessions ──────────────────────────────────────────────────────────
+
+export const chatSessionStatusEnum = pgEnum('chat_session_status', [
+  'active',
+  'completed',
+  'interrupted',
+]);
+
+export const chatSessions = pgTable(
+  'chat_sessions',
+  {
+    id: text('id').primaryKey(),
+    classroomId: text('classroom_id')
+      .notNull()
+      .references(() => classrooms.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    sceneId: text('scene_id').default(''),
+    type: text('type').notNull().default('chat'),
+    title: text('title').default(''),
+    status: chatSessionStatusEnum('status').notNull().default('active'),
+    messagesJson: jsonb('messages_json'),
+    config: jsonb('config'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_chat_session_classroom').on(table.classroomId),
+    index('idx_chat_session_user').on(table.userId),
+  ],
+);
+
+// ─── Classroom Interactions (quiz, transcription, PBL) ──────────────────────
+
+export const interactionTypeEnum = pgEnum('interaction_type', [
+  'quiz',
+  'transcription',
+  'pbl',
+]);
+
+export const classroomInteractions = pgTable(
+  'classroom_interactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    classroomId: text('classroom_id')
+      .notNull()
+      .references(() => classrooms.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    sceneId: text('scene_id').default(''),
+    type: interactionTypeEnum('type').notNull(),
+    inputJson: jsonb('input_json'),
+    outputJson: jsonb('output_json'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_interaction_classroom').on(table.classroomId),
+    index('idx_interaction_user').on(table.userId),
+  ],
+);
+
 // ─── Checkpoints (saved state when credits run out) ──────────────────────────
 
 export const checkpoints = pgTable(

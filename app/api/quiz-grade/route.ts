@@ -10,7 +10,7 @@ import { callLLM } from '@/lib/ai/llm';
 import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
-import { withAuthAndCredits } from '@/lib/server/api-auth-credits';
+import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
 const log = createLogger('Quiz Grade');
 
 interface GradeRequest {
@@ -99,6 +99,13 @@ ${commentPrompt ? `Grading guidance: ${commentPrompt}\n` : ''}Student answer: ${
           : 'Answer received. Please refer to the standard answer.',
       };
     }
+
+    recordUsage(auth.user.id, {
+      type: 'llm',
+      tokenCount: 500,
+      apiRoute: '/api/quiz-grade',
+      description: 'Quiz grading',
+    }).catch(() => {});
 
     return apiSuccess({ ...gradeResult });
   } catch (error) {

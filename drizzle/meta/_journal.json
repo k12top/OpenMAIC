@@ -8,6 +8,13 @@
       "when": 1776495938933,
       "tag": "0000_omniscient_nehzno",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776499218734,
+      "tag": "0001_strange_the_fallen",
+      "breakpoints": true
     }
   ]
 }

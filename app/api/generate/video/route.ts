@@ -83,6 +83,13 @@ export async function POST(request: NextRequest) {
       `Video generated: url=${result.url ? 'yes' : 'no'}, ${result.width}x${result.height}, ${result.duration}s`,
     );
 
+    recordUsage(auth.user.id, {
+      type: 'video',
+      unitCount: 1,
+      apiRoute: '/api/generate/video',
+      description: `Video generation (${providerId})`,
+    }).catch(() => {});
+
     return apiSuccess({ result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

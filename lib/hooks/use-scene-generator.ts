@@ -168,6 +168,14 @@ export async function generateAndStoreTTS(
     format: data.format,
     createdAt: Date.now(),
   });
+
+  // Upload to cloud storage (best-effort)
+  const stageId = useStageStore.getState().stage?.id;
+  if (stageId) {
+    import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
+      uploadMediaToServer(stageId, 'tts', blob, `${audioId}.${data.format}`).catch(() => {});
+    });
+  }
 }
 
 /** Generate TTS for all speech actions in a scene. Returns result. */

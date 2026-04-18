@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
 
     const result = await generateImage({ providerId, apiKey, baseUrl, model: clientModel }, body);
 
+    recordUsage(auth.user.id, {
+      type: 'image',
+      unitCount: 1,
+      apiRoute: '/api/generate/image',
+      description: `Image generation (${providerId})`,
+    }).catch(() => {});
+
     return apiSuccess({ result });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

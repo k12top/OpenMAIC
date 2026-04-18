@@ -14,6 +14,7 @@ export function runClassroomGenerationJob(
   jobId: string,
   input: GenerateClassroomInput,
   baseUrl: string,
+  userId?: string,
 ): Promise<void> {
   const existing = runningJobs.get(jobId);
   if (existing) {
@@ -26,6 +27,7 @@ export function runClassroomGenerationJob(
 
       const result = await generateClassroom(input, {
         baseUrl,
+        userId,
         onProgress: async (progress) => {
           await updateClassroomGenerationJobProgress(jobId, progress);
         },

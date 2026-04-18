@@ -5,6 +5,7 @@ import { type GenerateClassroomInput } from '@/lib/server/classroom-generation';
 import { runClassroomGenerationJob } from '@/lib/server/classroom-job-runner';
 import { createClassroomGenerationJob } from '@/lib/server/classroom-job-store';
 import { buildRequestOrigin } from '@/lib/server/classroom-storage';
+import { optionalAuth } from '@/lib/server/auth-guard';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('GenerateClassroom API');
@@ -14,6 +15,7 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   let requirementSnippet: string | undefined;
   try {
+    const user = await optionalAuth();
     const rawBody = (await req.json()) as Partial<GenerateClassroomInput>;
     requirementSnippet = rawBody.requirement?.substring(0, 60);
     const body: GenerateClassroomInput = {
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
     const job = await createClassroomGenerationJob(jobId, body);
     const pollUrl = `${baseUrl}/api/generate-classroom/${jobId}`;
 
-    after(() => runClassroomGenerationJob(jobId, body, baseUrl));
+    after(() => runClassroomGenerationJob(jobId, body, baseUrl, user?.id));
 
     return apiSuccess(
       {
