@@ -162,7 +162,9 @@
     "restore": "Restore",
     "noHistory": "No history yet",
     "restored": "Whiteboard restored",
-    "elementCount": "{{count}} elements"
+    "elementCount": "{{count}} elements",
+    "collapseToolbar": "Collapse toolbar",
+    "expandToolbar": "Expand toolbar"
   },
   "quiz": {
     "title": "Quiz",

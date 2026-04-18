@@ -92,20 +92,18 @@ export function CanvasArea({
       >
         <div
           className={cn(
-            'aspect-[16/9] h-full max-h-full max-w-full bg-white dark:bg-gray-800 shadow-2xl rounded-lg overflow-hidden relative transition-all duration-700',
+            'aspect-[16/9] h-full max-h-full max-w-full overflow-hidden relative transition-all duration-700',
             showControls && !isLiveSession && currentScene?.type === 'slide' && 'cursor-pointer',
             currentScene?.type === 'interactive'
-              ? 'shadow-blue-200/50 dark:shadow-blue-900/50 ring-1 ring-blue-900/5 dark:ring-blue-500/10'
-              : 'shadow-gray-200/50 dark:shadow-gray-800/50 ring-1 ring-gray-950/5 dark:ring-white/5',
+              ? 'bg-white dark:bg-gray-800 shadow-2xl rounded-lg shadow-blue-200/50 dark:shadow-blue-900/50 ring-1 ring-blue-900/5 dark:ring-blue-500/10'
+              : 'bg-transparent shadow-none rounded-none ring-0',
           )}
           onClick={handleSlideClick}
         >
-          {/* Whiteboard Layer */}
-          <div className="absolute inset-0 z-[110] pointer-events-none">
-            <SceneProvider>
-              <Whiteboard isOpen={whiteboardOpen} onClose={onWhiteboardClose} />
-            </SceneProvider>
-          </div>
+          {/* Whiteboard: layer shell + z-index live inside the component */}
+          <SceneProvider>
+            <Whiteboard isOpen={whiteboardOpen} onClose={onWhiteboardClose} />
+          </SceneProvider>
 
           {/* Scene Content */}
           {currentScene && !whiteboardOpen && (
@@ -177,10 +175,10 @@ export function CanvasArea({
             )}
           </AnimatePresence>
 
-          {/* Scene Number Badge */}
+          {/* Scene index — bottom only so it does not compete with content; subtle on slide bg */}
           {currentScene && (
-            <div className="absolute top-4 right-4 text-gray-200 dark:text-gray-700 font-black text-4xl opacity-50 pointer-events-none select-none mix-blend-multiply dark:mix-blend-screen">
-              {(currentSceneIndex + 1).toString().padStart(2, '0')}
+            <div className="absolute bottom-3 right-4 z-[104] text-gray-400 dark:text-gray-600 font-mono text-sm tabular-nums opacity-70 pointer-events-none select-none">
+              {currentSceneIndex + 1}/{Math.max(scenesCount, 1)}
             </div>
           )}
 

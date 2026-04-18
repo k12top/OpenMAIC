@@ -162,7 +162,9 @@
     "restore": "Pulihkan",
     "noHistory": "Belum ada riwayat",
     "restored": "Papan tulis dipulihkan",
-    "elementCount": "{{count}} elemen"
+    "elementCount": "{{count}} elemen",
+    "collapseToolbar": "Sembunyikan bilah alat",
+    "expandToolbar": "Tampilkan bilah alat"
   },
   "quiz": {
     "title": "Kuis",

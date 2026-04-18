@@ -162,7 +162,9 @@
     "restore": "Restaurer",
     "noHistory": "Pas encore d'historique",
     "restored": "Tableau blanc restauré",
-    "elementCount": "{{count}} éléments"
+    "elementCount": "{{count}} éléments",
+    "collapseToolbar": "Réduire la barre d’outils",
+    "expandToolbar": "Afficher la barre d’outils"
   },
   "quiz": {
     "title": "Quiz",

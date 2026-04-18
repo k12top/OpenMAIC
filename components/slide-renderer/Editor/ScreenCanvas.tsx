@@ -58,10 +58,11 @@ export function ScreenCanvas() {
     );
   }, [zoomTarget, elements]);
 
+  // Single fill container for ResizeObserver; slide chrome (rounded/shadow) lives in canvas-area for interactive only
   return (
-    <div className="relative h-full w-full overflow-hidden select-none" ref={canvasRef}>
+    <div className="relative h-full w-full min-h-0 overflow-hidden select-none" ref={canvasRef}>
       <div
-        className="absolute shadow-[0_0_0_1px_rgba(0,0,0,0.01),0_0_12px_0_rgba(0,0,0,0.1)] rounded-lg overflow-hidden transition-transform duration-700"
+        className="absolute overflow-hidden transition-transform duration-700"
         style={{
           width: `${viewportStyles.width * canvasScale}px`,
           height: `${viewportStyles.height * canvasScale}px`,
@@ -75,11 +76,8 @@ export function ScreenCanvas() {
             : {}),
         }}
       >
-        {/* Background layer */}
-        <div
-          className="w-full h-full bg-position-center rounded-lg"
-          style={{ ...backgroundStyle }}
-        ></div>
+        {/* Background layer — flush, no extra rounding (slide bg fills viewport) */}
+        <div className="w-full h-full bg-position-center" style={{ ...backgroundStyle }} />
 
         {/* Content layer - scaled */}
         <div

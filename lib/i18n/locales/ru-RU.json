@@ -162,7 +162,9 @@
     "restore": "Восстановить",
     "noHistory": "Истории пока нет",
     "restored": "Доска восстановлена",
-    "elementCount": "{{count}} элементов"
+    "elementCount": "{{count}} элементов",
+    "collapseToolbar": "Свернуть панель",
+    "expandToolbar": "Развернуть панель"
   },
   "quiz": {
     "title": "Тест",
