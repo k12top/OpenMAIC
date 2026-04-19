@@ -118,7 +118,7 @@ export async function persistClassroom(
             stageJson: data.stage,
             scenesJson: data.scenes,
             title: data.stage.name || '',
-            language: (data.stage as Record<string, unknown>).language as string || 'en-US',
+            language: data.stage.language ?? 'en-US',
             status: 'completed',
             updatedAt: new Date(),
           })
@@ -128,7 +128,7 @@ export async function persistClassroom(
           id: data.id,
           userId: data.userId,
           title: data.stage.name || '',
-          language: (data.stage as Record<string, unknown>).language as string || 'en-US',
+          language: data.stage.language ?? 'en-US',
           stageJson: data.stage,
           scenesJson: data.scenes,
           status: 'completed',

@@ -761,6 +761,15 @@ export const useSettingsStore = create<SettingsState>()(
               image: Record<string, { baseUrl?: string }>;
               video: Record<string, { baseUrl?: string }>;
               webSearch: Record<string, { baseUrl?: string }>;
+              /** Operator defaults from env (DEFAULT_TTS_PROVIDER, etc.) — see getServerDefaults */
+              defaults?: {
+                ttsProvider?: string;
+                asrProvider?: string;
+                imageProvider?: string;
+                videoProvider?: string;
+                imageGenerationEnabled?: boolean;
+                videoGenerationEnabled?: boolean;
+              };
             };
 
             set((state) => {
@@ -1051,14 +1060,7 @@ export const useSettingsStore = create<SettingsState>()(
 
               if (!state.autoConfigApplied) {
                 // Operator-configured defaults from env (DEFAULT_TTS_PROVIDER etc.)
-                const serverDefaults = data.defaults as {
-                  ttsProvider?: string;
-                  asrProvider?: string;
-                  imageProvider?: string;
-                  videoProvider?: string;
-                  imageGenerationEnabled?: boolean;
-                  videoGenerationEnabled?: boolean;
-                } | undefined;
+                const serverDefaults = data.defaults;
 
                 // PDF: unpdf → mineru if server has it
                 if (newPDFConfig.mineru?.isServerConfigured && state.pdfProviderId === 'unpdf') {

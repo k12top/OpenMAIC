@@ -31,19 +31,24 @@ export async function requireAuth(): Promise<AuthUser> {
     throw new UnauthenticatedError();
   }
 
-  let parsed: Record<string, string>;
+  type CasdoorJwtUser = ReturnType<typeof casdoorSDK.parseJwtToken> & {
+    /** Standard JWT subject (Casdoor User type may omit this) */
+    sub?: string;
+  };
+
+  let parsed: CasdoorJwtUser;
   try {
-    parsed = casdoorSDK.parseJwtToken(token);
+    parsed = casdoorSDK.parseJwtToken(token) as CasdoorJwtUser;
   } catch {
     throw new UnauthenticatedError('Invalid or expired token');
   }
 
   const user: AuthUser = {
-    id: parsed.id || parsed.name || parsed.sub || '',
-    name: parsed.name || '',
-    nickname: parsed.displayName || parsed.name || '',
-    avatar: parsed.avatar || '',
-    email: parsed.email || '',
+    id: String(parsed.id ?? parsed.name ?? parsed.sub ?? ''),
+    name: String(parsed.name ?? ''),
+    nickname: String(parsed.displayName ?? parsed.name ?? ''),
+    avatar: String(parsed.avatar ?? ''),
+    email: String(parsed.email ?? ''),
   };
 
   if (!user.id) {

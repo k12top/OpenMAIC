@@ -70,30 +70,25 @@ export function findBestASRLanguage(
   }
 
   const targetPrimary = primaryLang(targetLanguage);
+  const langs = provider.supportedLanguages;
 
-  // Exact match
-  const exact = provider.supportedLanguages.find(
-    (l) => l.code.toLowerCase() === targetLanguage.toLowerCase(),
-  );
-  if (exact) return { language: exact.code, matched: true };
+  // Exact match (BCP-47 or provider-specific tag)
+  const exact = langs.find((l) => l.toLowerCase() === targetLanguage.toLowerCase());
+  if (exact) return { language: exact, matched: true };
 
-  // Primary match
-  const primary = provider.supportedLanguages.find(
-    (l) => primaryLang(l.code) === targetPrimary,
-  );
-  if (primary) return { language: primary.code, matched: true };
+  // Primary subtag match (e.g. zh-CN → zh, or en-US → en)
+  const primary = langs.find((l) => primaryLang(l) === targetPrimary);
+  if (primary) return { language: primary, matched: true };
 
   // Auto detection if supported
-  const auto = provider.supportedLanguages.find((l) => l.code === 'auto');
+  const auto = langs.find((l) => l.toLowerCase() === 'auto');
   if (auto) return { language: 'auto', matched: true };
 
   // Fallback to English
-  const en = provider.supportedLanguages.find(
-    (l) => primaryLang(l.code) === 'en',
-  );
-  if (en) return { language: en.code, matched: false };
+  const en = langs.find((l) => primaryLang(l) === 'en');
+  if (en) return { language: en, matched: false };
 
-  return { language: provider.supportedLanguages[0].code, matched: false };
+  return { language: langs[0], matched: false };
 }
 
 /**
