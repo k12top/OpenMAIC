@@ -148,10 +148,20 @@ async function generateSingleMedia(
       createdAt: Date.now(),
     });
 
-    // Upload to cloud storage (best-effort, non-blocking)
+    // Upload to cloud storage and write the persisted URL back into the slide element src.
+    // This ensures other users (e.g. via share link) can load the image even when they have no
+    // local IndexedDB cache and have image generation disabled in their own settings.
     import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
       const mediaKind = req.type === 'video' ? 'video' : 'image';
-      uploadMediaToServer(stageId, mediaKind, blob, `${req.elementId}.${mimeType.split('/')[1] || 'bin'}`).catch(() => {});
+      uploadMediaToServer(stageId, mediaKind, blob, `${req.elementId}.${mimeType.split('/')[1] || 'bin'}`)
+        .then((result) => {
+          if (result?.url) {
+            import('@/lib/store/stage').then(({ useStageStore }) => {
+              useStageStore.getState().updateMediaElementSrc(req.elementId, result.url);
+            });
+          }
+        })
+        .catch(() => {});
     });
 
     // Update store with object URL

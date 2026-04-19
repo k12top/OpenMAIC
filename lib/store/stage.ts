@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Stage, Scene, StageMode } from '@/lib/types/stage';
+import type { Stage, Scene, StageMode, SlideContent } from '@/lib/types/stage';
+import type { PPTImageElement, PPTVideoElement } from '@/lib/types/slides';
 import { createSelectors } from '@/lib/utils/create-selectors';
 import type { ChatSession } from '@/lib/types/chat';
 import type { SceneOutline } from '@/lib/types/generation';
@@ -86,6 +87,8 @@ interface StageState {
   retryFailedOutline: (outlineId: string) => void;
   setCreditsInsufficient: (value: boolean) => void;
   updateSpeechActionAudioUrl: (audioId: string, url: string) => void;
+  /** Replace a placeholder media elementId with its persisted cloud URL across all scenes */
+  updateMediaElementSrc: (elementId: string, url: string) => void;
 
   // Getters
   getCurrentScene: () => Scene | null;
@@ -254,6 +257,45 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
         get().updateScene(scene.id, { actions: updated });
         break;
       }
+    }
+  },
+
+  updateMediaElementSrc: (elementId, url) => {
+    const { scenes } = get();
+    let changed = false;
+    const updated = scenes.map((scene) => {
+      if (scene.content?.type !== 'slide') return scene;
+      const slideContent = scene.content as SlideContent;
+      const canvas = slideContent.canvas;
+      if (!canvas?.elements) return scene;
+
+      let slideChanged = false;
+      const elements = canvas.elements.map((el) => {
+        if (
+          (el.type === 'image' || el.type === 'video') &&
+          (el as PPTImageElement | PPTVideoElement).src === elementId
+        ) {
+          slideChanged = true;
+          return { ...el, src: url };
+        }
+        return el;
+      });
+
+      if (slideChanged) {
+        changed = true;
+        return {
+          ...scene,
+          content: {
+            ...slideContent,
+            canvas: { ...canvas, elements },
+          } as SlideContent,
+        };
+      }
+      return scene;
+    });
+    if (changed) {
+      set({ scenes: updated });
+      debouncedSave();
     }
   },
 
