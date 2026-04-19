@@ -9,6 +9,7 @@ import { ChevronLeftIcon, ChevronRightIcon, PaperclipIcon, XIcon } from 'lucide-
 import type { ComponentProps, HTMLAttributes, ReactElement } from 'react';
 import { createContext, memo, useContext, useEffect, useMemo, useState } from 'react';
 import { Streamdown } from 'streamdown';
+import { createMathPlugin } from '@streamdown/math';
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage['role'];
@@ -265,12 +266,17 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
   );
 };
 
+// Module-level singleton — avoids re-creating the plugin on every render.
+// singleDollarTextMath enables $…$ inline math in addition to $$…$$.
+const mathPlugin = createMathPlugin({ singleDollarTextMath: true });
+
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn('size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0', className)}
+      plugins={{ math: mathPlugin }}
       {...props}
     />
   ),

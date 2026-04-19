@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { PPTTextElement } from '@/lib/types/slides';
 import { useElementShadow } from '../hooks/useElementShadow';
 import { ElementOutline } from '../ElementOutline';
@@ -9,12 +10,34 @@ export interface BaseTextElementProps {
   target?: string;
 }
 
+const KATEX_DELIMITERS = [
+  { left: '$$', right: '$$', display: true },
+  { left: '$', right: '$', display: false },
+  { left: '\\(', right: '\\)', display: false },
+  { left: '\\[', right: '\\]', display: true },
+];
+
 /**
  * Base text element component (read-only)
- * Renders static text content with styling
+ * Renders static text content with styling.
+ * Automatically runs KaTeX auto-render on mount and when content changes
+ * so that any $…$ or $$…$$ math written into text elements is displayed
+ * as formatted formulas, not raw LaTeX strings.
  */
 export function BaseTextElement({ elementInfo, target }: BaseTextElementProps) {
   const { shadowStyle } = useElementShadow(elementInfo.shadow);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    import('katex/contrib/auto-render').then(({ default: renderMathInElement }) => {
+      if (!contentRef.current) return;
+      renderMathInElement(contentRef.current, {
+        delimiters: KATEX_DELIMITERS,
+        throwOnError: false,
+      });
+    });
+  }, [elementInfo.content]);
 
   return (
     <div
@@ -53,6 +76,7 @@ export function BaseTextElement({ elementInfo, target }: BaseTextElementProps) {
             outline={elementInfo.outline}
           />
           <div
+            ref={contentRef}
             className={`text ProseMirror-static relative ${target === 'thumbnail' ? 'pointer-events-none' : ''}`}
             dangerouslySetInnerHTML={{ __html: elementInfo.content }}
           />

@@ -8,6 +8,9 @@ import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { validateUrlForSSRF } from '@/lib/server/ssrf-guard';
 const log = createLogger('Parse PDF');
 
+/** MinerU cloud task polling can exceed default serverless limits; keep in sync with PDF_MINERU_CLOUD_TIMEOUT_MS (default 900s). */
+export const maxDuration = 900;
+
 export async function POST(req: NextRequest) {
   let pdfFileName: string | undefined;
   let resolvedProviderId: string | undefined;

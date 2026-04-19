@@ -343,7 +343,10 @@
     "outlineGenerateFailed": "アウトラインの生成に失敗しました。しばらくしてからお試しください",
     "webSearching": "ウェブ検索",
     "webSearchingDesc": "ウェブで最新情報を検索しています",
-    "webSearchFailed": "ウェブ検索に失敗しました"
+    "webSearchFailed": "ウェブ検索に失敗しました",
+    "insufficientCreditsTitle": "クレジット不足",
+    "insufficientCreditsDesc": "クレジットがなくなりました。チャージしてから続行してください。",
+    "goToRecharge": "チャージへ"
   },
   "settings": {
     "title": "設定",

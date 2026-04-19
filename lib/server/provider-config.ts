@@ -420,3 +420,47 @@ export function resolveWebSearchApiKey(clientKey?: string): string {
   if (serverKey) return serverKey;
   return process.env.TAVILY_API_KEY || '';
 }
+
+// ---------------------------------------------------------------------------
+// Public API — Server defaults
+// ---------------------------------------------------------------------------
+
+export interface ServerDefaults {
+  /** Preferred TTS provider ID (DEFAULT_TTS_PROVIDER) */
+  ttsProvider?: string;
+  /** Preferred ASR provider ID (DEFAULT_ASR_PROVIDER) */
+  asrProvider?: string;
+  /** Preferred image generation provider ID (DEFAULT_IMAGE_PROVIDER) */
+  imageProvider?: string;
+  /** Preferred video generation provider ID (DEFAULT_VIDEO_PROVIDER) */
+  videoProvider?: string;
+  /** Whether image generation should be enabled by default (DEFAULT_IMAGE_GENERATION_ENABLED) */
+  imageGenerationEnabled?: boolean;
+  /** Whether video generation should be enabled by default (DEFAULT_VIDEO_GENERATION_ENABLED) */
+  videoGenerationEnabled?: boolean;
+}
+
+/**
+ * Read operator-configured defaults from environment variables.
+ * These are used by the client on first setup to pre-select providers
+ * instead of always falling back to the first available one.
+ */
+export function getServerDefaults(): ServerDefaults {
+  const defaults: ServerDefaults = {};
+
+  if (process.env.DEFAULT_TTS_PROVIDER) defaults.ttsProvider = process.env.DEFAULT_TTS_PROVIDER;
+  if (process.env.DEFAULT_ASR_PROVIDER) defaults.asrProvider = process.env.DEFAULT_ASR_PROVIDER;
+  if (process.env.DEFAULT_IMAGE_PROVIDER)
+    defaults.imageProvider = process.env.DEFAULT_IMAGE_PROVIDER;
+  if (process.env.DEFAULT_VIDEO_PROVIDER)
+    defaults.videoProvider = process.env.DEFAULT_VIDEO_PROVIDER;
+
+  if (process.env.DEFAULT_IMAGE_GENERATION_ENABLED !== undefined)
+    defaults.imageGenerationEnabled =
+      process.env.DEFAULT_IMAGE_GENERATION_ENABLED === 'true';
+  if (process.env.DEFAULT_VIDEO_GENERATION_ENABLED !== undefined)
+    defaults.videoGenerationEnabled =
+      process.env.DEFAULT_VIDEO_GENERATION_ENABLED === 'true';
+
+  return defaults;
+}

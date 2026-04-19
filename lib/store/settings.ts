@@ -1050,56 +1050,84 @@ export const useSettingsStore = create<SettingsState>()(
               let autoVideoEnabled: boolean | undefined;
 
               if (!state.autoConfigApplied) {
+                // Operator-configured defaults from env (DEFAULT_TTS_PROVIDER etc.)
+                const serverDefaults = data.defaults as {
+                  ttsProvider?: string;
+                  asrProvider?: string;
+                  imageProvider?: string;
+                  videoProvider?: string;
+                  imageGenerationEnabled?: boolean;
+                  videoGenerationEnabled?: boolean;
+                } | undefined;
+
                 // PDF: unpdf → mineru if server has it
                 if (newPDFConfig.mineru?.isServerConfigured && state.pdfProviderId === 'unpdf') {
                   autoPdfProvider = 'mineru' as PDFProviderId;
                 }
 
-                // TTS: select first server provider if current is not server-configured
+                // TTS: prefer DEFAULT_TTS_PROVIDER, fallback to first server provider
                 const serverTtsIds = Object.keys(data.tts) as TTSProviderId[];
                 if (
                   serverTtsIds.length > 0 &&
                   !newTTSConfig[state.ttsProviderId]?.isServerConfigured
                 ) {
-                  autoTtsProvider = serverTtsIds[0];
+                  const preferred = serverDefaults?.ttsProvider as TTSProviderId | undefined;
+                  autoTtsProvider =
+                    preferred && newTTSConfig[preferred]?.isServerConfigured
+                      ? preferred
+                      : serverTtsIds[0];
                   autoTtsVoice = DEFAULT_TTS_VOICES[autoTtsProvider] || 'default';
                 }
 
-                // ASR: select first server provider if current is not server-configured
+                // ASR: prefer DEFAULT_ASR_PROVIDER, fallback to first server provider
                 const serverAsrIds = Object.keys(data.asr) as ASRProviderId[];
                 if (
                   serverAsrIds.length > 0 &&
                   !newASRConfig[state.asrProviderId]?.isServerConfigured
                 ) {
-                  autoAsrProvider = serverAsrIds[0];
+                  const preferred = serverDefaults?.asrProvider as ASRProviderId | undefined;
+                  autoAsrProvider =
+                    preferred && newASRConfig[preferred]?.isServerConfigured
+                      ? preferred
+                      : serverAsrIds[0];
                 }
 
-                // Image: first server provider
+                // Image: prefer DEFAULT_IMAGE_PROVIDER, fallback to first server provider
                 const serverImageIds = Object.keys(data.image) as ImageProviderId[];
                 if (
                   serverImageIds.length > 0 &&
                   !newImageConfig[state.imageProviderId]?.isServerConfigured
                 ) {
-                  autoImageProvider = serverImageIds[0];
+                  const preferred = serverDefaults?.imageProvider as ImageProviderId | undefined;
+                  autoImageProvider =
+                    preferred && newImageConfig[preferred]?.isServerConfigured
+                      ? preferred
+                      : serverImageIds[0];
                   const models = IMAGE_PROVIDERS[autoImageProvider]?.models;
                   if (models?.length) autoImageModel = models[0].id;
                 }
                 if (serverImageIds.length > 0 && !state.imageGenerationEnabled) {
-                  autoImageEnabled = true;
+                  // Respect DEFAULT_IMAGE_GENERATION_ENABLED; default true when server has providers
+                  autoImageEnabled = serverDefaults?.imageGenerationEnabled !== false;
                 }
 
-                // Video: first server provider
+                // Video: prefer DEFAULT_VIDEO_PROVIDER, fallback to first server provider
                 const serverVideoIds = Object.keys(data.video || {}) as VideoProviderId[];
                 if (
                   serverVideoIds.length > 0 &&
                   !newVideoConfig[state.videoProviderId]?.isServerConfigured
                 ) {
-                  autoVideoProvider = serverVideoIds[0];
+                  const preferred = serverDefaults?.videoProvider as VideoProviderId | undefined;
+                  autoVideoProvider =
+                    preferred && newVideoConfig[preferred]?.isServerConfigured
+                      ? preferred
+                      : serverVideoIds[0];
                   const models = VIDEO_PROVIDERS[autoVideoProvider]?.models;
                   if (models?.length) autoVideoModel = models[0].id;
                 }
                 if (serverVideoIds.length > 0 && !state.videoGenerationEnabled) {
-                  autoVideoEnabled = true;
+                  // Respect DEFAULT_VIDEO_GENERATION_ENABLED; default true when server has providers
+                  autoVideoEnabled = serverDefaults?.videoGenerationEnabled !== false;
                 }
               }
 

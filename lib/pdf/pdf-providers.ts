@@ -137,8 +137,11 @@
  * - Always include provider name in error messages
  */
 
+import crypto from 'crypto';
 import { extractText, getDocumentProxy, extractImages } from 'unpdf';
 import sharp from 'sharp';
+import { Client as MinioClient } from 'minio';
+import JSZip from 'jszip';
 import type { PDFParserConfig } from './types';
 import type { ParsedPdfContent } from '@/lib/types/pdf';
 import { PDF_PROVIDERS } from './constants';
@@ -262,6 +265,319 @@ async function parseWithUnpdf(pdfBuffer: Buffer): Promise<ParsedPdfContent> {
   };
 }
 
+// ---------------------------------------------------------------------------
+// MinerU cloud API helpers
+// ---------------------------------------------------------------------------
+
+const MINERU_CLOUD_HOST = 'https://mineru.net';
+const MINERU_CLOUD_POLL_INIT_MS = 3000;
+const MINERU_CLOUD_POLL_MAX_MS = 30000;
+/** Default 15 min — large PDFs + VLM can exceed 5 min. Override with PDF_MINERU_CLOUD_TIMEOUT_MS (seconds). */
+function getMinerUCloudPollTimeoutMs(): number {
+  const raw = process.env.PDF_MINERU_CLOUD_TIMEOUT_MS?.trim();
+  if (raw) {
+    const sec = Number.parseInt(raw, 10);
+    if (Number.isFinite(sec) && sec > 0) return sec * 1000;
+  }
+  return 15 * 60 * 1000;
+}
+
+/** Official API returns `full_zip_url` when state=done (not `zip_url`). */
+function extractMinerUResultZipUrl(data: Record<string, unknown> | undefined): string | undefined {
+  if (!data) return undefined;
+  const full = data.full_zip_url;
+  const legacy = data.zip_url;
+  if (typeof full === 'string' && full.length > 0) return full;
+  if (typeof legacy === 'string' && legacy.length > 0) return legacy;
+  return undefined;
+}
+
+/** Long presigned URLs clutter logs — keep origin + path + truncated tail. */
+function truncateForLog(value: string, maxLen = 200): string {
+  if (value.length <= maxLen) return value;
+  return `${value.slice(0, maxLen)}…(len=${value.length})`;
+}
+
+/**
+ * Effective MinerU cloud API origin for REST calls.
+ * Prefer `PDF_MINERU_BASE_URL` origin when set (e.g. https://mineru.net),
+ * else `PDF_MINERU_CLOUD_API_BASE`, else https://mineru.net
+ */
+function resolveMinerUCloudApiBase(configBaseUrl?: string): string {
+  const fromEnv = process.env.PDF_MINERU_CLOUD_API_BASE?.trim();
+  if (fromEnv) {
+    try {
+      return new URL(fromEnv.startsWith('http') ? fromEnv : `https://${fromEnv}`).origin;
+    } catch {
+      log.warn(`[MinerU Cloud] Invalid PDF_MINERU_CLOUD_API_BASE, ignoring: ${fromEnv}`);
+    }
+  }
+  if (configBaseUrl?.startsWith('http')) {
+    try {
+      return new URL(configBaseUrl).origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return MINERU_CLOUD_HOST;
+}
+
+/** Returns true when the base URL points to the official MinerU cloud service. */
+function isMinerUCloudMode(baseUrl: string): boolean {
+  return baseUrl.includes('mineru.net');
+}
+
+/**
+ * Ensure the PDF exists in MinIO and return a publicly accessible URL.
+ *
+ * Uses the SHA-256 hash of the file content as the object key so that
+ * identical files are stored only once and reused across requests.
+ * The object is never deleted — it serves as a permanent cache.
+ */
+async function ensurePdfInMinio(pdfBuffer: Buffer): Promise<string> {
+  const endpoint = process.env.MINIO_ENDPOINT;
+  const accessKey = process.env.MINIO_ACCESS_KEY;
+  const secretKey = process.env.MINIO_SECRET_KEY || '';
+  const bucket = process.env.MINIO_BUCKET || 'openmaic';
+
+  if (!endpoint || !accessKey) {
+    throw new Error(
+      'MinIO is required for MinerU cloud mode. ' +
+        'Please configure MINIO_ENDPOINT, MINIO_ACCESS_KEY, and MINIO_SECRET_KEY.',
+    );
+  }
+
+  const client = new MinioClient({
+    endPoint: endpoint,
+    port: parseInt(process.env.MINIO_PORT || '9000', 10),
+    useSSL: process.env.MINIO_USE_SSL === 'true',
+    accessKey,
+    secretKey,
+  });
+
+  const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+  const key = `pdf/${hash}.pdf`;
+
+  let alreadyExists = false;
+  try {
+    await client.statObject(bucket, key);
+    alreadyExists = true;
+  } catch {
+    alreadyExists = false;
+  }
+
+  if (alreadyExists) {
+    log.info(`[MinerU Cloud] Reusing cached PDF in MinIO: ${key}`);
+  } else {
+    await client.putObject(bucket, key, pdfBuffer, pdfBuffer.length, {
+      'Content-Type': 'application/pdf',
+    });
+    log.info(`[MinerU Cloud] Uploaded PDF to MinIO: ${key} (${pdfBuffer.length} bytes)`);
+  }
+
+  const publicBaseUrl = process.env.MINIO_PUBLIC_URL?.replace(/\/$/, '');
+  if (publicBaseUrl) {
+    return `${publicBaseUrl}/${bucket}/${key}`;
+  }
+  // Presigned URL valid for 2 hours — enough for MinerU cloud to fetch the file.
+  return client.presignedGetObject(bucket, key, 2 * 60 * 60);
+}
+
+/**
+ * Parse PDF using the official MinerU cloud API (mineru.net).
+ *
+ * Flow:
+ *   1. Upload PDF to MinIO (SHA-256 hash deduplication, permanent cache)
+ *   2. POST /api/v4/extract/task — submit parse task
+ *   3. GET  /api/v4/extract/task/{id} — poll with exponential back-off
+ *   4. Download result zip in memory
+ *   5. Extract markdown + images with JSZip (no disk I/O)
+ *
+ * @see https://mineru.net/doc/docs/
+ */
+async function parseWithMinerUCloud(
+  config: PDFParserConfig,
+  pdfBuffer: Buffer,
+): Promise<ParsedPdfContent> {
+  if (!config.apiKey) {
+    throw new Error(
+      'MinerU cloud API requires an API key (Token). ' +
+        'Please set PDF_MINERU_API_KEY. ' +
+        'See: https://mineru.net/apiManage',
+    );
+  }
+
+  const apiBase = resolveMinerUCloudApiBase(config.baseUrl);
+  const submitUrl = `${apiBase}/api/v4/extract/task`;
+  const authHeaders = { Authorization: `Bearer ${config.apiKey}` };
+
+  log.info(
+    `[MinerU Cloud] Config: apiBase=${apiBase} ` +
+      `(PDF_MINERU_BASE_URL / PDF_MINERU_CLOUD_API_BASE), submitUrl=${submitUrl}`,
+  );
+
+  // 1. Ensure PDF is in MinIO and get a public / presigned URL
+  log.info('[MinerU Cloud] Ensuring PDF is available in MinIO...');
+  const pdfUrl = await ensurePdfInMinio(pdfBuffer);
+  log.info(`[MinerU Cloud] PDF URL for MinerU (truncated): ${truncateForLog(pdfUrl)}`);
+
+  const submitBody = {
+    url: pdfUrl,
+    model_version: 'vlm' as const,
+    enable_formula: true,
+    enable_table: true,
+  };
+  log.info(
+    `[MinerU Cloud] POST submit: url=${submitUrl} body=${JSON.stringify({
+      ...submitBody,
+      url: truncateForLog(pdfUrl),
+    })}`,
+  );
+
+  // 2. Submit parse task
+  const submitRes = await fetch(submitUrl, {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(submitBody),
+  });
+
+  const submitText = await submitRes.text();
+  if (!submitRes.ok) {
+    log.error(
+      `[MinerU Cloud] Submit failed status=${submitRes.status} response=${truncateForLog(submitText, 800)}`,
+    );
+    throw new Error(`MinerU Cloud submit failed (${submitRes.status}): ${submitText}`);
+  }
+
+  let submitJson: Record<string, unknown>;
+  try {
+    submitJson = JSON.parse(submitText) as Record<string, unknown>;
+  } catch {
+    throw new Error(`MinerU Cloud: submit response is not JSON: ${truncateForLog(submitText, 500)}`);
+  }
+
+  const taskId: string = (submitJson?.data as { task_id?: string } | undefined)?.task_id ?? '';
+  log.info(
+    `[MinerU Cloud] Submit OK: task_id=${taskId || '(missing)'} raw=${truncateForLog(JSON.stringify(submitJson), 400)}`,
+  );
+  if (!taskId) {
+    throw new Error(
+      `MinerU Cloud: no task_id in response: ${JSON.stringify(submitJson)}`,
+    );
+  }
+
+  // 3. Poll until done (exponential back-off: 3 s → 30 s; default timeout 15 min)
+  const pollTimeoutMs = getMinerUCloudPollTimeoutMs();
+  const deadline = Date.now() + pollTimeoutMs;
+  let waitMs = MINERU_CLOUD_POLL_INIT_MS;
+  let zipUrl: string | undefined;
+  let pollRound = 0;
+  let lastState = '';
+
+  while (Date.now() < deadline) {
+    await new Promise<void>((r) => setTimeout(r, waitMs));
+    waitMs = Math.min(Math.round(waitMs * 1.5), MINERU_CLOUD_POLL_MAX_MS);
+    pollRound += 1;
+
+    const pollUrl = `${apiBase}/api/v4/extract/task/${taskId}`;
+    if (pollRound === 1) {
+      log.info(`[MinerU Cloud] Polling: GET ${pollUrl}`);
+    }
+
+    const pollRes = await fetch(pollUrl, {
+      headers: authHeaders,
+    });
+
+    if (!pollRes.ok) {
+      const pollErrText = await pollRes.text().catch(() => pollRes.statusText);
+      log.warn(
+        `[MinerU Cloud] Poll HTTP ${pollRes.status} round=${pollRound} body=${truncateForLog(pollErrText, 400)}`,
+      );
+      continue;
+    }
+
+    const pollJson = (await pollRes.json()) as Record<string, unknown>;
+    const apiCode = pollJson.code;
+    if (typeof apiCode === 'number' && apiCode !== 0) {
+      log.warn(
+        `[MinerU Cloud] Poll round=${pollRound} non-zero code=${apiCode} msg=${String(pollJson.msg ?? '')}`,
+      );
+    }
+
+    const data = pollJson?.data as Record<string, unknown> | undefined;
+    const state: string = (data?.state as string) ?? 'unknown';
+    lastState = state;
+    log.info(
+      `[MinerU Cloud] Poll round=${pollRound} state=${state} detail=${truncateForLog(JSON.stringify(pollJson), 500)}`,
+    );
+
+    if (state === 'done') {
+      // Official docs: `full_zip_url` (legacy alias: zip_url)
+      zipUrl = extractMinerUResultZipUrl(data);
+      if (!zipUrl) {
+        log.error(
+          `[MinerU Cloud] state=done but missing full_zip_url: ${truncateForLog(JSON.stringify(pollJson), 1000)}`,
+        );
+        throw new Error(
+          'MinerU Cloud: task finished (state=done) but full_zip_url was not returned. ' +
+            'Check API version / response shape.',
+        );
+      }
+      break;
+    }
+    if (state === 'failed') {
+      const errMsg = (data?.err_msg as string) ?? 'unknown error';
+      log.error(
+        `[MinerU Cloud] Task failed: err_msg=${errMsg} full=${truncateForLog(JSON.stringify(pollJson), 1500)}`,
+      );
+      throw new Error(
+        `MinerU Cloud task failed: ${errMsg} (apiBase=${apiBase}, pdfUrl=${truncateForLog(pdfUrl)}, task_id=${taskId})`,
+      );
+    }
+  }
+
+  if (!zipUrl) {
+    throw new Error(
+      `MinerU Cloud task timed out after ${pollTimeoutMs / 1000}s ` +
+        `(task_id=${taskId}, apiBase=${apiBase}, lastState=${lastState || 'n/a'})`,
+    );
+  }
+
+  // 4. Download result zip entirely in memory — no disk I/O, no cleanup needed
+  log.info(`[MinerU Cloud] Downloading result zip: ${truncateForLog(zipUrl)}`);
+  const zipArrayBuffer = await fetch(zipUrl).then((r) => r.arrayBuffer());
+  const zipBuf = Buffer.from(new Uint8Array(zipArrayBuffer));
+
+  // 5. Extract with JSZip in memory
+  const zip = await JSZip.loadAsync(zipBuf);
+
+  const mdFile = Object.values(zip.files).find((f) => !f.dir && f.name.endsWith('.md'));
+  if (!mdFile) {
+    throw new Error('MinerU Cloud: no markdown file found in result zip');
+  }
+  const markdown = await mdFile.async('string');
+
+  const imageData: Record<string, string> = {};
+  await Promise.all(
+    Object.values(zip.files)
+      .filter((f) => !f.dir && /^images\//i.test(f.name))
+      .map(async (f) => {
+        const b64 = await f.async('base64');
+        const ext = f.name.split('.').pop()?.toLowerCase() ?? 'png';
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+        const filename = f.name.split('/').pop()!;
+        imageData[filename] = `data:${mime};base64,${b64}`;
+      }),
+  );
+
+  // Reuse the existing result extractor for consistent output format
+  return extractMinerUResult({ md_content: markdown, images: imageData });
+}
+
+// ---------------------------------------------------------------------------
+// MinerU self-hosted implementation
+// ---------------------------------------------------------------------------
+
 /**
  * Parse PDF using self-hosted MinerU service (mineru-api)
  *
@@ -283,6 +599,11 @@ async function parseWithMinerU(
         'Please deploy MinerU locally or specify the server URL. ' +
         'See: https://github.com/opendatalab/MinerU',
     );
+  }
+
+  // Auto-detect cloud vs self-hosted based on the base URL
+  if (isMinerUCloudMode(config.baseUrl)) {
+    return parseWithMinerUCloud(config, pdfBuffer);
   }
 
   log.info('[MinerU] Parsing PDF with MinerU server:', config.baseUrl);

@@ -347,7 +347,10 @@
     "outlineGenerateFailed": "大纲生成失败，请稍后重试",
     "webSearching": "网络搜索",
     "webSearchingDesc": "正在搜索网络获取最新资料",
-    "webSearchFailed": "网络搜索失败"
+    "webSearchFailed": "网络搜索失败",
+    "insufficientCreditsTitle": "积分不足",
+    "insufficientCreditsDesc": "您的积分已用完，请前往充值后再继续生成。",
+    "goToRecharge": "前往充值"
   },
   "settings": {
     "title": "设置",

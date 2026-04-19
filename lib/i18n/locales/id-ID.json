@@ -343,7 +343,10 @@
     "outlineGenerateFailed": "Pembuatan kerangka gagal, silakan coba lagi nanti",
     "webSearching": "Pencarian Web",
     "webSearchingDesc": "Mencari di web untuk informasi terbaru",
-    "webSearchFailed": "Pencarian web gagal"
+    "webSearchFailed": "Pencarian web gagal",
+    "insufficientCreditsTitle": "Kredit habis",
+    "insufficientCreditsDesc": "Kredit Anda habis. Isi ulang untuk melanjutkan pembuatan.",
+    "goToRecharge": "Isi ulang kredit"
   },
   "settings": {
     "title": "Pengaturan",

@@ -343,7 +343,10 @@
     "outlineGenerateFailed": "Ошибка генерации структуры, попробуйте позже",
     "webSearching": "Поиск в интернете",
     "webSearchingDesc": "Поиск актуальной информации в сети",
-    "webSearchFailed": "Ошибка веб-поиска"
+    "webSearchFailed": "Ошибка веб-поиска",
+    "insufficientCreditsTitle": "Недостаточно кредитов",
+    "insufficientCreditsDesc": "Кредиты закончились. Пополните баланс, чтобы продолжить генерацию.",
+    "goToRecharge": "Пополнить"
   },
   "settings": {
     "title": "Настройки",

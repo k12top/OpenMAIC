@@ -343,7 +343,10 @@
     "outlineGenerateFailed": "La génération du plan a échoué, veuillez réessayer plus tard",
     "webSearching": "Recherche Web",
     "webSearchingDesc": "Recherche sur le web pour des informations à jour",
-    "webSearchFailed": "La recherche web a échoué"
+    "webSearchFailed": "La recherche web a échoué",
+    "insufficientCreditsTitle": "Crédits insuffisants",
+    "insufficientCreditsDesc": "Vos crédits sont épuisés. Rechargez pour continuer la génération.",
+    "goToRecharge": "Aller à la recharge"
   },
   "settings": {
     "title": "Paramètres",

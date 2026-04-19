@@ -1,9 +1,18 @@
 'use client';
 
 import { useEffect, useState, Suspense, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, Sparkles, AlertCircle, AlertTriangle, ArrowLeft, Bot } from 'lucide-react';
+import {
+  CheckCircle2,
+  Sparkles,
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Bot,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,6 +41,9 @@ import { StepVisualizer } from './components/visualizers';
 
 const log = createLogger('GenerationPreview');
 
+/** Thrown when API returns 402 / INSUFFICIENT_CREDITS — show recharge UI, not raw server message */
+const INSUFFICIENT_CREDITS_MARKER = 'INSUFFICIENT_CREDITS';
+
 function GenerationPreviewContent() {
   const router = useRouter();
   const { t } = useI18n();
@@ -41,6 +53,7 @@ function GenerationPreviewContent() {
   const [session, setSession] = useState<GenerationSessionState | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isComplete] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -65,6 +78,10 @@ function GenerationPreviewContent() {
 
   // Compute active steps based on session state
   const activeSteps = getActiveSteps(session);
+
+  const rechargeHref =
+    process.env.NEXT_PUBLIC_CREDITS_RECHARGE_URL?.trim() || '/credits/recharge';
+  const rechargeOpensNewTab = /^https?:\/\//i.test(rechargeHref);
 
   // Load session from sessionStorage
   useEffect(() => {
@@ -140,6 +157,7 @@ function GenerationPreviewContent() {
     let currentSession = session;
 
     setError(null);
+    setInsufficientCredits(false);
     setCurrentStepIndex(0);
 
     try {
@@ -315,6 +333,9 @@ function GenerationPreviewContent() {
 
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: 'Web search failed' }));
+          if (res.status === 402 || data.code === 'INSUFFICIENT_CREDITS') {
+            throw new Error(INSUFFICIENT_CREDITS_MARKER);
+          }
           throw new Error(data.error || t('generation.webSearchFailed'));
         }
 
@@ -427,7 +448,13 @@ function GenerationPreviewContent() {
             signal,
           });
 
-          if (!agentResp.ok) throw new Error('Agent generation failed');
+          if (!agentResp.ok) {
+            const errData = await agentResp.json().catch(() => ({}));
+            if (agentResp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+              throw new Error(INSUFFICIENT_CREDITS_MARKER);
+            }
+            throw new Error(errData.error || 'Agent generation failed');
+          }
           const agentData = await agentResp.json();
           if (!agentData.success) throw new Error(agentData.error || 'Agent generation failed');
 
@@ -454,6 +481,9 @@ function GenerationPreviewContent() {
               persona: a!.persona,
             }));
         } catch (err: unknown) {
+          if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) {
+            throw err;
+          }
           log.warn('[Generation] Agent generation failed, falling back to presets:', err);
           const registry = useAgentRegistry.getState();
           const fallbackIds = settings.selectedAgentIds.filter((id) => {
@@ -519,6 +549,10 @@ function GenerationPreviewContent() {
             .then((res) => {
               if (!res.ok) {
                 return res.json().then((d) => {
+                  if (res.status === 402 || d.code === 'INSUFFICIENT_CREDITS') {
+                    reject(new Error(INSUFFICIENT_CREDITS_MARKER));
+                    return;
+                  }
                   reject(new Error(d.error || t('generation.outlineGenerateFailed')));
                 });
               }
@@ -644,6 +678,9 @@ function GenerationPreviewContent() {
 
       if (!contentResp.ok) {
         const errorData = await contentResp.json().catch(() => ({ error: 'Request failed' }));
+        if (contentResp.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
+          throw new Error(INSUFFICIENT_CREDITS_MARKER);
+        }
         throw new Error(errorData.error || t('generation.sceneGenerateFailed'));
       }
 
@@ -673,6 +710,9 @@ function GenerationPreviewContent() {
 
       if (!actionsResp.ok) {
         const errorData = await actionsResp.json().catch(() => ({ error: 'Request failed' }));
+        if (actionsResp.status === 402 || errorData.code === 'INSUFFICIENT_CREDITS') {
+          throw new Error(INSUFFICIENT_CREDITS_MARKER);
+        }
         throw new Error(errorData.error || t('generation.sceneGenerateFailed'));
       }
 
@@ -709,6 +749,10 @@ function GenerationPreviewContent() {
               signal,
             });
             if (!resp.ok) {
+              const errData = await resp.json().catch(() => ({}));
+              if (resp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+                throw new Error(INSUFFICIENT_CREDITS_MARKER);
+              }
               ttsFailCount++;
               continue;
             }
@@ -766,7 +810,13 @@ function GenerationPreviewContent() {
         return;
       }
       sessionStorage.removeItem('generationSession');
-      setError(err instanceof Error ? err.message : String(err));
+      if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) {
+        setInsufficientCredits(true);
+        setError(null);
+      } else {
+        setInsufficientCredits(false);
+        setError(err instanceof Error ? err.message : String(err));
+      }
     }
   };
 
@@ -875,7 +925,7 @@ function GenerationPreviewContent() {
               {/* Icon / Visualizer Container */}
               <div className="relative size-48 flex items-center justify-center">
                 <AnimatePresence mode="popLayout">
-                  {error ? (
+                  {error || insufficientCredits ? (
                     <motion.div
                       key="error"
                       initial={{ scale: 0.5, opacity: 0 }}
@@ -916,32 +966,38 @@ function GenerationPreviewContent() {
               <div className="space-y-3 max-w-sm mx-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={error ? 'error' : isComplete ? 'done' : activeStep.id}
+                    key={
+                      error || insufficientCredits ? 'error' : isComplete ? 'done' : activeStep.id
+                    }
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-2"
                   >
                     <h2 className="text-2xl font-bold tracking-tight">
-                      {error
-                        ? t('generation.generationFailed')
-                        : isComplete
-                          ? t('generation.generationComplete')
-                          : t(activeStep.title)}
+                      {insufficientCredits
+                        ? t('generation.insufficientCreditsTitle')
+                        : error
+                          ? t('generation.generationFailed')
+                          : isComplete
+                            ? t('generation.generationComplete')
+                            : t(activeStep.title)}
                     </h2>
                     <p className="text-muted-foreground text-base">
-                      {error
-                        ? error
-                        : isComplete
-                          ? t('generation.classroomReady')
-                          : statusMessage || t(activeStep.description)}
+                      {insufficientCredits
+                        ? t('generation.insufficientCreditsDesc')
+                        : error
+                          ? error
+                          : isComplete
+                            ? t('generation.classroomReady')
+                            : statusMessage || t(activeStep.description)}
                     </p>
                   </motion.div>
                 </AnimatePresence>
 
                 {/* Truncation warning indicator */}
                 <AnimatePresence>
-                  {truncationWarnings.length > 0 && !error && !isComplete && (
+                  {truncationWarnings.length > 0 && !error && !insufficientCredits && !isComplete && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -1003,12 +1059,35 @@ function GenerationPreviewContent() {
         {/* Footer Action */}
         <div className="h-16 flex items-center justify-center w-full">
           <AnimatePresence>
-            {error ? (
+            {error || insufficientCredits ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-xs"
+                className="w-full max-w-xs space-y-3"
               >
+                {insufficientCredits && (
+                  <Button size="lg" className="w-full h-12" asChild>
+                    {rechargeOpensNewTab ? (
+                      <a
+                        href={rechargeHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2"
+                      >
+                        {t('generation.goToRecharge')}
+                        <ArrowRight className="size-4 shrink-0" />
+                      </a>
+                    ) : (
+                      <Link
+                        href={rechargeHref}
+                        className="inline-flex items-center justify-center gap-2"
+                      >
+                        {t('generation.goToRecharge')}
+                        <ArrowRight className="size-4 shrink-0" />
+                      </Link>
+                    )}
+                  </Button>
+                )}
                 <Button size="lg" variant="outline" className="w-full h-12" onClick={goBackToHome}>
                   {t('generation.goBackAndRetry')}
                 </Button>

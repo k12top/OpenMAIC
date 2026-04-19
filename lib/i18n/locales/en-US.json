@@ -343,7 +343,10 @@
     "outlineGenerateFailed": "Outline generation failed, please try again later",
     "webSearching": "Web Search",
     "webSearchingDesc": "Searching the web for up-to-date information",
-    "webSearchFailed": "Web search failed"
+    "webSearchFailed": "Web search failed",
+    "insufficientCreditsTitle": "Out of credits",
+    "insufficientCreditsDesc": "Your credits are used up. Recharge to continue generation.",
+    "goToRecharge": "Go to recharge"
   },
   "settings": {
     "title": "Settings",
