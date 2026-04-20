@@ -11,7 +11,7 @@ import { createLogger } from '@/lib/logger';
 
 const log = createLogger('ClassroomSync');
 
-const SYNC_DEBOUNCE_MS = 3000;
+const SYNC_DEBOUNCE_MS = 1500;
 const CHAT_SYNC_DEBOUNCE_MS = 5000;
 
 let _stageSyncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,15 +39,19 @@ export function syncClassroomToServer(
 
   _stageSyncTimer = setTimeout(async () => {
     try {
+      const body = JSON.stringify({
+        classroomId,
+        stage,
+        scenes,
+        currentSceneId,
+      });
       const res = await fetch('/api/classroom/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classroomId,
-          stage,
-          scenes,
-          currentSceneId,
-        }),
+        // keepalive ensures the request completes even if the user navigates away
+        // before the debounce timer fires (e.g. tab close right after image upload).
+        keepalive: true,
+        body,
       });
 
       if (res.ok) {

@@ -67,6 +67,13 @@ interface StageState {
   failedOutlines: SceneOutline[];
   creditsInsufficient: boolean;
 
+  /**
+   * Buffer for media element src updates that arrived before the scene was added.
+   * Maps elementId → final URL. Applied automatically when addScene is called.
+   * Not persisted.
+   */
+  pendingMediaUrls: Record<string, string>;
+
   // Actions
   setStage: (stage: Stage) => void;
   setScenes: (scenes: Scene[]) => void;
@@ -116,6 +123,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   currentGeneratingOrder: -1,
   failedOutlines: [],
   creditsInsufficient: false,
+  pendingMediaUrls: {},
 
   // Actions
   setStage: (stage) => {
@@ -147,7 +155,46 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       );
       return;
     }
-    const scenes = [...get().scenes, scene];
+
+    // Apply any media URLs that arrived before this scene was in the store
+    const { pendingMediaUrls } = get();
+    let patchedScene = scene;
+    if (
+      Object.keys(pendingMediaUrls).length > 0 &&
+      scene.content?.type === 'slide'
+    ) {
+      const slideContent = scene.content as SlideContent;
+      const canvas = slideContent.canvas;
+      if (canvas?.elements) {
+        let anyPatched = false;
+        const elements = canvas.elements.map((el) => {
+          if (
+            (el.type === 'image' || el.type === 'video') &&
+            typeof (el as PPTImageElement | PPTVideoElement).src === 'string' &&
+            pendingMediaUrls[(el as PPTImageElement | PPTVideoElement).src]
+          ) {
+            anyPatched = true;
+            return {
+              ...el,
+              src: pendingMediaUrls[(el as PPTImageElement | PPTVideoElement).src],
+            };
+          }
+          return el;
+        });
+        if (anyPatched) {
+          patchedScene = {
+            ...scene,
+            content: {
+              ...slideContent,
+              canvas: { ...canvas, elements },
+            } as SlideContent,
+          };
+          log.info(`Applied ${Object.keys(pendingMediaUrls).length} pending media URL(s) to scene "${scene.title}"`);
+        }
+      }
+    }
+
+    const scenes = [...get().scenes, patchedScene];
     // Remove the matching outline from generatingOutlines (match by order)
     const generatingOutlines = get().generatingOutlines.filter((o) => o.order !== scene.order);
     // Auto-switch from pending page to the newly generated scene
@@ -155,7 +202,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
     set({
       scenes,
       generatingOutlines,
-      ...(shouldSwitch ? { currentSceneId: scene.id } : {}),
+      ...(shouldSwitch ? { currentSceneId: patchedScene.id } : {}),
     });
     debouncedSave();
   },
@@ -295,7 +342,13 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
     });
     if (changed) {
       set({ scenes: updated });
-      debouncedSave();
+      // Use immediate save (not debounced) so the URL reaches IndexedDB/server promptly
+      useStageStoreBase.getState().saveToStorage();
+    } else {
+      // Scene not yet in store (media and scene generation run in parallel).
+      // Buffer the URL so addScene can patch it in when the scene arrives.
+      log.info(`Scene for element "${elementId}" not yet loaded — buffering URL for later patching`);
+      set((s) => ({ pendingMediaUrls: { ...s.pendingMediaUrls, [elementId]: url } }));
     }
   },
 
@@ -399,6 +452,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       failedOutlines: [],
       generatingOutlines: [],
       creditsInsufficient: false,
+      pendingMediaUrls: {},
     }));
     log.info('Store cleared');
   },
