@@ -1,9 +1,9 @@
-# 翔宇文书 飞书社区群 / Feishu Community Group
+# 翔宇文淑 飞书社区群 / Feishu Community Group
 
-扫描下方二维码加入 翔宇文书 开源社区飞书群：
+扫描下方二维码加入 翔宇文淑 开源社区飞书群：
 
-Scan the QR code below to join the 翔宇文书 community group on Feishu (Lark):
+Scan the QR code below to join the 翔宇文淑 community group on Feishu (Lark):
 
 <p align="center">
-  <img src="../assets/feishu-qrcode.png" alt="翔宇文书 飞书群二维码" width="400"/>
+  <img src="../assets/feishu-qrcode.png" alt="翔宇文淑 飞书群二维码" width="400"/>
 </p>

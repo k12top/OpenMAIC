@@ -131,7 +131,8 @@
     "tslib": "^2.8.0",
     "typescript": "^5",
     "vitest": "^4.1.0",
-    "vue-to-react": "^1.0.0"
+    "vue-to-react": "^1.0.0",
+    "wrangler": "^4.83.0"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [
