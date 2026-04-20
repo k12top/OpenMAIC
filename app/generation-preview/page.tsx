@@ -722,6 +722,8 @@ function GenerationPreviewContent() {
       }
 
       // Generate TTS for first scene (part of actions step — blocking)
+      // pendingTtsUploads collects (audioId, blob, format) pairs for MinIO upload after addScene.
+      const pendingTtsUploads: Array<{ audioId: string; blob: Blob; format: string }> = [];
       if (settings.ttsEnabled && settings.ttsProviderId !== 'browser-native-tts') {
         const ttsProviderConfig = settings.ttsProvidersConfig?.[settings.ttsProviderId];
         const speechActions = (data.scene.actions || []).filter(
@@ -771,6 +773,8 @@ function GenerationPreviewContent() {
               format: ttsData.format,
               createdAt: Date.now(),
             });
+            // Collect for MinIO upload (done after addScene so the store already has the scene)
+            pendingTtsUploads.push({ audioId, blob, format: ttsData.format });
           } catch (err) {
             log.warn(`[TTS] Failed for ${audioId}:`, err);
             ttsFailCount++;
@@ -785,6 +789,23 @@ function GenerationPreviewContent() {
       // Add scene to store and navigate
       store.addScene(data.scene);
       store.setCurrentSceneId(data.scene.id);
+
+      // Upload first-scene TTS blobs to MinIO and write back the URL into the speech action.
+      // This mirrors what generateAndStoreTTS does for subsequent scenes (use-scene-generator),
+      // ensuring shared-link users (who have no local IndexedDB) can play audio via audioUrl.
+      if (pendingTtsUploads.length > 0) {
+        import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
+          for (const { audioId, blob, format } of pendingTtsUploads) {
+            uploadMediaToServer(stage.id, 'tts', blob, `${audioId}.${format}`)
+              .then((result) => {
+                if (result?.url) {
+                  store.updateSpeechActionAudioUrl(audioId, result.url);
+                }
+              })
+              .catch(() => {});
+          }
+        });
+      }
 
       // Set remaining outlines as skeleton placeholders
       const remaining = outlines.filter((o) => o.order !== data.scene.order);
