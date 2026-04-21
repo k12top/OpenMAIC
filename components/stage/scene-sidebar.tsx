@@ -44,6 +44,7 @@ export function SceneSidebar({
     useStageStore();
   const failedOutlines = useStageStore.use.failedOutlines();
   const creditsInsufficient = useStageStore.use.creditsInsufficient();
+  const regeneratingSceneIds = useStageStore.use.regeneratingSceneIds();
   const viewportSize = useCanvasStore.use.viewportSize();
   const viewportRatio = useCanvasStore.use.viewportRatio();
 
@@ -172,6 +173,7 @@ export function SceneSidebar({
             const Icon = getSceneTypeIcon(scene.type);
             const isSlide = scene.type === 'slide';
             const slideContent = isSlide ? (scene.content as SlideContent) : null;
+            const isRegenerating = regeneratingSceneIds.includes(scene.id);
 
             return (
               <div
@@ -220,6 +222,14 @@ export function SceneSidebar({
 
                 {/* Thumbnail */}
                 <div className="relative aspect-video w-full rounded overflow-hidden bg-gray-100 dark:bg-gray-800 ring-1 ring-black/5 dark:ring-white/5">
+                  {isRegenerating && (
+                    <div className="absolute inset-0 z-10 bg-white/70 dark:bg-black/50 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1">
+                      <RefreshCw className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 animate-spin" />
+                      <span className="text-[9px] font-semibold text-purple-700 dark:text-purple-300">
+                        {t('stage.regenerating')}
+                      </span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center">
                     {isSlide && slideContent ? (
                       <ThumbnailSlide

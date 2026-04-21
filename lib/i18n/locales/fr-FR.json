@@ -147,6 +147,7 @@
     "fullscreen": "Plein écran",
     "exitFullscreen": "Quitter le plein écran",
     "regenerateScene": "Régénérer cette page",
+    "regenerating": "Régénération",
     "retryMode": "Réessayer uniquement",
     "retryModeHint": "Relancer cette page telle quelle, sans modifier les invites (le texte, les médias et le TTS sont tous régénérés).",
     "simpleMode": "Simple",

@@ -147,6 +147,7 @@
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen",
     "regenerateScene": "Regenerate this page",
+    "regenerating": "Regenerating",
     "retryMode": "Retry only",
     "retryModeHint": "Re-run this page as-is, without changing any prompts (text, media, and TTS are all produced again).",
     "simpleMode": "Simple",

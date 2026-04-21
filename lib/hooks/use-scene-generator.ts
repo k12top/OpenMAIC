@@ -591,7 +591,13 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
     ) => {
       const state = store.getState();
       const scene = state.scenes.find((s) => s.id === sceneId);
-      if (!scene || !state.stage) return;
+      if (!state.stage || !scene) return;
+      // Guard against double-clicks
+      if (state.regeneratingSceneIds.includes(sceneId)) {
+        log.info(`[regenerateScene] ${sceneId} already regenerating, skipping`);
+        return;
+      }
+
       const params = lastParamsRef.current ?? {
         stageInfo: {
           name: state.stage.name || '',
@@ -636,23 +642,20 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
         });
       }
 
-      // Pop the old scene so the sidebar shows a "generating" placeholder and
-      // stale content doesn't linger while the new one is produced.
-      const wasCurrent = state.currentSceneId === sceneId;
-      store.getState().deleteScene(sceneId);
+      // Non-destructive flow: keep the old scene visible (so the current page
+      // never blanks out), don't touch generatingOutlines (which belongs to
+      // the initial full-doc pipeline — polluting it loses other in-flight
+      // pages), and only swap content on success via `replaceScene`.
+      store.getState().setSceneRegenerating(sceneId, true);
       store.getState().setCreditsInsufficient(false);
-
-      // Show a generating pill for this outline.
-      const existingGenerating = store.getState().generatingOutlines;
-      if (!existingGenerating.some((o) => o.id === effectiveOutline.id)) {
-        store.getState().setGeneratingOutlines([...existingGenerating, effectiveOutline]);
-      }
 
       const abortController = new AbortController();
       const signal = abortController.signal;
 
       try {
-        // Previous-speech context from the (now) latest prior scene.
+        // Previous-speech context: pull from the scene immediately preceding
+        // this one by `order` among the *currently rendered* scenes. The old
+        // scene is still present at this point, so this stays stable.
         const sortedScenes = [...store.getState().scenes].sort((a, b) => a.order - b.order);
         const priorScenes = sortedScenes.filter((s) => s.order < scene.order);
         const lastPrior = priorScenes[priorScenes.length - 1];
@@ -679,7 +682,11 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
           if (contentResult.error === 'INSUFFICIENT_CREDITS') {
             store.getState().setCreditsInsufficient(true);
           }
-          store.getState().addFailedOutline(effectiveOutline);
+          // Failure path: do NOT call addFailedOutline (that bucket is for the
+          // initial pipeline — polluting it would show a red "failed" card in
+          // the sidebar for a page that actually still exists). Just surface
+          // the error in logs and leave the original scene intact.
+          log.warn(`[regenerateScene] content generation failed for ${sceneId}`);
           return;
         }
 
@@ -700,7 +707,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
           if (actionsResult.error === 'INSUFFICIENT_CREDITS') {
             store.getState().setCreditsInsufficient(true);
           }
-          store.getState().addFailedOutline(effectiveOutline);
+          log.warn(`[regenerateScene] actions generation failed for ${sceneId}`);
           return;
         }
 
@@ -711,20 +718,22 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
         if (settings.ttsEnabled && settings.ttsProviderId !== 'browser-native-tts') {
           const ttsResult = await generateTTSForScene(newScene, signal);
           if (!ttsResult.success) {
-            store.getState().addFailedOutline(effectiveOutline);
+            log.warn(`[regenerateScene] TTS failed for ${sceneId}`);
             return;
           }
         }
 
-        // Drop the generating placeholder and inject the fresh scene.
-        const currentGenerating = store.getState().generatingOutlines;
-        store
-          .getState()
-          .setGeneratingOutlines(currentGenerating.filter((o) => o.id !== effectiveOutline.id));
-        store.getState().addScene(newScene);
-        if (wasCurrent) {
-          store.getState().setCurrentSceneId(newScene.id);
+        // Success — atomic in-place swap. Preserves array index (sidebar
+        // order) and, if the old scene was current, transparently moves the
+        // viewer to the new scene without any blank-page flash.
+        const stillExists = store.getState().scenes.some((s) => s.id === sceneId);
+        if (!stillExists) {
+          // User deleted the scene while we were regenerating — just bail,
+          // don't resurrect it.
+          log.info(`[regenerateScene] scene ${sceneId} vanished during regen, discarding result`);
+          return;
         }
+        store.getState().replaceScene(sceneId, newScene);
 
         // Kick off media regeneration for this outline only. Orchestrator will
         // persist to MinIO (with elementId) and patch element srcs.
@@ -734,8 +743,12 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
       } catch (err) {
         if (!(err instanceof DOMException && err.name === 'AbortError')) {
           log.error('[regenerateScene] Failed:', err);
-          store.getState().addFailedOutline(effectiveOutline);
         }
+      } finally {
+        // Always clear the regenerating flag on the ORIGINAL id. If we
+        // successfully replaced, replaceScene already cleared both old and
+        // new; this call is a no-op in that case.
+        store.getState().setSceneRegenerating(sceneId, false);
       }
     },
     [store],

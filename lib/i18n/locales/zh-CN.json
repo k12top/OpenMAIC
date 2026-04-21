@@ -151,6 +151,7 @@
     "fullscreen": "全屏",
     "exitFullscreen": "退出全屏",
     "regenerateScene": "重新生成当前页",
+    "regenerating": "重新生成中",
     "retryMode": "仅重试",
     "retryModeHint": "不改动任何提示词，直接重新生成当前页（文字、媒体、TTS 全部重新产出）。",
     "simpleMode": "傻瓜模式",

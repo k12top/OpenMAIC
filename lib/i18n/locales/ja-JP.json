@@ -147,6 +147,7 @@
     "fullscreen": "全画面表示",
     "exitFullscreen": "全画面表示を終了",
     "regenerateScene": "このページを再生成",
+    "regenerating": "再生成中",
     "retryMode": "再試行のみ",
     "retryModeHint": "プロンプトを変更せず、このページをそのまま再生成します（テキスト、メディア、TTS がすべて作り直されます）。",
     "simpleMode": "シンプル",

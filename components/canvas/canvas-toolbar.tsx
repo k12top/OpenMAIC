@@ -129,6 +129,11 @@ export function CanvasToolbar({
   // the button hidden on share/non-owner views without any extra prop plumbing.
   const isOwner = useStageStore((s) => s.isOwner);
   const showRegenerate = !!onRegenerateScene && isOwner;
+  // Is the currently visible scene being regenerated? When true, swap the
+  // icon for a spinner and disable clicks to prevent double-submits.
+  const currentSceneId = useStageStore((s) => s.currentSceneId);
+  const regeneratingSceneIds = useStageStore((s) => s.regeneratingSceneIds);
+  const isCurrentRegenerating = !!currentSceneId && regeneratingSceneIds.includes(currentSceneId);
 
   // Volume slider hover state
   const [volumeHover, setVolumeHover] = useState(false);
@@ -414,19 +419,28 @@ export function CanvasToolbar({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (isCurrentRegenerating) return;
                       onRegenerateScene?.();
                     }}
+                    disabled={isCurrentRegenerating}
                     className={cn(
                       ctrlBtn,
-                      'w-6 h-6 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400',
+                      'w-6 h-6',
+                      isCurrentRegenerating
+                        ? 'text-purple-600 dark:text-purple-400 cursor-wait'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400',
                     )}
                     aria-label={t('stage.regenerateScene')}
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw
+                      className={cn('w-3.5 h-3.5', isCurrentRegenerating && 'animate-spin')}
+                    />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                  {t('stage.regenerateScene')}
+                  {isCurrentRegenerating
+                    ? t('stage.regenerating')
+                    : t('stage.regenerateScene')}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

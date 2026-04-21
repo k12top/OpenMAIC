@@ -81,6 +81,15 @@ interface StageState {
    */
   isOwner: boolean;
 
+  /**
+   * IDs of scenes currently being regenerated in place. The old scene stays
+   * in the list (and remains the current page) while a new one is produced
+   * in the background; on success we swap in-place via `replaceScene`, on
+   * failure we simply clear the flag and the original content is untouched.
+   * Not persisted.
+   */
+  regeneratingSceneIds: string[];
+
   // Actions
   setStage: (stage: Stage) => void;
   setScenes: (scenes: Scene[]) => void;
@@ -103,6 +112,14 @@ interface StageState {
   updateSpeechActionAudioUrl: (audioId: string, url: string) => void;
   /** Replace a placeholder media elementId with its persisted cloud URL across all scenes */
   updateMediaElementSrc: (elementId: string, url: string) => void;
+
+  /**
+   * Atomically replace a scene by id with a new one, preserving array index
+   * (so sidebar order doesn't drift). If the old scene was current, the new
+   * scene becomes current. Used by the regenerate-scene flow.
+   */
+  replaceScene: (oldSceneId: string, newScene: Scene) => void;
+  setSceneRegenerating: (sceneId: string, regenerating: boolean) => void;
 
   // Getters
   getCurrentScene: () => Scene | null;
@@ -135,6 +152,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   creditsInsufficient: false,
   pendingMediaUrls: {},
   isOwner: false,
+  regeneratingSceneIds: [],
 
   // Actions
   setStage: (stage) => {
@@ -205,7 +223,17 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       }
     }
 
-    const scenes = [...get().scenes, patchedScene];
+    // Insert by `order` so regenerated scenes land back in their original slot
+    // (regenerate = deleteScene + addScene; without this, the new scene would
+    // be pushed to the end and the sidebar / nav indices would drift). Normal
+    // sequential generation still behaves as append because the new scene's
+    // order is always strictly greater than any existing scene's order.
+    const existing = get().scenes;
+    const insertIdx = existing.findIndex((s) => s.order > patchedScene.order);
+    const scenes =
+      insertIdx === -1
+        ? [...existing, patchedScene]
+        : [...existing.slice(0, insertIdx), patchedScene, ...existing.slice(insertIdx)];
     // Remove the matching outline from generatingOutlines (match by order)
     const generatingOutlines = get().generatingOutlines.filter((o) => o.order !== scene.order);
     // Auto-switch from pending page to the newly generated scene
@@ -465,11 +493,55 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       creditsInsufficient: false,
       pendingMediaUrls: {},
       isOwner: false,
+      regeneratingSceneIds: [],
     }));
     log.info('Store cleared');
   },
 
   setIsOwner: (isOwner) => set({ isOwner }),
+
+  /**
+   * Swap a scene with a new one atomically at the same array position.
+   * This is the *only* correct way to update a scene after regeneration —
+   * callers that delete-then-add would otherwise push the new scene to the
+   * end (losing page order) and briefly drop the current page entirely.
+   */
+  replaceScene: (oldSceneId, newScene) => {
+    const { scenes, currentSceneId, regeneratingSceneIds } = get();
+    const idx = scenes.findIndex((s) => s.id === oldSceneId);
+    if (idx === -1) {
+      log.warn(`replaceScene: scene ${oldSceneId} not found, appending instead`);
+      set({ scenes: [...scenes, newScene] });
+      debouncedSave();
+      return;
+    }
+    const nextScenes = [
+      ...scenes.slice(0, idx),
+      newScene,
+      ...scenes.slice(idx + 1),
+    ];
+    set({
+      scenes: nextScenes,
+      // If the replaced scene was the active one, move selection to the new scene
+      ...(currentSceneId === oldSceneId ? { currentSceneId: newScene.id } : {}),
+      // Clear the regenerating flag for both the old and new ids (new id is
+      // different because generation assigns a fresh uuid).
+      regeneratingSceneIds: regeneratingSceneIds.filter(
+        (id) => id !== oldSceneId && id !== newScene.id,
+      ),
+    });
+    debouncedSave();
+  },
+
+  setSceneRegenerating: (sceneId, regenerating) => {
+    const { regeneratingSceneIds } = get();
+    const has = regeneratingSceneIds.includes(sceneId);
+    if (regenerating && !has) {
+      set({ regeneratingSceneIds: [...regeneratingSceneIds, sceneId] });
+    } else if (!regenerating && has) {
+      set({ regeneratingSceneIds: regeneratingSceneIds.filter((id) => id !== sceneId) });
+    }
+  },
 }));
 
 export const useStageStore = createSelectors(useStageStoreBase);
