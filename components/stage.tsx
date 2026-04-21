@@ -947,7 +947,6 @@ export function Stage({
         onCollapseChange={setSidebarCollapsed}
         onSceneSelect={gatedSceneSwitch}
         onRetryOutline={onRetryOutline}
-        onRegenerateScene={onRegenerateScene ? (id) => setRegenTargetSceneId(id) : undefined}
       />
 
       {onRegenerateScene && (
@@ -1006,6 +1005,11 @@ export function Stage({
             onRetryGeneration={
               onRetryOutline && generatingOutlines[0]
                 ? () => onRetryOutline(generatingOutlines[0].id)
+                : undefined
+            }
+            onRegenerateScene={
+              onRegenerateScene && currentScene
+                ? () => setRegenTargetSceneId(currentScene.id)
                 : undefined
             }
           />
@@ -1152,6 +1156,11 @@ export function Stage({
               onTogglePresentation={togglePresentation}
               onPresentationInteractionChange={setIsPresentationInteractionActive}
               fullscreenContainerRef={stageRef}
+              onRegenerateScene={
+                onRegenerateScene && currentScene
+                  ? () => setRegenTargetSceneId(currentScene.id)
+                  : undefined
+              }
             />
           </div>
         )}

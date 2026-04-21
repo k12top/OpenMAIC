@@ -14,7 +14,7 @@
  */
 
 import { getDb, isDbConfigured, schema } from '@/lib/db';
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { getStorageProvider } from '@/lib/storage';
 import { createLogger } from '@/lib/logger';
 import type { Scene } from '@/lib/types/stage';
@@ -30,6 +30,12 @@ type CanvasElement = {
   src?: string;
 };
 
+// Once we've seen a schema-drift error (missing `element_id` column) we skip
+// the DB read path entirely to avoid spamming the logs with the same stack on
+// every request. A `make db-push` clears the drift; restart the server to
+// re-enable backfill after applying the migration.
+let _columnMissing = false;
+
 /**
  * Walk scenes and replace placeholder `src` / missing `audioUrl` with real
  * MinIO URLs using the `classroom_media.element_id` index. Returns new scene
@@ -42,8 +48,12 @@ export async function backfillScenesWithMedia(
 ): Promise<Scene[]> {
   if (!scenes || scenes.length === 0) return scenes ?? [];
   if (!isDbConfigured()) return scenes;
+  if (_columnMissing) return scenes;
 
-  let rows: Array<{ elementId: string | null; minioKey: string; mediaType: MediaKind }>;
+  // Select only always-present columns first, then try to add `element_id` in
+  // a second pass. That way if the column is missing we still get rows keyed
+  // by minioKey for a best-effort repair.
+  let rows: Array<{ elementId: string | null; minioKey: string; mediaType: MediaKind }> = [];
   try {
     const db = getDb();
     rows = await db
@@ -53,15 +63,18 @@ export async function backfillScenesWithMedia(
         mediaType: schema.classroomMedia.mediaType,
       })
       .from(schema.classroomMedia)
-      .where(
-        and(
-          eq(schema.classroomMedia.classroomId, classroomId),
-          isNotNull(schema.classroomMedia.elementId),
-        ),
-      )
+      .where(eq(schema.classroomMedia.classroomId, classroomId))
       .orderBy(desc(schema.classroomMedia.createdAt));
   } catch (err) {
-    log.warn('Failed to read classroom_media for backfill:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/element_id|column .* does not exist/i.test(msg)) {
+      _columnMissing = true;
+      log.error(
+        'classroom_media.element_id column missing — run `make db-push` (or apply drizzle/0003_add_media_element_id.sql) and restart the server. Backfill is now disabled for this process.',
+      );
+    } else {
+      log.warn('Failed to read classroom_media for backfill:', err);
+    }
     return scenes;
   }
 

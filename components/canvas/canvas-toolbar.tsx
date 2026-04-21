@@ -15,6 +15,7 @@ import {
   Repeat,
   Maximize2,
   Minimize2,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store';
@@ -50,6 +51,12 @@ export interface CanvasToolbarProps {
   readonly onToggleAutoPlay?: () => void;
   readonly playbackSpeed?: number;
   readonly onCycleSpeed?: () => void;
+  /**
+   * Owner-only: regenerate the currently visible scene. When provided AND the
+   * viewer owns the classroom (`useStageStore.isOwner`), a RefreshCw button is
+   * rendered alongside the playback controls.
+   */
+  readonly onRegenerateScene?: () => void;
 }
 
 /* Compact control button */
@@ -108,6 +115,7 @@ export function CanvasToolbar({
   onToggleAutoPlay,
   playbackSpeed = 1,
   onCycleSpeed,
+  onRegenerateScene,
 }: CanvasToolbarProps) {
   const { t } = useI18n();
   const canGoPrev = currentSceneIndex > 0;
@@ -117,6 +125,10 @@ export function CanvasToolbar({
   const whiteboardElementCount = useStageStore(
     (s) => s.stage?.whiteboard?.[0]?.elements?.length || 0,
   );
+  // Owner-only gate for the regenerate button. Subscribing to this slice keeps
+  // the button hidden on share/non-owner views without any extra prop plumbing.
+  const isOwner = useStageStore((s) => s.isOwner);
+  const showRegenerate = !!onRegenerateScene && isOwner;
 
   // Volume slider hover state
   const [volumeHover, setVolumeHover] = useState(false);
@@ -393,6 +405,32 @@ export function CanvasToolbar({
               <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-violet-500 dark:bg-violet-400 rounded-full" />
             )}
           </button>
+
+          {/* Regenerate current scene (owner only) */}
+          {showRegenerate && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRegenerateScene?.();
+                    }}
+                    className={cn(
+                      ctrlBtn,
+                      'w-6 h-6 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400',
+                    )}
+                    aria-label={t('stage.regenerateScene')}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {t('stage.regenerateScene')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 

@@ -61,7 +61,11 @@ export default function ClassroomDetailPage() {
         log.warn('Server-side classroom fetch failed:', fetchErr);
       }
 
-      useStageStore.getState().setIsOwner(!!serverData?.isOwner);
+      const owns = !!serverData?.isOwner;
+      useStageStore.getState().setIsOwner(owns);
+      log.info(
+        `[Classroom] isOwner=${owns} (serverResponse=${serverData ? 'ok' : 'missing'}) — regenerate button will be ${owns ? 'visible on hover' : 'hidden'}`,
+      );
 
       // If IndexedDB had no data, hydrate stage/scenes from the server response.
       if (!useStageStore.getState().stage) {

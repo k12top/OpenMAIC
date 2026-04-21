@@ -26,11 +26,6 @@ interface SceneSidebarProps {
   readonly onCollapseChange: (collapsed: boolean) => void;
   readonly onSceneSelect?: (sceneId: string) => void;
   readonly onRetryOutline?: (outlineId: string) => Promise<void>;
-  /**
-   * Owner-only hook. When provided and the viewer owns the classroom, a
-   * regenerate button appears on scene-card hover.
-   */
-  readonly onRegenerateScene?: (sceneId: string) => void;
 }
 
 const DEFAULT_WIDTH = 220;
@@ -42,7 +37,6 @@ export function SceneSidebar({
   onCollapseChange,
   onSceneSelect,
   onRetryOutline,
-  onRegenerateScene,
 }: SceneSidebarProps) {
   const { t } = useI18n();
   const router = useRouter();
@@ -50,7 +44,6 @@ export function SceneSidebar({
     useStageStore();
   const failedOutlines = useStageStore.use.failedOutlines();
   const creditsInsufficient = useStageStore.use.creditsInsufficient();
-  const isOwner = useStageStore.use.isOwner();
   const viewportSize = useCanvasStore.use.viewportSize();
   const viewportRatio = useCanvasStore.use.viewportRatio();
 
@@ -223,23 +216,6 @@ export function SceneSidebar({
                       {scene.title}
                     </span>
                   </div>
-                  {isOwner && onRegenerateScene && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRegenerateScene(scene.id);
-                      }}
-                      title={t('stage.regenerateScene')}
-                      className={cn(
-                        'shrink-0 ml-1 w-5 h-5 rounded-md flex items-center justify-center',
-                        'text-gray-400 hover:text-purple-600 dark:text-gray-500 dark:hover:text-purple-300',
-                        'bg-transparent hover:bg-purple-50 dark:hover:bg-purple-900/30',
-                        'opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity',
-                      )}
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </button>
-                  )}
                 </div>
 
                 {/* Thumbnail */}

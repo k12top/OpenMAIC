@@ -3,7 +3,10 @@ import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getStorageProvider } from '@/lib/storage';
+import { createLogger } from '@/lib/logger';
 import crypto from 'crypto';
+
+const log = createLogger('ClassroomMediaAPI');
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,8 +51,15 @@ export async function POST(req: NextRequest) {
           mimeType,
           sizeBytes: buffer.length,
         });
-      } catch {
-        // Best-effort DB record; storage upload already succeeded
+      } catch (dbErr) {
+        // Storage upload already succeeded — we never fail the request on a DB
+        // hiccup, but we DO need to surface the error: a silent catch here used
+        // to hide missing-column errors (e.g. `element_id`) and break share
+        // backfill. Log loudly so schema drift is obvious in dev logs.
+        log.error(
+          `classroom_media insert failed (classroomId=${classroomId}, elementId=${elementId ?? 'null'}, key=${key}):`,
+          dbErr,
+        );
       }
     }
 

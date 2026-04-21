@@ -3,6 +3,7 @@ import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import type { Stage, Scene } from '@/lib/types/stage';
+import { backfillScenesWithMedia } from '@/lib/server/media-backfill';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest) {
     const title = stageObj.name || '';
     const language = (stageObj.language as string) || 'en-US';
 
+    // Repair placeholder media references (gen_img_xxx / empty audioUrl) using
+    // the classroom_media table BEFORE persisting. This is the write-time
+    // counterpart of the read-time backfill in share/classroom GET handlers —
+    // ensures we never leave placeholders in `scenesJson` even if the client
+    // debounce hadn't flushed yet.
+    const repairedScenes = await backfillScenesWithMedia(classroomId, scenes || []);
+
     const existing = await db.query.classrooms.findFirst({
       where: eq(schema.classrooms.id, classroomId),
     });
@@ -37,7 +45,7 @@ export async function POST(req: NextRequest) {
         .update(schema.classrooms)
         .set({
           stageJson: { ...stage, currentSceneId },
-          scenesJson: scenes || [],
+          scenesJson: repairedScenes,
           title,
           language,
           status: 'completed',
@@ -51,7 +59,7 @@ export async function POST(req: NextRequest) {
         title,
         language,
         stageJson: { ...stage, currentSceneId },
-        scenesJson: scenes || [],
+        scenesJson: repairedScenes,
         status: 'completed',
       });
     }

@@ -63,6 +63,8 @@ interface RoundtableProps {
   readonly onDiscussionSkip?: () => void;
   readonly onStopDiscussion?: () => void;
   readonly onInputActivate?: () => void;
+  /** Owner-only: regenerate the currently visible scene (passed through to CanvasToolbar). */
+  readonly onRegenerateScene?: () => void;
 
   readonly onResumeTopic?: () => void;
   readonly onPlayPause?: () => void;
@@ -151,6 +153,7 @@ export function Roundtable({
   onDiscussionSkip,
   onStopDiscussion,
   onInputActivate,
+  onRegenerateScene,
 
   onResumeTopic,
   onPlayPause,
@@ -619,6 +622,7 @@ export function Roundtable({
       onToggleAutoPlay={() => setAutoPlayLecture(!autoPlayLecture)}
       playbackSpeed={playbackSpeed}
       onCycleSpeed={handleCycleSpeed}
+      onRegenerateScene={onRegenerateScene}
     />
   );
 
