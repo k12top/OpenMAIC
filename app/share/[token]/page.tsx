@@ -47,6 +47,8 @@ function DirectClassroomView({
       generationStatus: 'idle',
       failedOutlines: [],
     });
+    // Share pages are never "owned" by the viewer, regardless of auth state.
+    useStageStore.getState().setIsOwner(false);
     Promise.resolve().then(() => setReady(true));
     return () => {
       useStageStore.getState().clearStore();

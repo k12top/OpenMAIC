@@ -153,7 +153,13 @@ async function generateSingleMedia(
     // local IndexedDB cache and have image generation disabled in their own settings.
     import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
       const mediaKind = req.type === 'video' ? 'video' : 'image';
-      uploadMediaToServer(stageId, mediaKind, blob, `${req.elementId}.${mimeType.split('/')[1] || 'bin'}`)
+      uploadMediaToServer(
+        stageId,
+        mediaKind,
+        blob,
+        `${req.elementId}.${mimeType.split('/')[1] || 'bin'}`,
+        req.elementId,
+      )
         .then((result) => {
           if (result?.url) {
             import('@/lib/store/stage').then(({ useStageStore }) => {

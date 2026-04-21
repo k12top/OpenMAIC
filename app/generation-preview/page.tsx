@@ -796,7 +796,7 @@ function GenerationPreviewContent() {
       if (pendingTtsUploads.length > 0) {
         import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
           for (const { audioId, blob, format } of pendingTtsUploads) {
-            uploadMediaToServer(stage.id, 'tts', blob, `${audioId}.${format}`)
+            uploadMediaToServer(stage.id, 'tts', blob, `${audioId}.${format}`, audioId)
               .then((result) => {
                 if (result?.url) {
                   store.updateSpeechActionAudioUrl(audioId, result.url);

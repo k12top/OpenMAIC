@@ -145,7 +145,22 @@
     "confirmSwitchMessage": "В данный момент идёт обсуждение. Переключение сцены завершит текущую тему. Продолжить?",
     "generatingNextPage": "Сцена генерируется, пожалуйста подождите...",
     "fullscreen": "Полный экран",
-    "exitFullscreen": "Свернуть"
+    "exitFullscreen": "Свернуть",
+    "regenerateScene": "Сгенерировать страницу заново",
+    "retryMode": "Только повторить",
+    "retryModeHint": "Повторно сгенерировать эту страницу как есть, без изменения промптов (текст, медиа и TTS создаются заново).",
+    "simpleMode": "Простой",
+    "advancedMode": "Продвинутый",
+    "titleLabel": "Заголовок",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Кратко опишите содержимое страницы…",
+    "keyPointsLabel": "Ключевые тезисы",
+    "keyPointsHint": "По одному в строке",
+    "keyPointsPlaceholder": "Введите по одному ключевому тезису на строку",
+    "mediaPromptsLabel": "Промпты для медиа",
+    "mediaPromptsHint": "Настройте промпт для каждого изображения или видео",
+    "startRegenerate": "Запустить регенерацию",
+    "ownerOnly": "Доступно только владельцу урока"
   },
   "whiteboard": {
     "title": "Интерактивная доска",

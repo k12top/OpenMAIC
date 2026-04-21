@@ -149,7 +149,22 @@
     "confirmSwitchMessage": "当前话题正在进行中，切换页面将结束当前话题。确定要切换吗？",
     "generatingNextPage": "场景正在生成，请稍候...",
     "fullscreen": "全屏",
-    "exitFullscreen": "退出全屏"
+    "exitFullscreen": "退出全屏",
+    "regenerateScene": "重新生成当前页",
+    "retryMode": "仅重试",
+    "retryModeHint": "不改动任何提示词，直接重新生成当前页（文字、媒体、TTS 全部重新产出）。",
+    "simpleMode": "傻瓜模式",
+    "advancedMode": "专业模式",
+    "titleLabel": "标题",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "简述本页要讲什么…",
+    "keyPointsLabel": "关键点",
+    "keyPointsHint": "每行一条",
+    "keyPointsPlaceholder": "每行填写一个关键点",
+    "mediaPromptsLabel": "媒体提示词",
+    "mediaPromptsHint": "可按元素调整生成图/视频的提示词",
+    "startRegenerate": "开始重新生成",
+    "ownerOnly": "仅课件作者可见"
   },
   "whiteboard": {
     "title": "互动白板",

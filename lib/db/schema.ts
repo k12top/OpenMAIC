@@ -99,12 +99,21 @@ export const classroomMedia = pgTable(
       .notNull()
       .references(() => classrooms.id, { onDelete: 'cascade' }),
     mediaType: mediaTypeEnum('media_type').notNull(),
+    /**
+     * Element identifier from the scene (e.g. `gen_img_1`, `gen_vid_2`, `tts_abc`).
+     * Used to backfill scene `src` / `audioUrl` on read when async MinIO uploads
+     * complete after the scene has been persisted. Nullable for legacy rows.
+     */
+    elementId: text('element_id'),
     minioKey: text('minio_key').notNull(),
     mimeType: text('mime_type').default('application/octet-stream'),
     sizeBytes: bigint('size_bytes', { mode: 'number' }).default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('idx_media_classroom').on(table.classroomId)],
+  (table) => [
+    index('idx_media_classroom').on(table.classroomId),
+    index('idx_media_classroom_element').on(table.classroomId, table.elementId),
+  ],
 );
 
 // ─── Shares ──────────────────────────────────────────────────────────────────

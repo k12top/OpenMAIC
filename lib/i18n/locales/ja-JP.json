@@ -145,7 +145,22 @@
     "confirmSwitchMessage": "現在トピックが進行中です。シーンを切り替えると、現在のトピックが終了します。よろしいですか？",
     "generatingNextPage": "シーンを生成中です。お待ちください...",
     "fullscreen": "全画面表示",
-    "exitFullscreen": "全画面表示を終了"
+    "exitFullscreen": "全画面表示を終了",
+    "regenerateScene": "このページを再生成",
+    "retryMode": "再試行のみ",
+    "retryModeHint": "プロンプトを変更せず、このページをそのまま再生成します（テキスト、メディア、TTS がすべて作り直されます）。",
+    "simpleMode": "シンプル",
+    "advancedMode": "詳細",
+    "titleLabel": "タイトル",
+    "descriptionLabel": "説明",
+    "descriptionPlaceholder": "このページの内容を簡単に説明してください…",
+    "keyPointsLabel": "重要ポイント",
+    "keyPointsHint": "1行に1項目",
+    "keyPointsPlaceholder": "1行に1つのポイントを入力",
+    "mediaPromptsLabel": "メディア プロンプト",
+    "mediaPromptsHint": "画像や動画ごとのプロンプトを調整できます",
+    "startRegenerate": "再生成を開始",
+    "ownerOnly": "この機能は教材の作者のみ利用できます"
   },
   "whiteboard": {
     "title": "インタラクティブホワイトボード",

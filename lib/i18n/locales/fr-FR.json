@@ -145,7 +145,22 @@
     "confirmSwitchMessage": "Un sujet est actuellement en cours. Changer de scène mettra fin au sujet actuel. Êtes-vous sûr ?",
     "generatingNextPage": "La scène est en cours de génération, veuillez patienter...",
     "fullscreen": "Plein écran",
-    "exitFullscreen": "Quitter le plein écran"
+    "exitFullscreen": "Quitter le plein écran",
+    "regenerateScene": "Régénérer cette page",
+    "retryMode": "Réessayer uniquement",
+    "retryModeHint": "Relancer cette page telle quelle, sans modifier les invites (le texte, les médias et le TTS sont tous régénérés).",
+    "simpleMode": "Simple",
+    "advancedMode": "Avancé",
+    "titleLabel": "Titre",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Décrivez brièvement le contenu de cette page…",
+    "keyPointsLabel": "Points clés",
+    "keyPointsHint": "Un par ligne",
+    "keyPointsPlaceholder": "Saisissez un point clé par ligne",
+    "mediaPromptsLabel": "Invites pour les médias",
+    "mediaPromptsHint": "Ajustez l'invite de chaque image ou vidéo",
+    "startRegenerate": "Lancer la régénération",
+    "ownerOnly": "Visible uniquement par le propriétaire du cours"
   },
   "whiteboard": {
     "title": "Tableau blanc interactif",

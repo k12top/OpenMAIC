@@ -7,6 +7,10 @@ import { useCanvasStore } from '@/lib/store/canvas';
 import { useSettingsStore } from '@/lib/store/settings';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { SceneSidebar } from './stage/scene-sidebar';
+import {
+  RegenerateSceneDialog,
+  type RegenerateSceneOverrides,
+} from './stage/regenerate-scene-dialog';
 import { Header } from './header';
 import { CanvasArea } from '@/components/canvas/canvas-area';
 import { Roundtable } from '@/components/roundtable';
@@ -42,13 +46,21 @@ import { VisuallyHidden } from 'radix-ui';
  */
 export function Stage({
   onRetryOutline,
+  onRegenerateScene,
 }: {
   onRetryOutline?: (outlineId: string) => Promise<void>;
+  onRegenerateScene?: (
+    sceneId: string,
+    overrides?: RegenerateSceneOverrides,
+  ) => Promise<void> | void;
 }) {
   const { t } = useI18n();
   const { mode, getCurrentScene, scenes, currentSceneId, setCurrentSceneId, generatingOutlines } =
     useStageStore();
   const failedOutlines = useStageStore.use.failedOutlines();
+
+  // Target scene for the regenerate dialog (owner-only). `null` means closed.
+  const [regenTargetSceneId, setRegenTargetSceneId] = useState<string | null>(null);
 
   const currentScene = getCurrentScene();
 
@@ -935,7 +947,18 @@ export function Stage({
         onCollapseChange={setSidebarCollapsed}
         onSceneSelect={gatedSceneSwitch}
         onRetryOutline={onRetryOutline}
+        onRegenerateScene={onRegenerateScene ? (id) => setRegenTargetSceneId(id) : undefined}
       />
+
+      {onRegenerateScene && (
+        <RegenerateSceneDialog
+          sceneId={regenTargetSceneId}
+          onClose={() => setRegenTargetSceneId(null)}
+          onSubmit={async (id, overrides) => {
+            await onRegenerateScene(id, overrides);
+          }}
+        />
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative">

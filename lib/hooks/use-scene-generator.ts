@@ -179,7 +179,7 @@ export async function generateAndStoreTTS(
   const stageId = useStageStore.getState().stage?.id;
   if (stageId) {
     import('@/lib/sync/classroom-sync').then(({ uploadMediaToServer }) => {
-      uploadMediaToServer(stageId, 'tts', blob, `${audioId}.${data.format}`)
+      uploadMediaToServer(stageId, 'tts', blob, `${audioId}.${data.format}`, audioId)
         .then((result) => {
           if (result?.url) {
             useStageStore.getState().updateSpeechActionAudioUrl(audioId, result.url);
@@ -575,5 +575,171 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
     [store],
   );
 
-  return { generateRemaining, retrySingleOutline, stop, isGenerating };
+  /**
+   * Regenerate a single already-completed scene in-place. The scene is
+   * removed, any media tasks for its elements are cleared, then content →
+   * actions → TTS → media are re-run using an (optionally tweaked) outline.
+   *
+   * Owner-only. Callers are responsible for gating on `isOwner`.
+   */
+  const regenerateScene = useCallback(
+    async (
+      sceneId: string,
+      overrides?: Partial<
+        Pick<SceneOutline, 'title' | 'description' | 'keyPoints' | 'mediaGenerations'>
+      >,
+    ) => {
+      const state = store.getState();
+      const scene = state.scenes.find((s) => s.id === sceneId);
+      if (!scene || !state.stage) return;
+      const params = lastParamsRef.current ?? {
+        stageInfo: {
+          name: state.stage.name || '',
+          description: state.stage.description,
+          language: state.stage.language,
+          style: state.stage.style,
+        },
+      };
+
+      const originalOutline = state.outlines.find((o) => o.order === scene.order);
+      if (!originalOutline) return;
+
+      const effectiveOutline: SceneOutline = {
+        ...originalOutline,
+        ...(overrides ?? {}),
+      };
+
+      // Persist the tweaked outline so refreshes / later regens see the edits.
+      const didOverride = !!overrides && Object.keys(overrides).length > 0;
+      if (didOverride) {
+        const nextOutlines = state.outlines.map((o) =>
+          o.order === scene.order ? effectiveOutline : o,
+        );
+        store.getState().setOutlines(nextOutlines);
+      }
+
+      // Clear media tasks tied to this scene's elements so the orchestrator
+      // re-enqueues them instead of skipping as "already completed".
+      const elementIdsToClear = new Set<string>();
+      for (const m of effectiveOutline.mediaGenerations || []) {
+        elementIdsToClear.add(m.elementId);
+      }
+      for (const m of originalOutline.mediaGenerations || []) {
+        elementIdsToClear.add(m.elementId);
+      }
+      if (elementIdsToClear.size > 0) {
+        const { useMediaGenerationStore } = await import('@/lib/store/media-generation');
+        useMediaGenerationStore.setState((s) => {
+          const tasks = { ...s.tasks };
+          for (const id of elementIdsToClear) delete tasks[id];
+          return { tasks };
+        });
+      }
+
+      // Pop the old scene so the sidebar shows a "generating" placeholder and
+      // stale content doesn't linger while the new one is produced.
+      const wasCurrent = state.currentSceneId === sceneId;
+      store.getState().deleteScene(sceneId);
+      store.getState().setCreditsInsufficient(false);
+
+      // Show a generating pill for this outline.
+      const existingGenerating = store.getState().generatingOutlines;
+      if (!existingGenerating.some((o) => o.id === effectiveOutline.id)) {
+        store.getState().setGeneratingOutlines([...existingGenerating, effectiveOutline]);
+      }
+
+      const abortController = new AbortController();
+      const signal = abortController.signal;
+
+      try {
+        // Previous-speech context from the (now) latest prior scene.
+        const sortedScenes = [...store.getState().scenes].sort((a, b) => a.order - b.order);
+        const priorScenes = sortedScenes.filter((s) => s.order < scene.order);
+        const lastPrior = priorScenes[priorScenes.length - 1];
+        const previousSpeeches = lastPrior
+          ? (lastPrior.actions || [])
+              .filter((a): a is SpeechAction => a.type === 'speech')
+              .map((a) => a.text)
+          : [];
+
+        const contentResult = await fetchSceneContent(
+          {
+            outline: effectiveOutline,
+            allOutlines: store.getState().outlines,
+            stageId: state.stage.id,
+            pdfImages: params.pdfImages,
+            imageMapping: params.imageMapping,
+            stageInfo: params.stageInfo,
+            agents: params.agents,
+          },
+          signal,
+        );
+
+        if (!contentResult.success || !contentResult.content) {
+          if (contentResult.error === 'INSUFFICIENT_CREDITS') {
+            store.getState().setCreditsInsufficient(true);
+          }
+          store.getState().addFailedOutline(effectiveOutline);
+          return;
+        }
+
+        const actionsResult = await fetchSceneActions(
+          {
+            outline: contentResult.effectiveOutline || effectiveOutline,
+            allOutlines: store.getState().outlines,
+            content: contentResult.content,
+            stageId: state.stage.id,
+            agents: params.agents,
+            previousSpeeches,
+            userProfile: params.userProfile,
+          },
+          signal,
+        );
+
+        if (!actionsResult.success || !actionsResult.scene) {
+          if (actionsResult.error === 'INSUFFICIENT_CREDITS') {
+            store.getState().setCreditsInsufficient(true);
+          }
+          store.getState().addFailedOutline(effectiveOutline);
+          return;
+        }
+
+        const newScene = actionsResult.scene;
+
+        // TTS
+        const settings = useSettingsStore.getState();
+        if (settings.ttsEnabled && settings.ttsProviderId !== 'browser-native-tts') {
+          const ttsResult = await generateTTSForScene(newScene, signal);
+          if (!ttsResult.success) {
+            store.getState().addFailedOutline(effectiveOutline);
+            return;
+          }
+        }
+
+        // Drop the generating placeholder and inject the fresh scene.
+        const currentGenerating = store.getState().generatingOutlines;
+        store
+          .getState()
+          .setGeneratingOutlines(currentGenerating.filter((o) => o.id !== effectiveOutline.id));
+        store.getState().addScene(newScene);
+        if (wasCurrent) {
+          store.getState().setCurrentSceneId(newScene.id);
+        }
+
+        // Kick off media regeneration for this outline only. Orchestrator will
+        // persist to MinIO (with elementId) and patch element srcs.
+        generateMediaForOutlines([effectiveOutline], state.stage.id).catch((err) => {
+          log.warn('[regenerateScene] Media regeneration error:', err);
+        });
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          log.error('[regenerateScene] Failed:', err);
+          store.getState().addFailedOutline(effectiveOutline);
+        }
+      }
+    },
+    [store],
+  );
+
+  return { generateRemaining, retrySingleOutline, regenerateScene, stop, isGenerating };
 }

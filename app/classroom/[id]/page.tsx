@@ -38,7 +38,7 @@ export default function ClassroomDetailPage() {
 
   const generationStartedRef = useRef(false);
 
-  const { generateRemaining, retrySingleOutline, stop } = useSceneGenerator({
+  const { generateRemaining, retrySingleOutline, regenerateScene, stop } = useSceneGenerator({
     onComplete: () => {
       log.info('[Classroom] All scenes generated');
     },
@@ -48,14 +48,26 @@ export default function ClassroomDetailPage() {
     try {
       await loadFromStorage(classroomId);
 
-      // If IndexedDB had no data, try server-side storage (API-generated classrooms)
+      // Always fetch server-side metadata to compute `isOwner` (used to gate
+      // owner-only UI like the regenerate-scene button). Reuses the same
+      // response for stage/scene hydration when IndexedDB was empty.
+      let serverData: Awaited<
+        ReturnType<typeof import('@/lib/sync/classroom-sync').loadClassroomFromServer>
+      > = null;
+      try {
+        const { loadClassroomFromServer } = await import('@/lib/sync/classroom-sync');
+        serverData = await loadClassroomFromServer(classroomId);
+      } catch (fetchErr) {
+        log.warn('Server-side classroom fetch failed:', fetchErr);
+      }
+
+      useStageStore.getState().setIsOwner(!!serverData?.isOwner);
+
+      // If IndexedDB had no data, hydrate stage/scenes from the server response.
       if (!useStageStore.getState().stage) {
         log.info('No IndexedDB data, trying server-side storage for:', classroomId);
         try {
-          const { loadClassroomFromServer, loadChatSessionsFromServer } = await import(
-            '@/lib/sync/classroom-sync'
-          );
-          const serverData = await loadClassroomFromServer(classroomId);
+          const { loadChatSessionsFromServer } = await import('@/lib/sync/classroom-sync');
           if (serverData) {
             const { stage, scenes } = serverData;
             useStageStore.getState().setStage(stage);
@@ -228,7 +240,10 @@ export default function ClassroomDetailPage() {
               </div>
             </div>
           ) : (
-            <Stage onRetryOutline={retrySingleOutline} />
+            <Stage
+              onRetryOutline={retrySingleOutline}
+              onRegenerateScene={regenerateScene}
+            />
           )}
         </div>
 

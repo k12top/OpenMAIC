@@ -8,6 +8,7 @@ import {
   readClassroom,
 } from '@/lib/server/classroom-storage';
 import { optionalAuth } from '@/lib/server/auth-guard';
+import { backfillScenesWithMedia } from '@/lib/server/media-backfill';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('Classroom API');
@@ -71,7 +72,17 @@ export async function GET(request: NextRequest) {
       return apiError(API_ERROR_CODES.INVALID_REQUEST, 404, 'Classroom not found');
     }
 
-    return apiSuccess({ classroom });
+    // Backfill placeholder media srcs / audioUrls with MinIO URLs that were
+    // uploaded after the last sync. Read-time repair only — DB is untouched.
+    const scenes = await backfillScenesWithMedia(classroom.id, classroom.scenes);
+
+    // Compute ownership so the client can gate owner-only features (regenerate
+    // scene button, etc). Without a DB-tracked user (file-only classrooms),
+    // `userId` is undefined and nobody is considered the owner.
+    const viewer = await optionalAuth();
+    const isOwner = !!classroom.userId && !!viewer && classroom.userId === viewer.id;
+
+    return apiSuccess({ classroom: { ...classroom, scenes }, isOwner });
   } catch (error) {
     log.error(
       `Classroom retrieval failed [id=${request.nextUrl.searchParams.get('id') ?? 'unknown'}]:`,

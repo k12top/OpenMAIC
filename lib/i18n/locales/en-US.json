@@ -145,7 +145,22 @@
     "confirmSwitchMessage": "A topic is currently in progress. Switching scenes will end the current topic. Are you sure?",
     "generatingNextPage": "Scene is being generated, please wait...",
     "fullscreen": "Fullscreen",
-    "exitFullscreen": "Exit Fullscreen"
+    "exitFullscreen": "Exit Fullscreen",
+    "regenerateScene": "Regenerate this page",
+    "retryMode": "Retry only",
+    "retryModeHint": "Re-run this page as-is, without changing any prompts (text, media, and TTS are all produced again).",
+    "simpleMode": "Simple",
+    "advancedMode": "Advanced",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Briefly describe what this page should cover…",
+    "keyPointsLabel": "Key points",
+    "keyPointsHint": "One per line",
+    "keyPointsPlaceholder": "Enter one key point per line",
+    "mediaPromptsLabel": "Media prompts",
+    "mediaPromptsHint": "Adjust the prompt for each image or video",
+    "startRegenerate": "Start regenerating",
+    "ownerOnly": "Visible only to the classroom owner"
   },
   "whiteboard": {
     "title": "Interactive Whiteboard",

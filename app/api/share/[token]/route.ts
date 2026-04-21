@@ -3,6 +3,7 @@ import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { readClassroom } from '@/lib/server/classroom-storage';
 import { optionalAuth } from '@/lib/server/auth-guard';
+import { backfillScenesWithMedia } from '@/lib/server/media-backfill';
 import type { Scene, Stage } from '@/lib/types/stage';
 
 export async function GET(
@@ -44,6 +45,10 @@ export async function GET(
   });
 
   if (dbRow) {
+    const scenes = await backfillScenesWithMedia(
+      dbRow.id,
+      dbRow.scenesJson as Scene[],
+    );
     return NextResponse.json({
       mode: share.mode,
       classroom: {
@@ -51,7 +56,7 @@ export async function GET(
         title: dbRow.title,
         language: dbRow.language,
         stage: dbRow.stageJson as Stage,
-        scenes: dbRow.scenesJson as Scene[],
+        scenes,
         createdAt: dbRow.createdAt,
       },
     });
@@ -63,6 +68,7 @@ export async function GET(
   }
 
   const stageObj = fsData.stage as Stage;
+  const fsScenes = await backfillScenesWithMedia(fsData.id, fsData.scenes as Scene[]);
   return NextResponse.json({
     mode: share.mode,
     classroom: {
@@ -70,7 +76,7 @@ export async function GET(
       title: stageObj.name || '',
       language: (stageObj as unknown as Record<string, string>).language || 'en-US',
       stage: fsData.stage,
-      scenes: fsData.scenes,
+      scenes: fsScenes,
       createdAt: fsData.createdAt,
     },
   });

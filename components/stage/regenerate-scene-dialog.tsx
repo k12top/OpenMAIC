@@ -1,0 +1,301 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, RefreshCw, X } from 'lucide-react';
+import { useI18n } from '@/lib/hooks/use-i18n';
+import { useStageStore } from '@/lib/store';
+import type { SceneOutline } from '@/lib/types/generation';
+import type { MediaGenerationRequest } from '@/lib/media/types';
+import { cn } from '@/lib/utils';
+
+type Mode = 'retry' | 'simple' | 'advanced';
+
+export type RegenerateSceneOverrides = Partial<
+  Pick<SceneOutline, 'title' | 'description' | 'keyPoints' | 'mediaGenerations'>
+>;
+
+interface RegenerateSceneDialogProps {
+  sceneId: string | null;
+  onClose: () => void;
+  onSubmit: (sceneId: string, overrides: RegenerateSceneOverrides) => Promise<void> | void;
+}
+
+/**
+ * Owner-only dialog to kick off regenerating a single page. Offers two modes:
+ * - simple: edit description only (what most users need).
+ * - advanced: edit title, description, key-points, and media-generation prompts.
+ */
+export function RegenerateSceneDialog({
+  sceneId,
+  onClose,
+  onSubmit,
+}: RegenerateSceneDialogProps) {
+  const { t } = useI18n();
+  const scenes = useStageStore.use.scenes();
+  const outlines = useStageStore.use.outlines();
+
+  const { scene, outline } = useMemo(() => {
+    const s = sceneId ? scenes.find((x) => x.id === sceneId) : null;
+    const o = s ? outlines.find((x) => x.order === s.order) : null;
+    return { scene: s || null, outline: o || null };
+  }, [sceneId, scenes, outlines]);
+
+  const [mode, setMode] = useState<Mode>('retry');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [keyPointsText, setKeyPointsText] = useState('');
+  const [mediaPrompts, setMediaPrompts] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // Seed form state whenever the target scene changes.
+  useEffect(() => {
+    if (!outline) return;
+    setTitle(outline.title || '');
+    setDescription(outline.description || '');
+    setKeyPointsText((outline.keyPoints || []).join('\n'));
+    const seeded: Record<string, string> = {};
+    for (const m of outline.mediaGenerations || []) {
+      seeded[m.elementId] = m.prompt;
+    }
+    setMediaPrompts(seeded);
+    setMode('retry');
+  }, [outline?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const open = !!sceneId;
+  if (!open) return null;
+
+  if (!scene || !outline) {
+    // Target scene was deleted between opening the dialog and now — dismiss.
+    return null;
+  }
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const overrides: RegenerateSceneOverrides = {};
+      if (mode === 'retry') {
+        // No overrides — just re-run the same outline.
+      } else if (mode === 'simple') {
+        const trimmed = description.trim();
+        if (trimmed && trimmed !== outline.description) overrides.description = trimmed;
+      } else {
+        const trimmedTitle = title.trim();
+        if (trimmedTitle && trimmedTitle !== outline.title) overrides.title = trimmedTitle;
+
+        const trimmedDesc = description.trim();
+        if (trimmedDesc !== outline.description) overrides.description = trimmedDesc;
+
+        const points = keyPointsText
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const currentPoints = outline.keyPoints || [];
+        const pointsChanged =
+          points.length !== currentPoints.length ||
+          points.some((p, i) => p !== currentPoints[i]);
+        if (pointsChanged) overrides.keyPoints = points;
+
+        if (outline.mediaGenerations && outline.mediaGenerations.length > 0) {
+          const nextMedia: MediaGenerationRequest[] = outline.mediaGenerations.map((m) => ({
+            ...m,
+            prompt: (mediaPrompts[m.elementId] ?? m.prompt).trim() || m.prompt,
+          }));
+          const changed = nextMedia.some(
+            (m, i) => m.prompt !== outline.mediaGenerations![i].prompt,
+          );
+          if (changed) overrides.mediaGenerations = nextMedia;
+        }
+      }
+
+      await onSubmit(scene.id, overrides);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl mx-4 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-border/40 flex flex-col max-h-[min(85vh,720px)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-border/30">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="size-9 shrink-0 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <RefreshCw className="size-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-foreground truncate">
+                {t('stage.regenerateScene')}
+              </h2>
+              <p className="text-xs text-muted-foreground truncate">
+                {scene.title || outline.title}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="size-8 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Mode tabs */}
+        <div className="px-6 pt-4">
+          <div className="inline-flex rounded-lg bg-muted/50 p-1 text-xs font-medium">
+            {(['retry', 'simple', 'advanced'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md transition-colors',
+                  mode === m
+                    ? 'bg-white dark:bg-slate-800 text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {m === 'retry'
+                  ? t('stage.retryMode')
+                  : m === 'simple'
+                    ? t('stage.simpleMode')
+                    : t('stage.advancedMode')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Form */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {mode === 'retry' ? (
+            <div className="rounded-lg bg-muted/30 border border-border/40 p-4 text-xs text-muted-foreground leading-relaxed">
+              {t('stage.retryModeHint')}
+            </div>
+          ) : mode === 'simple' ? (
+            <Field label={t('stage.descriptionLabel')}>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={6}
+                className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                placeholder={t('stage.descriptionPlaceholder')}
+              />
+            </Field>
+          ) : (
+            <>
+              <Field label={t('stage.titleLabel')}>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                />
+              </Field>
+              <Field label={t('stage.descriptionLabel')}>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                />
+              </Field>
+              <Field
+                label={t('stage.keyPointsLabel')}
+                hint={t('stage.keyPointsHint')}
+              >
+                <textarea
+                  value={keyPointsText}
+                  onChange={(e) => setKeyPointsText(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                  placeholder={t('stage.keyPointsPlaceholder')}
+                />
+              </Field>
+              {outline.mediaGenerations && outline.mediaGenerations.length > 0 && (
+                <Field
+                  label={t('stage.mediaPromptsLabel')}
+                  hint={t('stage.mediaPromptsHint')}
+                >
+                  <div className="space-y-2">
+                    {outline.mediaGenerations.map((m) => (
+                      <div
+                        key={m.elementId}
+                        className="rounded-lg border border-border/40 bg-muted/20 p-2 space-y-1"
+                      >
+                        <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                          <span className="rounded bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 px-1.5 py-0.5">
+                            {m.type}
+                          </span>
+                          <span className="truncate">{m.elementId}</span>
+                        </div>
+                        <textarea
+                          value={mediaPrompts[m.elementId] ?? ''}
+                          onChange={(e) =>
+                            setMediaPrompts((prev) => ({
+                              ...prev,
+                              [m.elementId]: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                          className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-xs resize-y focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Field>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/30">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+          >
+            {submitting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+            {t('stage.startRegenerate')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between">
+        <label className="text-xs font-semibold text-foreground">{label}</label>
+        {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}

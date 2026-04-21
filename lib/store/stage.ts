@@ -74,6 +74,13 @@ interface StageState {
    */
   pendingMediaUrls: Record<string, string>;
 
+  /**
+   * Whether the current viewer owns the loaded classroom. Gates owner-only
+   * UI (e.g. regenerate-scene button in the sidebar). Not persisted; set from
+   * the server `/api/classroom` response, forced to `false` on share pages.
+   */
+  isOwner: boolean;
+
   // Actions
   setStage: (stage: Stage) => void;
   setScenes: (scenes: Scene[]) => void;
@@ -106,6 +113,9 @@ interface StageState {
   saveToStorage: () => Promise<void>;
   loadFromStorage: (stageId: string) => Promise<void>;
   clearStore: () => void;
+
+  // Ownership
+  setIsOwner: (isOwner: boolean) => void;
 }
 
 const useStageStoreBase = create<StageState>()((set, get) => ({
@@ -124,6 +134,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   failedOutlines: [],
   creditsInsufficient: false,
   pendingMediaUrls: {},
+  isOwner: false,
 
   // Actions
   setStage: (stage) => {
@@ -453,9 +464,12 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       generatingOutlines: [],
       creditsInsufficient: false,
       pendingMediaUrls: {},
+      isOwner: false,
     }));
     log.info('Store cleared');
   },
+
+  setIsOwner: (isOwner) => set({ isOwner }),
 }));
 
 export const useStageStore = createSelectors(useStageStoreBase);

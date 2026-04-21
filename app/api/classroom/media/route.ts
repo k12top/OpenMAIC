@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
     const classroomId = formData.get('classroomId') as string;
     const mediaType = formData.get('mediaType') as string;
     const file = formData.get('file') as File | null;
+    const elementIdRaw = formData.get('elementId');
+    const elementId = typeof elementIdRaw === 'string' && elementIdRaw.length > 0 ? elementIdRaw : null;
 
     if (!classroomId || !mediaType || !file) {
       return NextResponse.json(
@@ -41,6 +43,7 @@ export async function POST(req: NextRequest) {
         await db.insert(schema.classroomMedia).values({
           classroomId,
           mediaType: mediaType as 'image' | 'video' | 'audio' | 'tts',
+          elementId,
           minioKey: key,
           mimeType,
           sizeBytes: buffer.length,
@@ -82,6 +85,7 @@ export async function GET(req: NextRequest) {
     const media = rows.map((r) => ({
       id: r.id,
       mediaType: r.mediaType,
+      elementId: r.elementId,
       minioKey: r.minioKey,
       mimeType: r.mimeType,
       sizeBytes: r.sizeBytes,

@@ -117,6 +117,7 @@ export async function uploadMediaToServer(
   mediaType: 'image' | 'video' | 'audio' | 'tts',
   blob: Blob,
   filename?: string,
+  elementId?: string,
 ): Promise<{ url: string; key: string } | null> {
   if (!_syncEnabled) return null;
 
@@ -125,6 +126,9 @@ export async function uploadMediaToServer(
     formData.append('classroomId', classroomId);
     formData.append('mediaType', mediaType);
     formData.append('file', blob, filename || `${mediaType}.bin`);
+    if (elementId) {
+      formData.append('elementId', elementId);
+    }
 
     const res = await fetch('/api/classroom/media', {
       method: 'POST',
@@ -151,6 +155,7 @@ export async function loadClassroomFromServer(classroomId: string): Promise<{
   stage: Stage;
   scenes: Scene[];
   currentSceneId?: string;
+  isOwner: boolean;
 } | null> {
   try {
     const res = await fetch(`/api/classroom?id=${encodeURIComponent(classroomId)}`);
@@ -162,6 +167,7 @@ export async function loadClassroomFromServer(classroomId: string): Promise<{
         stage: json.classroom.stage,
         scenes: json.classroom.scenes,
         currentSceneId: json.classroom.stage?.currentSceneId,
+        isOwner: !!json.isOwner,
       };
     }
     return null;

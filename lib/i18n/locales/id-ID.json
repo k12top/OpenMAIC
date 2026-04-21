@@ -145,7 +145,22 @@
     "confirmSwitchMessage": "Topik sedang berlangsung. Mengganti adegan akan mengakhiri topik saat ini. Anda yakin?",
     "generatingNextPage": "Adegan sedang dibuat, harap tunggu...",
     "fullscreen": "Layar Penuh",
-    "exitFullscreen": "Keluar Layar Penuh"
+    "exitFullscreen": "Keluar Layar Penuh",
+    "regenerateScene": "Buat ulang halaman ini",
+    "retryMode": "Coba lagi saja",
+    "retryModeHint": "Buat ulang halaman ini apa adanya, tanpa mengubah prompt apa pun (teks, media, dan TTS dibuat ulang semua).",
+    "simpleMode": "Sederhana",
+    "advancedMode": "Lanjutan",
+    "titleLabel": "Judul",
+    "descriptionLabel": "Deskripsi",
+    "descriptionPlaceholder": "Jelaskan secara singkat isi halaman ini…",
+    "keyPointsLabel": "Poin Utama",
+    "keyPointsHint": "Satu per baris",
+    "keyPointsPlaceholder": "Masukkan satu poin per baris",
+    "mediaPromptsLabel": "Prompt Media",
+    "mediaPromptsHint": "Sesuaikan prompt untuk setiap gambar atau video",
+    "startRegenerate": "Mulai buat ulang",
+    "ownerOnly": "Hanya terlihat oleh pemilik kelas"
   },
   "whiteboard": {
     "title": "Papan Tulis Interaktif",
