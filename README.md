@@ -116,6 +116,8 @@ providers:
 
 Supported providers: **OpenAI**, **Anthropic**, **Google Gemini**, **DeepSeek**, **MiniMax**, **Grok (xAI)**, and any OpenAI-compatible API.
 
+To restrict and reorder the models shown in the UI for a given provider, set `{PROVIDER}_MODELS` (comma-separated, e.g. `GOOGLE_MODELS=gemini-2.5-pro,gemini-3-flash-preview`). The **order in the env value becomes the display order**; ids must exist in the built-in catalog at `lib/ai/providers.ts` — unknown ids are dropped and logged once on the client. Leave the variable empty to show the full built-in list.
+
 MiniMax quick examples:
 
 ```env

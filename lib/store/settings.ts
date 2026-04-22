@@ -792,16 +792,33 @@ export const useSettingsStore = create<SettingsState>()(
                 const key = pid as ProviderId;
                 if (newProvidersConfig[key]) {
                   const currentModels = newProvidersConfig[key].models;
-                  // When server specifies allowed models, filter the models list
-                  const filteredModels = info.models?.length
-                    ? currentModels.filter((m) => info.models!.includes(m.id))
-                    : currentModels;
+                  // When the operator sets `{PREFIX}_MODELS`, honour that list
+                  // verbatim: env order becomes the display order, and ids not
+                  // present in the built-in PROVIDERS catalog are dropped
+                  // (logged once so typos are easy to spot).
+                  let orderedModels = currentModels;
+                  if (info.models?.length) {
+                    const byId = new Map(currentModels.map((m) => [m.id, m]));
+                    const hits: typeof currentModels = [];
+                    const unknown: string[] = [];
+                    for (const id of info.models) {
+                      const m = byId.get(id);
+                      if (m) hits.push(m);
+                      else unknown.push(id);
+                    }
+                    if (unknown.length > 0) {
+                      log.warn(
+                        `[serverProviders] ${pid} env MODELS contains ids not in built-in list: ${unknown.join(', ')}`,
+                      );
+                    }
+                    orderedModels = hits;
+                  }
                   newProvidersConfig[key] = {
                     ...newProvidersConfig[key],
                     isServerConfigured: true,
                     serverModels: info.models,
                     serverBaseUrl: info.baseUrl,
-                    models: filteredModels,
+                    models: orderedModels,
                   };
                 }
               }

@@ -116,6 +116,8 @@ providers:
 
 支持的服务商：**OpenAI**、**Anthropic**、**Google Gemini**、**DeepSeek**、**MiniMax**、**Grok (xAI)** 以及任何兼容 OpenAI API 的服务。
 
+如需限定并重新排列 UI 中某服务商的模型列表，设置 `{PROVIDER}_MODELS`（英文逗号分隔，如 `GOOGLE_MODELS=gemini-2.5-pro,gemini-3-flash-preview`）。**env 里的顺序就是 UI 显示顺序**；id 必须存在于 `lib/ai/providers.ts` 的内置清单中，未知 id 会被丢弃并在客户端日志里告警一次。留空则显示该服务商的全部内置模型。
+
 MiniMax 快速示例：
 
 ```env
