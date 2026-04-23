@@ -82,6 +82,14 @@ interface StageState {
   isOwner: boolean;
 
   /**
+   * Whether the Stage is being rendered inside a public /share/[token] page
+   * (any mode: public / readonly / editable). Used to hide navigation UI
+   * (back-to-home button, credits badge, etc.) that only makes sense for the
+   * owner on their own classroom page. Not persisted.
+   */
+  isSharedView: boolean;
+
+  /**
    * IDs of scenes currently being regenerated in place. The old scene stays
    * in the list (and remains the current page) while a new one is produced
    * in the background; on success we swap in-place via `replaceScene`, on
@@ -133,6 +141,7 @@ interface StageState {
 
   // Ownership
   setIsOwner: (isOwner: boolean) => void;
+  setIsSharedView: (isSharedView: boolean) => void;
 }
 
 const useStageStoreBase = create<StageState>()((set, get) => ({
@@ -152,6 +161,7 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   creditsInsufficient: false,
   pendingMediaUrls: {},
   isOwner: false,
+  isSharedView: false,
   regeneratingSceneIds: [],
 
   // Actions
@@ -493,12 +503,14 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
       creditsInsufficient: false,
       pendingMediaUrls: {},
       isOwner: false,
+      isSharedView: false,
       regeneratingSceneIds: [],
     }));
     log.info('Store cleared');
   },
 
   setIsOwner: (isOwner) => set({ isOwner }),
+  setIsSharedView: (isSharedView) => set({ isSharedView }),
 
   /**
    * Swap a scene with a new one atomically at the same array position.

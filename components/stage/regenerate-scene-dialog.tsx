@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, RefreshCw, X } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useStageStore } from '@/lib/store';
+import { useSettingsStore } from '@/lib/store/settings';
 import type { SceneOutline } from '@/lib/types/generation';
 import type { MediaGenerationRequest } from '@/lib/media/types';
+import type { ProviderId } from '@/lib/ai/providers';
 import { cn } from '@/lib/utils';
 
 type Mode = 'retry' | 'simple' | 'advanced';
@@ -14,10 +16,19 @@ export type RegenerateSceneOverrides = Partial<
   Pick<SceneOutline, 'title' | 'description' | 'keyPoints' | 'mediaGenerations'>
 >;
 
+export interface RegenerateModelOverride {
+  providerId: ProviderId;
+  modelId: string;
+}
+
 interface RegenerateSceneDialogProps {
   sceneId: string | null;
   onClose: () => void;
-  onSubmit: (sceneId: string, overrides: RegenerateSceneOverrides) => Promise<void> | void;
+  onSubmit: (
+    sceneId: string,
+    overrides: RegenerateSceneOverrides,
+    modelOverride: RegenerateModelOverride,
+  ) => Promise<void> | void;
 }
 
 /**
@@ -40,12 +51,60 @@ export function RegenerateSceneDialog({
     return { scene: s || null, outline: o || null };
   }, [sceneId, scenes, outlines]);
 
+  // Current global LLM selection — used as the default for the override dropdown.
+  const globalProviderId = useSettingsStore((s) => s.providerId);
+  const globalModelId = useSettingsStore((s) => s.modelId);
+  const providersConfig = useSettingsStore((s) => s.providersConfig);
+
+  // Build the list of selectable (provider, model) pairs — same predicate as
+  // the Settings ModelSelector: usable providers only.
+  const modelOptions = useMemo(() => {
+    type Group = {
+      providerId: ProviderId;
+      providerName: string;
+      models: { id: string; name: string }[];
+    };
+    const groups: Group[] = [];
+    for (const [pid, config] of Object.entries(providersConfig)) {
+      if (!config) continue;
+      const usable =
+        (!config.requiresApiKey || config.apiKey || config.isServerConfigured) &&
+        config.models.length >= 1 &&
+        (config.baseUrl || config.defaultBaseUrl || config.serverBaseUrl);
+      if (!usable) continue;
+      // Restrict to server-allowed models when using a server-configured
+      // provider without own key.
+      let models = config.models;
+      if (config.isServerConfigured && !config.apiKey && config.serverModels?.length) {
+        const allowed = new Set(config.serverModels);
+        models = models.filter((m) => allowed.has(m.id));
+      }
+      if (!models.length) continue;
+      groups.push({
+        providerId: pid as ProviderId,
+        providerName: config.name || pid,
+        models: models.map((m) => ({ id: m.id, name: m.name || m.id })),
+      });
+    }
+    return groups;
+  }, [providersConfig]);
+
   const [mode, setMode] = useState<Mode>('retry');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [keyPointsText, setKeyPointsText] = useState('');
   const [mediaPrompts, setMediaPrompts] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // `${providerId}:::${modelId}` — keeps provider+model paired in a single <select>.
+  const [modelKey, setModelKey] = useState<string>(
+    `${globalProviderId}:::${globalModelId || ''}`,
+  );
+
+  // Reseed modelKey when the global selection changes (e.g. user switched
+  // provider in settings while the dialog was closed).
+  useEffect(() => {
+    setModelKey(`${globalProviderId}:::${globalModelId || ''}`);
+  }, [globalProviderId, globalModelId]);
 
   // Seed form state whenever the target scene changes.
   useEffect(() => {
@@ -73,6 +132,11 @@ export function RegenerateSceneDialog({
     if (submitting) return;
     setSubmitting(true);
     try {
+      const [pid, mid] = modelKey.split(':::');
+      const modelOverride: RegenerateModelOverride = {
+        providerId: (pid || globalProviderId) as ProviderId,
+        modelId: mid || globalModelId || '',
+      };
       const overrides: RegenerateSceneOverrides = {};
       if (mode === 'retry') {
         // No overrides — just re-run the same outline.
@@ -108,7 +172,7 @@ export function RegenerateSceneDialog({
         }
       }
 
-      await onSubmit(scene.id, overrides);
+      await onSubmit(scene.id, overrides, modelOverride);
       onClose();
     } finally {
       setSubmitting(false);
@@ -145,6 +209,35 @@ export function RegenerateSceneDialog({
           >
             <X className="size-4" />
           </button>
+        </div>
+
+        {/* Model override */}
+        <div className="px-6 pt-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-foreground">
+              {t('stage.regenerateModelLabel')}
+            </span>
+            <select
+              value={modelKey}
+              onChange={(e) => setModelKey(e.target.value)}
+              disabled={submitting || modelOptions.length === 0}
+              className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40 disabled:opacity-60"
+            >
+              {modelOptions.length === 0 ? (
+                <option value={modelKey}>{globalModelId || globalProviderId}</option>
+              ) : (
+                modelOptions.map((g) => (
+                  <optgroup key={g.providerId} label={g.providerName}>
+                    {g.models.map((m) => (
+                      <option key={`${g.providerId}:::${m.id}`} value={`${g.providerId}:::${m.id}`}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              )}
+            </select>
+          </label>
         </div>
 
         {/* Mode tabs */}

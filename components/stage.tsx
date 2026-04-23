@@ -10,6 +10,7 @@ import { SceneSidebar } from './stage/scene-sidebar';
 import {
   RegenerateSceneDialog,
   type RegenerateSceneOverrides,
+  type RegenerateModelOverride,
 } from './stage/regenerate-scene-dialog';
 import { Header } from './header';
 import { CanvasArea } from '@/components/canvas/canvas-area';
@@ -52,6 +53,7 @@ export function Stage({
   onRegenerateScene?: (
     sceneId: string,
     overrides?: RegenerateSceneOverrides,
+    modelOverride?: RegenerateModelOverride,
   ) => Promise<void> | void;
 }) {
   const { t } = useI18n();
@@ -953,8 +955,8 @@ export function Stage({
         <RegenerateSceneDialog
           sceneId={regenTargetSceneId}
           onClose={() => setRegenTargetSceneId(null)}
-          onSubmit={async (id, overrides) => {
-            await onRegenerateScene(id, overrides);
+          onSubmit={async (id, overrides, modelOverride) => {
+            await onRegenerateScene(id, overrides, modelOverride);
           }}
         />
       )}

@@ -5,6 +5,7 @@
  */
 
 import type { StatelessChatRequest } from '@/lib/types/chat';
+import type { Scene } from '@/lib/types/stage';
 import type { AgentConfig } from '@/lib/orchestration/registry/types';
 import type { WhiteboardActionRecord, AgentTurnSummary } from './director-prompt';
 import { getActionDescriptions, getEffectiveActions } from './tool-schemas';
@@ -228,7 +229,9 @@ ${slideActionGuidelines}- Whiteboard actions (wb_open, wb_draw_text, wb_draw_sha
 - wb_delete: Use to remove a specific element by its ID (shown in brackets like [id:xxx] in the whiteboard state). Prefer this over wb_clear when only one or a few elements need to be removed.
 ${mutualExclusionNote}
 
-# Current State
+# Current State (GROUND TRUTH — read carefully before answering)
+Use this section as the authoritative source of truth about the course and the page the student is currently viewing. When the student asks a question, base your answer on the "Current Page" content below — quote key details, refer to elements by their visible text, and stay consistent with what is actually on screen. If the answer is not supported by this context, say so rather than inventing details.
+
 ${stateContext}
 ${virtualWbContext}
 Remember: Speak naturally as a teacher. Effects fire concurrently with your speech.${
@@ -419,16 +422,22 @@ function summarizeElement(el: any): string {
 
   switch (el.type) {
     case 'text': {
-      const text = stripHtml(el.content || '').slice(0, 60);
-      const suffix = text.length >= 60 ? '...' : '';
+      // Keep enough text for the Q&A agent to actually reason about slide
+      // content (was 60 — too short for body paragraphs/notes).
+      const TEXT_LIMIT = 400;
+      const raw = stripHtml(el.content || '');
+      const text = raw.slice(0, TEXT_LIMIT);
+      const suffix = raw.length > TEXT_LIMIT ? '...' : '';
       return `${id} text${el.textType ? `[${el.textType}]` : ''}: "${text}${suffix}" ${pos}${size}`;
     }
     case 'image': {
       const src = el.src?.startsWith('data:') ? '[embedded]' : el.src?.slice(0, 50) || 'unknown';
-      return `${id} image: ${src} ${pos}${size}`;
+      const alt = el.alt ? ` alt:"${String(el.alt).slice(0, 120)}"` : '';
+      const caption = el.caption ? ` caption:"${String(el.caption).slice(0, 120)}"` : '';
+      return `${id} image: ${src}${alt}${caption} ${pos}${size}`;
     }
     case 'shape': {
-      const shapeText = el.text?.content ? stripHtml(el.text.content).slice(0, 40) : '';
+      const shapeText = el.text?.content ? stripHtml(el.text.content).slice(0, 200) : '';
       return `${id} shape${shapeText ? `: "${shapeText}"` : ''} ${pos}${size}`;
     }
     case 'chart':
@@ -614,81 +623,202 @@ DO NOT redraw content that already exists. Check positions above before adding n
 // ==================== State Context ====================
 
 /**
- * Build context string from store state
+ * Maximum number of scenes to enumerate in the course table-of-contents.
+ * Beyond this we still include the current scene plus its neighbours and
+ * truncate the rest with a summary line — keeps prompts bounded on very
+ * long courses while still giving the agent a sense of the whole curriculum.
+ */
+const MAX_SCENES_IN_TOC = 40;
+
+/**
+ * Build context string from store state.
+ *
+ * This block is critical for Q&A quality — when the user asks "what does
+ * this slide say?" the agent MUST be able to see the current page's text,
+ * its position in the course, and the surrounding curriculum.
  */
 function buildStateContext(storeState: StatelessChatRequest['storeState']): string {
   const { stage, scenes, currentSceneId, mode, whiteboardOpen } = storeState;
 
   const lines: string[] = [];
 
-  // Mode
   lines.push(`Mode: ${mode}`);
-
-  // Whiteboard status
   lines.push(
     `Whiteboard: ${whiteboardOpen ? 'OPEN (slide canvas is hidden)' : 'closed (slide canvas is visible)'}`,
   );
 
-  // Stage info
   if (stage) {
     lines.push(
-      `Course: ${stage.name || 'Untitled'}${stage.description ? ` - ${stage.description}` : ''}`,
+      `Course: ${stage.name || 'Untitled'}${stage.description ? ` — ${stage.description}` : ''}`,
     );
+    if (stage.language) lines.push(`Course language: ${stage.language}`);
   }
 
-  // Scenes summary
-  lines.push(`Total scenes: ${scenes.length}`);
+  const total = scenes.length;
+  lines.push(`Total scenes: ${total}`);
 
-  if (currentSceneId) {
-    const currentScene = scenes.find((s) => s.id === currentSceneId);
-    if (currentScene) {
-      lines.push(
-        `Current scene: "${currentScene.title}" (${currentScene.type}, id: ${currentSceneId})`,
-      );
+  const currentIndex = currentSceneId
+    ? scenes.findIndex((s) => s.id === currentSceneId)
+    : -1;
 
-      // Slide scene: include element details
-      if (currentScene.content.type === 'slide') {
-        const elements = currentScene.content.canvas.elements;
-        lines.push(`Current slide elements (${elements.length}):\n${summarizeElements(elements)}`);
-      }
-
-      // Quiz scene: include question summary
-      if (currentScene.content.type === 'quiz') {
-        const questions = currentScene.content.questions;
-        const qSummary = questions
-          .slice(0, 5)
-          .map((q, i) => `  ${i + 1}. [${q.type}] ${q.question.slice(0, 80)}`)
-          .join('\n');
-        lines.push(
-          `Quiz questions (${questions.length}):\n${qSummary}${questions.length > 5 ? `\n  ... and ${questions.length - 5} more` : ''}`,
-        );
-      }
-    }
-  } else if (scenes.length > 0) {
-    lines.push('No scene currently selected');
+  // ── Full course table-of-contents (with current page marked) ───────────
+  if (total > 0) {
+    lines.push('');
+    lines.push('## Course Table of Contents');
+    const toc = buildSceneToc(scenes, currentIndex);
+    lines.push(toc);
   }
 
-  // List first few scenes
-  if (scenes.length > 0) {
-    const sceneSummary = scenes
-      .slice(0, 5)
-      .map((s, i) => `  ${i + 1}. ${s.title} (${s.type}, id: ${s.id})`)
-      .join('\n');
+  // ── Deep dive into the CURRENT scene ───────────────────────────────────
+  if (currentIndex >= 0) {
+    const currentScene = scenes[currentIndex];
+    lines.push('');
     lines.push(
-      `Scenes:\n${sceneSummary}${scenes.length > 5 ? `\n  ... and ${scenes.length - 5} more` : ''}`,
+      `## Current Page (${currentIndex + 1} / ${total}): "${currentScene.title}" [${currentScene.type}] id=${currentScene.id}`,
     );
+    lines.push(summarizeCurrentScene(currentScene));
+  } else if (total > 0) {
+    lines.push('');
+    lines.push('No scene currently selected.');
   }
 
-  // Whiteboard content (last whiteboard in the stage)
+  // ── Stage-level whiteboard history (rarely used, last only) ────────────
   if (stage?.whiteboard && stage.whiteboard.length > 0) {
     const lastWb = stage.whiteboard[stage.whiteboard.length - 1];
     const wbElements = lastWb.elements || [];
+    lines.push('');
     lines.push(
-      `Whiteboard (last of ${stage.whiteboard.length}, ${wbElements.length} elements):\n${summarizeElements(wbElements)}`,
+      `## Course Whiteboard (last of ${stage.whiteboard.length}, ${wbElements.length} elements):`,
     );
+    lines.push(summarizeElements(wbElements));
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Render a scene table-of-contents. Always include the first few, the last
+ * few, and a window around the current scene; truncate the middle on very
+ * long courses.
+ */
+function buildSceneToc(scenes: Scene[], currentIndex: number): string {
+  const total = scenes.length;
+  if (total <= MAX_SCENES_IN_TOC) {
+    return scenes
+      .map((s, i) => formatTocLine(s, i, i === currentIndex))
+      .join('\n');
+  }
+
+  // Long course: show head + window-around-current + tail
+  const window = 5;
+  const indices = new Set<number>();
+  // first 5
+  for (let i = 0; i < 5; i++) indices.add(i);
+  // last 5
+  for (let i = total - 5; i < total; i++) indices.add(i);
+  // around current
+  if (currentIndex >= 0) {
+    for (let i = currentIndex - window; i <= currentIndex + window; i++) {
+      if (i >= 0 && i < total) indices.add(i);
+    }
+  }
+
+  const sorted = Array.from(indices).sort((a, b) => a - b);
+  const lines: string[] = [];
+  let prev = -1;
+  for (const i of sorted) {
+    if (prev >= 0 && i > prev + 1) {
+      lines.push(`  … (${i - prev - 1} more scenes) …`);
+    }
+    lines.push(formatTocLine(scenes[i], i, i === currentIndex));
+    prev = i;
+  }
+  return lines.join('\n');
+}
+
+function formatTocLine(scene: Scene, index: number, isCurrent: boolean): string {
+  const marker = isCurrent ? '→' : ' ';
+  return `${marker} ${index + 1}. [${scene.type}] ${scene.title} (id: ${scene.id})`;
+}
+
+/**
+ * Produce a type-specific summary of a single scene. Used for the "current
+ * page" deep-dive section of the prompt.
+ */
+function summarizeCurrentScene(scene: Scene): string {
+  const content = scene.content;
+  switch (content.type) {
+    case 'slide': {
+      const elements = content.canvas.elements || [];
+      // Surface speaker notes separately — these are the most useful signal
+      // for Q&A ("explain this slide") but are often hidden among generic
+      // elements.
+      const notes = elements
+        .filter(
+          (el): el is (typeof elements)[number] & { textType: 'notes'; content?: string } =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- PPTElement variants
+            (el as any).type === 'text' && (el as any).textType === 'notes',
+        )
+        .map((el) => stripHtml(el.content || ''))
+        .filter(Boolean);
+
+      const parts: string[] = [];
+      if (notes.length > 0) {
+        parts.push(`Speaker notes:\n${notes.map((n) => `  • ${n}`).join('\n')}`);
+      }
+      parts.push(`Slide elements (${elements.length}):\n${summarizeElements(elements)}`);
+      return parts.join('\n');
+    }
+
+    case 'quiz': {
+      const questions = content.questions || [];
+      if (questions.length === 0) return 'Quiz has no questions.';
+      const rendered = questions.map((q, i) => {
+        const head = `  ${i + 1}. [${q.type}] ${q.question.slice(0, 200)}`;
+        const opts = q.options?.length
+          ? '\n     Options: ' +
+            q.options
+              .map((o) => `${o.value}) ${o.label.slice(0, 60)}`)
+              .join(' | ')
+          : '';
+        const ans = q.answer?.length ? `\n     Answer: ${q.answer.join(', ')}` : '';
+        return head + opts + ans;
+      });
+      return `Quiz questions (${questions.length}):\n${rendered.join('\n')}`;
+    }
+
+    case 'interactive': {
+      const parts = [`Interactive page URL: ${content.url || '(none)'}`];
+      if (content.html) {
+        const text = stripHtml(content.html).slice(0, 600);
+        if (text) parts.push(`Embedded content preview: "${text}${content.html.length > 600 ? '...' : ''}"`);
+      }
+      return parts.join('\n');
+    }
+
+    case 'pbl': {
+      const cfg = content.projectConfig;
+      const info = cfg.projectInfo;
+      const lines: string[] = [];
+      lines.push(`Project: ${info.title}`);
+      if (info.description) lines.push(`Description: ${info.description.slice(0, 400)}`);
+      if (cfg.agents?.length) {
+        lines.push(
+          `Participating roles (${cfg.agents.length}): ${cfg.agents
+            .map((a) => `${a.name}(${a.actor_role})`)
+            .slice(0, 8)
+            .join(', ')}`,
+        );
+      }
+      if (cfg.issueboard?.issues?.length) {
+        lines.push(`Active issues: ${cfg.issueboard.issues.length}`);
+      }
+      return lines.join('\n');
+    }
+
+    default:
+      return '(Unsupported scene type — no content summary available)';
+  }
 }
 
 // ==================== Conversation Summary ====================

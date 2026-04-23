@@ -95,10 +95,32 @@ export class AISdkLangGraphAdapter extends BaseChatModel {
         this.thinking,
       );
 
-      const content = result.text || '';
+      // Fallback to reasoning content when the main text is empty — some
+      // providers (OpenAI o1/o3, DeepSeek-R1, …) put the structured answer
+      // into the reasoning channel when asked to emit short JSON. Without
+      // this fallback, callers like the director would receive an empty
+      // string and be unable to make a decision.
+      const resultRecord = result as unknown as {
+        text?: string;
+        reasoningText?: string;
+        reasoning?: string | Array<{ text?: string }>;
+      };
+      let content = resultRecord.text || '';
+      if (!content) {
+        content = resultRecord.reasoningText || '';
+      }
+      if (!content && Array.isArray(resultRecord.reasoning)) {
+        content = resultRecord.reasoning
+          .map((r) => (typeof r === 'string' ? r : r?.text || ''))
+          .filter(Boolean)
+          .join('\n');
+      } else if (!content && typeof resultRecord.reasoning === 'string') {
+        content = resultRecord.reasoning;
+      }
 
       log.info('[AI SDK Adapter] Response:', {
         textLength: content.length,
+        usedReasoningFallback: !resultRecord.text && !!content,
       });
 
       // Create AI message

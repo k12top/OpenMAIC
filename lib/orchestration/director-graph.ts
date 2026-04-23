@@ -189,7 +189,27 @@ async function directorNode(
     const content = result.generations[0]?.text || '';
     log.info(`[Director] Raw decision: ${content}`);
 
-    const decision = parseDirectorDecision(content);
+    const decision = parseDirectorDecision(content, state.availableAgentIds);
+
+    // Fallback: if the LLM produced unparseable output AND we're still on
+    // the first turn, silently dispatch a sensible agent instead of ending
+    // the round. Without this the user would send a message, the director
+    // would "think" and then the session would end with no agent speaking —
+    // a common symptom when using reasoning-heavy models whose structured
+    // output lands in the reasoning channel.
+    if (decision.unableToDecide && state.turnCount === 0) {
+      const fallbackId = pickFallbackAgent(agents, state.triggerAgentId);
+      if (fallbackId) {
+        log.warn(
+          `[Director] Director could not decide — falling back to agent "${fallbackId}" for turn 0`,
+        );
+        write({
+          type: 'thinking',
+          data: { stage: 'agent_loading', agentId: fallbackId },
+        });
+        return { currentAgentId: fallbackId, shouldEnd: false };
+      }
+    }
 
     if (decision.shouldEnd || !decision.nextAgentId) {
       log.info('[Director] Decision: END');
@@ -223,8 +243,44 @@ async function directorNode(
     };
   } catch (error) {
     log.error('[Director] Error:', error);
+    // Still honour the first-turn fallback even when the director call
+    // itself throws (e.g. provider hiccup on a reasoning model).
+    if (state.turnCount === 0) {
+      const fallbackId = pickFallbackAgent(agents, state.triggerAgentId);
+      if (fallbackId) {
+        log.warn(
+          `[Director] LLM error on turn 0 — falling back to agent "${fallbackId}"`,
+        );
+        write({
+          type: 'thinking',
+          data: { stage: 'agent_loading', agentId: fallbackId },
+        });
+        return { currentAgentId: fallbackId, shouldEnd: false };
+      }
+    }
     return { shouldEnd: true };
   }
+}
+
+/**
+ * Pick a sensible agent to dispatch when the director can't decide. Priority:
+ *   1. The triggerAgentId (if it's still in the pool)
+ *   2. Highest-priority teacher
+ *   3. Highest-priority agent of any role
+ */
+function pickFallbackAgent(
+  agents: AgentConfig[],
+  triggerAgentId: string | null,
+): string | null {
+  if (!agents.length) return null;
+  if (triggerAgentId) {
+    const t = agents.find((a) => a.id === triggerAgentId);
+    if (t) return t.id;
+  }
+  const sorted = [...agents].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+  const teacher = sorted.find((a) => a.role === 'teacher');
+  if (teacher) return teacher.id;
+  return sorted[0]?.id ?? null;
 }
 
 function directorCondition(state: OrchestratorStateType): 'agent_generate' | typeof END {

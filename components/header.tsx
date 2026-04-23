@@ -35,8 +35,12 @@ export function Header({ currentSceneTitle }: HeaderProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [creditsUnlimited, setCreditsUnlimited] = useState(false);
+  const isSharedView = useStageStore((s) => s.isSharedView);
 
   useEffect(() => {
+    // Credits only belong to the authenticated owner's own classroom pages —
+    // never show them on public/readonly/editable share pages.
+    if (isSharedView) return;
     fetch('/api/credits')
       .then((r) => {
         if (!r.ok) return null;
@@ -52,7 +56,7 @@ export function Header({ currentSceneTitle }: HeaderProps) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isSharedView]);
 
   // Export
   const { exporting: isExporting, exportPPTX, exportResourcePack } = useExportPPTX();
@@ -95,13 +99,15 @@ export function Header({ currentSceneTitle }: HeaderProps) {
     <>
       <header className="h-20 px-8 flex items-center justify-between z-10 bg-transparent gap-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <button
-            onClick={() => router.push('/')}
-            className="shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            title={t('generation.backToHome')}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          {!isSharedView && (
+            <button
+              onClick={() => router.push('/')}
+              className="shrink-0 p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              title={t('generation.backToHome')}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex flex-col min-w-0">
             <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400 dark:text-gray-500 mb-0.5">
               {t('stage.currentScene')}
@@ -182,7 +188,7 @@ export function Header({ currentSceneTitle }: HeaderProps) {
           </div>
 
           {/* Credits Badge */}
-          {creditBalance !== null && (
+          {!isSharedView && creditBalance !== null && (
             <>
               <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
               <button

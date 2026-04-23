@@ -148,6 +148,7 @@
     "exitFullscreen": "Keluar Layar Penuh",
     "regenerateScene": "Buat ulang halaman ini",
     "regenerating": "Membuat ulang",
+    "regenerateModelLabel": "Model generasi",
     "retryMode": "Coba lagi saja",
     "retryModeHint": "Buat ulang halaman ini apa adanya, tanpa mengubah prompt apa pun (teks, media, dan TTS dibuat ulang semua).",
     "simpleMode": "Sederhana",

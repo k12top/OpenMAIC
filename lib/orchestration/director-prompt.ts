@@ -246,32 +246,97 @@ Contributors: ${contributors.length > 0 ? contributors.join(', ') : 'none'}${cro
 }
 
 /**
- * Parse the director's decision from its response
+ * Parse the director's decision from its response.
+ *
+ * Tolerates common LLM output quirks:
+ *  - Markdown code fences (```json … ``` or ``` … ```)
+ *  - Prose wrapped around the JSON object
+ *  - Bare "END" / "USER" keywords with no JSON envelope
+ *  - Empty content (e.g. reasoning model put everything in the reasoning
+ *    channel)
+ *
+ * Returns three possible shapes:
+ *   { nextAgentId, shouldEnd:false }            → dispatch that agent / USER
+ *   { nextAgentId:null, shouldEnd:true, unableToDecide:false } → explicit END
+ *   { nextAgentId:null, shouldEnd:true, unableToDecide:true  } → parse failed;
+ *     the caller can choose to use a first-turn fallback instead of ending.
  *
  * @param content - Raw LLM response content
- * @returns Parsed decision with nextAgentId and shouldEnd flag
+ * @param availableAgentIds - Optional list of valid agent ids; when provided,
+ *   used as a last-resort heuristic (pick the first mentioned agent id).
  */
-export function parseDirectorDecision(content: string): {
+export function parseDirectorDecision(
+  content: string,
+  availableAgentIds?: string[],
+): {
   nextAgentId: string | null;
   shouldEnd: boolean;
+  unableToDecide?: boolean;
 } {
-  try {
-    // Try to extract JSON from the response
-    const jsonMatch = content.match(/\{[\s\S]*?"next_agent"[\s\S]*?\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const nextAgent = parsed.next_agent;
+  const raw = (content || '').trim();
 
-      if (!nextAgent || nextAgent === 'END') {
-        return { nextAgentId: null, shouldEnd: true };
-      }
-
-      return { nextAgentId: nextAgent, shouldEnd: false };
-    }
-  } catch (_e) {
-    log.warn('[Director] Failed to parse decision:', content.slice(0, 200));
+  if (!raw) {
+    log.warn('[Director] Empty content from LLM — falling through to caller fallback');
+    return { nextAgentId: null, shouldEnd: true, unableToDecide: true };
   }
 
-  // Default: end the round if we can't parse
-  return { nextAgentId: null, shouldEnd: true };
+  // 1) Strip markdown code fences: ```json\n{...}\n``` or ```\n{...}\n```
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidates: string[] = [];
+  if (fenced && fenced[1]) candidates.push(fenced[1].trim());
+  candidates.push(raw);
+
+  for (const candidate of candidates) {
+    // 2) Try extracting a JSON object containing "next_agent"
+    const jsonMatch = candidate.match(/\{[\s\S]*?"next_agent"[\s\S]*?\}/);
+    const toParse = jsonMatch ? jsonMatch[0] : candidate;
+    try {
+      const parsed = JSON.parse(toParse);
+      const nextAgent =
+        typeof parsed?.next_agent === 'string' ? parsed.next_agent.trim() : undefined;
+      if (nextAgent !== undefined) {
+        if (!nextAgent || nextAgent.toUpperCase() === 'END') {
+          return { nextAgentId: null, shouldEnd: true };
+        }
+        if (nextAgent.toUpperCase() === 'USER') {
+          return { nextAgentId: 'USER', shouldEnd: false };
+        }
+        return { nextAgentId: nextAgent, shouldEnd: false };
+      }
+    } catch {
+      // fall through to next strategy
+    }
+  }
+
+  // 3) Heuristic: bare keywords
+  const upper = raw.toUpperCase();
+  if (/\bEND\b/.test(upper) && !/\bnext_agent\b/i.test(raw)) {
+    return { nextAgentId: null, shouldEnd: true };
+  }
+  if (/\bUSER\b/.test(upper) && !/\bnext_agent\b/i.test(raw)) {
+    return { nextAgentId: 'USER', shouldEnd: false };
+  }
+
+  // 4) Heuristic: pick the first known agent id mentioned in the text.
+  if (availableAgentIds?.length) {
+    // Match in order of first occurrence to respect the LLM's preference
+    let bestIdx = Infinity;
+    let bestId: string | null = null;
+    for (const id of availableAgentIds) {
+      const i = raw.indexOf(id);
+      if (i !== -1 && i < bestIdx) {
+        bestIdx = i;
+        bestId = id;
+      }
+    }
+    if (bestId) {
+      log.warn(
+        `[Director] Heuristic match: agent "${bestId}" found in unstructured response`,
+      );
+      return { nextAgentId: bestId, shouldEnd: false };
+    }
+  }
+
+  log.warn('[Director] Failed to parse decision:', raw.slice(0, 200));
+  return { nextAgentId: null, shouldEnd: true, unableToDecide: true };
 }

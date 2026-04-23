@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react';
 import { useStageStore } from '@/lib/store/stage';
 import { getCurrentModelConfig } from '@/lib/utils/model-config';
 import { useSettingsStore } from '@/lib/store/settings';
+import type { ProviderId } from '@/lib/ai/providers';
 import { db } from '@/lib/utils/database';
 import type { SceneOutline, PdfImage, ImageMapping } from '@/lib/types/generation';
 import type { AgentInfo } from '@/lib/generation/generation-pipeline';
@@ -30,18 +31,42 @@ interface SceneActionsResult {
   error?: string;
 }
 
-function getApiHeaders(): HeadersInit {
+interface LlmModelOverride {
+  providerId: ProviderId;
+  modelId: string;
+}
+
+function getApiHeaders(modelOverride?: LlmModelOverride): HeadersInit {
   const config = getCurrentModelConfig();
   const settings = useSettingsStore.getState();
   const imageProviderConfig = settings.imageProvidersConfig?.[settings.imageProviderId];
   const videoProviderConfig = settings.videoProvidersConfig?.[settings.videoProviderId];
 
+  // When a per-call override is supplied (e.g. from the regenerate-scene dialog),
+  // resolve its provider config and build the LLM headers from it instead of
+  // mutating the global settings store. Image/video/TTS headers keep using the
+  // global settings.
+  let modelString = config.modelString || '';
+  let apiKey = config.apiKey || '';
+  let baseUrl = config.baseUrl || '';
+  let providerType = config.providerType || '';
+  if (modelOverride) {
+    const { providerId: pid, modelId: mid } = modelOverride;
+    const pCfg = settings.providersConfig?.[pid];
+    if (pCfg) {
+      modelString = `${pid}:${mid}`;
+      apiKey = pCfg.apiKey || '';
+      baseUrl = pCfg.baseUrl || '';
+      providerType = pCfg.type || providerType;
+    }
+  }
+
   return {
     'Content-Type': 'application/json',
-    'x-model': config.modelString || '',
-    'x-api-key': config.apiKey || '',
-    'x-base-url': config.baseUrl || '',
-    'x-provider-type': config.providerType || '',
+    'x-model': modelString,
+    'x-api-key': apiKey,
+    'x-base-url': baseUrl,
+    'x-provider-type': providerType,
     // Image generation provider
     'x-image-provider': settings.imageProviderId || '',
     'x-image-model': settings.imageModelId || '',
@@ -75,10 +100,11 @@ async function fetchSceneContent(
     agents?: AgentInfo[];
   },
   signal?: AbortSignal,
+  modelOverride?: LlmModelOverride,
 ): Promise<SceneContentResult> {
   const response = await fetch('/api/generate/scene-content', {
     method: 'POST',
-    headers: getApiHeaders(),
+    headers: getApiHeaders(modelOverride),
     body: JSON.stringify(params),
     signal,
   });
@@ -106,10 +132,11 @@ async function fetchSceneActions(
     userProfile?: string;
   },
   signal?: AbortSignal,
+  modelOverride?: LlmModelOverride,
 ): Promise<SceneActionsResult> {
   const response = await fetch('/api/generate/scene-actions', {
     method: 'POST',
-    headers: getApiHeaders(),
+    headers: getApiHeaders(modelOverride),
     body: JSON.stringify(params),
     signal,
   });
@@ -588,6 +615,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
       overrides?: Partial<
         Pick<SceneOutline, 'title' | 'description' | 'keyPoints' | 'mediaGenerations'>
       >,
+      modelOverride?: LlmModelOverride,
     ) => {
       const state = store.getState();
       const scene = state.scenes.find((s) => s.id === sceneId);
@@ -676,6 +704,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             agents: params.agents,
           },
           signal,
+          modelOverride,
         );
 
         if (!contentResult.success || !contentResult.content) {
@@ -701,6 +730,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             userProfile: params.userProfile,
           },
           signal,
+          modelOverride,
         );
 
         if (!actionsResult.success || !actionsResult.scene) {
