@@ -17,6 +17,10 @@ const CHAT_SYNC_DEBOUNCE_MS = 5000;
 let _stageSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let _chatSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let _syncEnabled = true;
+// Pending stage sync payload: captured when debounce timer is scheduled so
+// `flushClassroomSync` can fire it immediately on demand (e.g. when the user
+// clicks "Save" in the source editor and expects changes to reach the cloud).
+let _pendingStageSync: (() => void) | null = null;
 
 export function disableSync() {
   _syncEnabled = false;
@@ -37,7 +41,7 @@ export function syncClassroomToServer(
   if (!_syncEnabled) return;
   if (_stageSyncTimer) clearTimeout(_stageSyncTimer);
 
-  _stageSyncTimer = setTimeout(async () => {
+  const send = async () => {
     try {
       const body = JSON.stringify({
         classroomId,
@@ -63,14 +67,29 @@ export function syncClassroomToServer(
     } catch (err) {
       log.warn('Classroom sync failed (network):', err);
     }
+  };
+
+  _pendingStageSync = send;
+  _stageSyncTimer = setTimeout(() => {
+    _pendingStageSync = null;
+    _stageSyncTimer = null;
+    void send();
   }, SYNC_DEBOUNCE_MS);
 }
 
+/**
+ * Flush any pending stage sync immediately. If a debounced sync is waiting
+ * to fire, cancel the timer and invoke the send synchronously (fire-and-
+ * forget). Safe to call when no sync is pending.
+ */
 export function flushClassroomSync() {
   if (_stageSyncTimer) {
     clearTimeout(_stageSyncTimer);
     _stageSyncTimer = null;
   }
+  const pending = _pendingStageSync;
+  _pendingStageSync = null;
+  if (pending) void pending();
 }
 
 // ─── Chat session sync ──────────────────────────────────────────────────────

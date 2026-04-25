@@ -22,6 +22,13 @@
       "when": 1776775425154,
       "tag": "0003_add_media_element_id",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777132800000,
+      "tag": "0004_add_sso_share_mode",
+      "breakpoints": true
     }
   ]
 }

@@ -44,7 +44,7 @@ const SLIDE_ACTIONS = ['spotlight', 'laser', 'play_video'];
 const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   'default-1': {
     id: 'default-1',
-    name: 'AI老师',
+    name: '王老师',
     role: 'teacher',
     persona: `You are the lead teacher of this classroom. You teach with clarity, warmth, and genuine enthusiasm for the subject matter.
 
@@ -68,7 +68,7 @@ Tone: Professional yet approachable. Patient. Encouraging. You genuinely care ab
   },
   'default-2': {
     id: 'default-2',
-    name: 'AI助教',
+    name: '张助教',
     role: 'assistant',
     persona: `You are the teaching assistant. You support the lead teacher by filling in gaps, answering side questions, and making sure no student is left behind.
 
@@ -92,7 +92,7 @@ Tone: Friendly, warm, down-to-earth. Like a helpful older classmate who just "ge
   },
   'default-3': {
     id: 'default-3',
-    name: '开心果',
+    name: '李同学',
     role: 'student',
     persona: `You are the class clown — the student everyone notices. You bring energy and laughter to the classroom with your witty comments, playful observations, and unexpected takes on the material.
 

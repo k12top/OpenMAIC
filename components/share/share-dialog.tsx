@@ -1,7 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link2, Copy, Check, Eye, Pencil, Trash2, Loader2, Globe, Lock } from 'lucide-react';
+import {
+  X,
+  Link2,
+  Copy,
+  Check,
+  Eye,
+  Pencil,
+  Trash2,
+  Loader2,
+  Globe,
+  Lock,
+  ShieldCheck,
+} from 'lucide-react';
 import { useStageStore } from '@/lib/store/stage';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -11,16 +23,18 @@ interface ShareDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type ShareMode = 'public' | 'readonly' | 'editable' | 'sso';
+
 interface ShareItem {
   id: string;
   shareToken: string;
-  mode: 'public' | 'readonly' | 'editable';
+  mode: ShareMode;
   url: string;
   createdAt: string;
 }
 
 export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
-  const [mode, setMode] = useState<'public' | 'readonly' | 'editable'>('public');
+  const [mode, setMode] = useState<ShareMode>('public');
   const [shares, setShares] = useState<ShareItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -107,11 +121,11 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
         {/* Create new share */}
         <div className="px-5 py-4 border-b border-border/20">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="grid grid-cols-2 gap-2 mb-3">
             <button
               onClick={() => setMode('public')}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
                 mode === 'public'
                   ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300'
                   : 'border-border/40 text-muted-foreground hover:bg-muted/30',
@@ -123,7 +137,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             <button
               onClick={() => setMode('readonly')}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
                 mode === 'readonly'
                   ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
                   : 'border-border/40 text-muted-foreground hover:bg-muted/30',
@@ -135,7 +149,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             <button
               onClick={() => setMode('editable')}
               className={cn(
-                'flex-1 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
                 mode === 'editable'
                   ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
                   : 'border-border/40 text-muted-foreground hover:bg-muted/30',
@@ -144,13 +158,27 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               <Pencil className="size-3" />
               Editable
             </button>
+            <button
+              onClick={() => setMode('sso')}
+              className={cn(
+                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+                mode === 'sso'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300'
+                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
+              )}
+            >
+              <ShieldCheck className="size-3" />
+              SSO
+            </button>
           </div>
           <p className="text-[11px] text-muted-foreground/60 mb-3">
             {mode === 'public'
               ? 'Anyone can view this link without logging in.'
               : mode === 'readonly'
-                ? 'Requires login to view. Viewers can browse but not edit or copy.'
-                : 'Requires login. Viewers can copy this courseware to their account and edit it.'}
+                ? 'Anyone with the link can view in read-only mode. Sign-in not required.'
+                : mode === 'editable'
+                  ? 'Anyone with the link can view; signed-in viewers can copy this courseware to their account and edit it.'
+                  : 'Requires organization sign-in. Unauthenticated visitors are redirected to SSO login before they can view.'}
           </p>
           <button
             onClick={createShare}
@@ -186,7 +214,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                             ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
                             : share.mode === 'readonly'
                               ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                              : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+                              : share.mode === 'editable'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
                         )}
                       >
                         {share.mode}

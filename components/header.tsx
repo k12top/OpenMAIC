@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store/stage';
 import { useMediaGenerationStore } from '@/lib/store/media-generation';
 import { useExportPPTX } from '@/lib/export/use-export-pptx';
+import { Can } from '@/components/auth/can';
 
 interface HeaderProps {
   readonly currentSceneTitle: string;
@@ -212,14 +213,16 @@ export function Header({ currentSceneTitle }: HeaderProps) {
           )}
         </div>
 
-        {/* Share Button */}
-        <button
-          onClick={() => setShareOpen(true)}
-          className="shrink-0 p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm transition-all"
-          title="Share"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
+        {/* Share Button — owners always; non-owners gated by RBAC */}
+        <Can action="share">
+          <button
+            onClick={() => setShareOpen(true)}
+            className="shrink-0 p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm transition-all"
+            title="Share"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </Can>
 
         {/* Export Dropdown */}
         <div className="relative" ref={exportRef}>

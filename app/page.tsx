@@ -57,6 +57,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
 import { LandingPage } from '@/components/landing/landing-page';
+import { Can } from '@/components/auth/can';
 import { BRAND_NAME } from '@/lib/constants/brand';
 
 const log = createLogger('Home');
@@ -971,7 +972,7 @@ function ClassroomCard({
           </div>
         ) : null}
 
-        {/* Delete — top-right, only on hover */}
+        {/* Delete — top-right, only on hover. Gated by `delete-classroom` permission. */}
         <AnimatePresence>
           {!confirmingDelete && (
             <motion.div
@@ -980,17 +981,19 @@ function ClassroomCard({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute top-2 right-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 hover:bg-destructive/80 text-white hover:text-white backdrop-blur-sm rounded-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(classroom.id, e);
-                }}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
+              <Can action="delete-classroom">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute top-2 right-2 size-7 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 hover:bg-destructive/80 text-white hover:text-white backdrop-blur-sm rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(classroom.id, e);
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </Can>
               <Button
                 size="icon"
                 variant="ghost"

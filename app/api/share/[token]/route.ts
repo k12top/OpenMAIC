@@ -30,6 +30,8 @@ export async function GET(
   }
 
   // All share modes (public / readonly / editable) are viewable without authentication.
+  // SSO shares require a valid session; unauthenticated requests get a 401
+  // with `requiresAuth: true` so the client can redirect to Casdoor login.
   // Mode affects only the client-side UI (banner + CTA). The /copy endpoint
   // still requires auth for `editable` shares.
 
@@ -37,6 +39,17 @@ export async function GET(
   // client uses this to re-enable owner-only UI (e.g. regenerate-scene) when
   // the author is viewing their own share link.
   const authedUser = await optionalAuth();
+
+  if (share.mode === 'sso' && !authedUser) {
+    return NextResponse.json(
+      {
+        error: 'Authentication required',
+        code: 'REQUIRES_SSO',
+        requiresAuth: true,
+      },
+      { status: 401 },
+    );
+  }
 
   const dbRow = await db.query.classrooms.findFirst({
     where: eq(schema.classrooms.id, share.classroomId),

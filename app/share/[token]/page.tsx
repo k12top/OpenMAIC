@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, Copy, LogIn, Globe, Loader2 } from 'lucide-react';
+import { Eye, Copy, LogIn, Globe, Loader2, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Stage } from '@/components/stage';
@@ -20,7 +20,7 @@ interface SharedClassroom {
   createdAt: string;
 }
 
-type ShareMode = 'public' | 'readonly' | 'editable';
+type ShareMode = 'public' | 'readonly' | 'editable' | 'sso';
 
 // ─── Direct classroom view: used for all share modes ─────────────────────────
 // public   → violet banner, Sign In button for unauth viewers
@@ -82,19 +82,36 @@ function DirectClassroomView({
       ? 'bg-violet-600 dark:bg-violet-700'
       : mode === 'readonly'
         ? 'bg-blue-600 dark:bg-blue-700'
-        : 'bg-emerald-600 dark:bg-emerald-700';
+        : mode === 'editable'
+          ? 'bg-emerald-600 dark:bg-emerald-700'
+          : 'bg-indigo-700 dark:bg-indigo-800';
 
-  const BannerIcon = mode === 'public' ? Globe : mode === 'readonly' ? Eye : Copy;
+  const BannerIcon =
+    mode === 'public'
+      ? Globe
+      : mode === 'readonly'
+        ? Eye
+        : mode === 'editable'
+          ? Copy
+          : Lock;
 
   const modeLabel =
-    mode === 'public' ? 'Public View' : mode === 'readonly' ? 'Read Only' : 'Editable';
+    mode === 'public'
+      ? 'Public View'
+      : mode === 'readonly'
+        ? 'Read Only'
+        : mode === 'editable'
+          ? 'Editable'
+          : 'SSO (Signed-in only)';
 
   const modeHint =
     mode === 'editable'
       ? authenticated
         ? 'You can copy this classroom to your account to edit it.'
         : 'Sign in to copy this classroom to your account and edit it.'
-      : null;
+      : mode === 'sso'
+        ? 'Access restricted to signed-in members of this organization.'
+        : null;
 
   return (
     <ThemeProvider>
@@ -182,18 +199,34 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
 
   // Load share content
   useEffect(() => {
+    let redirected = false;
     fetch(`/api/share/${token}`)
       .then(async (r) => {
+        // SSO share + unauth viewer: server returns 401 with requiresAuth.
+        // Hard redirect to Casdoor login; we never render any error state
+        // because the user isn't "missing" — they just need to sign in first.
+        if (r.status === 401) {
+          const data = await r.json().catch(() => ({}));
+          if (data?.requiresAuth) {
+            redirected = true;
+            const returnUrl = `/share/${token}`;
+            window.location.href = `/api/auth/login?returnUrl=${encodeURIComponent(returnUrl)}`;
+            return null;
+          }
+        }
         if (!r.ok) throw new Error(r.status === 404 ? 'Share not found' : 'Failed to load');
         return r.json();
       })
       .then((data) => {
+        if (!data) return;
         setMode(data.mode);
         setClassroom(data.classroom);
         setIsOwnerOfSource(!!data.isOwnerOfSource);
       })
       .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!redirected) setLoading(false);
+      });
   }, [token]);
 
   const handleCopy = useCallback(async () => {

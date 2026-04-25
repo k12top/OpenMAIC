@@ -16,11 +16,14 @@ import {
   Maximize2,
   Minimize2,
   RefreshCw,
+  Code2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { EditSceneSourceDialog } from '@/components/stage/edit-scene-source-dialog';
+import { useCan } from '@/components/auth/can';
 
 export interface CanvasToolbarProps {
   readonly currentSceneIndex: number;
@@ -125,15 +128,25 @@ export function CanvasToolbar({
   const whiteboardElementCount = useStageStore(
     (s) => s.stage?.whiteboard?.[0]?.elements?.length || 0,
   );
-  // Owner-only gate for the regenerate button. Subscribing to this slice keeps
-  // the button hidden on share/non-owner views without any extra prop plumbing.
-  const isOwner = useStageStore((s) => s.isOwner);
-  const showRegenerate = !!onRegenerateScene && isOwner;
+  // Permission-gated buttons. `useCan` already respects classroom ownership
+  // (owners implicitly get regenerate/edit-source) and consults RBAC env for
+  // non-owners. On shared views we additionally hide edit-source because
+  // structural edits via the raw JSON editor can conflict with a live
+  // in-browser viewer session (hot-swapping scenes mid-render).
+  const isSharedView = useStageStore((s) => s.isSharedView);
+  const canRegenerate = useCan('regenerate');
+  const canEditSource = useCan('edit-source');
+  const showRegenerate = !!onRegenerateScene && canRegenerate;
+  const showEditSource = canEditSource && !isSharedView;
   // Is the currently visible scene being regenerated? When true, swap the
   // icon for a spinner and disable clicks to prevent double-submits.
   const currentSceneId = useStageStore((s) => s.currentSceneId);
   const regeneratingSceneIds = useStageStore((s) => s.regeneratingSceneIds);
   const isCurrentRegenerating = !!currentSceneId && regeneratingSceneIds.includes(currentSceneId);
+
+  // Source-editor dialog — driven entirely from this toolbar so we avoid
+  // threading another callback prop through stage.tsx / roundtable.
+  const [editSourceSceneId, setEditSourceSceneId] = useState<string | null>(null);
 
   // Volume slider hover state
   const [volumeHover, setVolumeHover] = useState(false);
@@ -445,6 +458,34 @@ export function CanvasToolbar({
               </Tooltip>
             </TooltipProvider>
           )}
+
+          {/* Edit source JSON (owner only) */}
+          {showEditSource && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!currentSceneId) return;
+                      setEditSourceSceneId(currentSceneId);
+                    }}
+                    disabled={!currentSceneId || isCurrentRegenerating}
+                    className={cn(
+                      ctrlBtn,
+                      'w-6 h-6 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 disabled:opacity-40 disabled:pointer-events-none',
+                    )}
+                    aria-label={t('stage.editSource') || 'Edit Source'}
+                  >
+                    <Code2 className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {t('stage.editSource') || 'Edit Source'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 
@@ -493,6 +534,14 @@ export function CanvasToolbar({
           </button>
         )}
       </div>
+
+      {/* Source editor (owner only; portal-like overlay rendered at bottom) */}
+      {showEditSource && (
+        <EditSceneSourceDialog
+          sceneId={editSourceSceneId}
+          onClose={() => setEditSourceSceneId(null)}
+        />
+      )}
     </div>
   );
 }

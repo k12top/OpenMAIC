@@ -1,28 +1,22 @@
 import { NextResponse } from 'next/server';
-import { casdoorSDK } from '@/lib/auth/casdoor';
-import { cookies } from 'next/headers';
+import { optionalAuth } from '@/lib/server/auth-guard';
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('casdoor_token')?.value;
+  const user = await optionalAuth();
 
-  if (!token) {
+  if (!user) {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
-  try {
-    const user = casdoorSDK.parseJwtToken(token);
-    return NextResponse.json({
-      authenticated: true,
-      user: {
-        id: user.id || user.name,
-        nickname: user.displayName || user.name,
-        avatar: user.avatar,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.error('Invalid Casdoor token:', error);
-    return NextResponse.json({ authenticated: false }, { status: 401 });
-  }
+  return NextResponse.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      nickname: user.nickname,
+      avatar: user.avatar,
+      email: user.email,
+      roles: user.roles,
+      permissions: user.permissions,
+    },
+  });
 }

@@ -104,6 +104,13 @@ interface StageState {
   addScene: (scene: Scene) => void;
   updateScene: (sceneId: string, updates: Partial<Scene>) => void;
   deleteScene: (sceneId: string) => void;
+  /**
+   * Reorder scenes according to the given list of scene ids. Scenes not
+   * present in the list are appended in their existing order. Rewrites
+   * each scene's `order` field to 1..N so future mutations respect the
+   * new sequence. Triggers `debouncedSave` to persist.
+   */
+  reorderScenes: (orderedIds: string[]) => void;
   setCurrentSceneId: (sceneId: string | null) => void;
   setChats: (chats: ChatSession[]) => void;
   setMode: (mode: StageMode) => void;
@@ -279,6 +286,30 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
     } else {
       set({ scenes });
     }
+    debouncedSave();
+  },
+
+  reorderScenes: (orderedIds) => {
+    const current = get().scenes;
+    if (current.length === 0) return;
+
+    const byId = new Map(current.map((s) => [s.id, s]));
+    const reordered: Scene[] = [];
+    for (const id of orderedIds) {
+      const s = byId.get(id);
+      if (s) {
+        reordered.push(s);
+        byId.delete(id);
+      }
+    }
+    // Append any scenes that weren't in the provided list (defensive)
+    for (const remaining of byId.values()) {
+      reordered.push(remaining);
+    }
+
+    // Rewrite order fields to 1..N
+    const withOrder = reordered.map((s, i) => ({ ...s, order: i + 1 }));
+    set({ scenes: withOrder });
     debouncedSave();
   },
 

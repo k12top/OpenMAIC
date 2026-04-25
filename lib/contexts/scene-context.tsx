@@ -35,12 +35,14 @@ const SceneContext = createContext<SceneContextValue | null>(null);
  *   <SlideRenderer /> // Uses useSceneData<SlideContent>()
  * </SceneProvider>
  */
-export function SceneProvider({ children }: { children: React.ReactNode }) {
+export function SceneProvider({ children, scene }: { children: React.ReactNode; scene?: Scene }) {
   // Subscribe to current scene
-  const currentScene = useStageStore((state) => {
+  const currentSceneFromStore = useStageStore((state) => {
     if (!state.currentSceneId) return null;
     return state.scenes.find((s) => s.id === state.currentSceneId) || null;
   });
+
+  const currentScene = scene || currentSceneFromStore;
 
   const updateScene = useStageStore((state) => state.updateScene);
 

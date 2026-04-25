@@ -16,11 +16,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { classroomId, mode = 'public' } = body as {
       classroomId: string;
-      mode?: 'public' | 'readonly' | 'editable';
+      mode?: 'public' | 'readonly' | 'editable' | 'sso';
     };
 
     if (!classroomId) {
       return NextResponse.json({ error: 'classroomId is required' }, { status: 400 });
+    }
+
+    const allowedModes = ['public', 'readonly', 'editable', 'sso'] as const;
+    if (!allowedModes.includes(mode as (typeof allowedModes)[number])) {
+      return NextResponse.json({ error: 'Invalid share mode' }, { status: 400 });
     }
 
     const db = getDb();
@@ -57,7 +62,7 @@ export async function POST(req: NextRequest) {
       classroomId,
       userId: user.id,
       shareToken,
-      mode: mode as 'public' | 'readonly' | 'editable',
+      mode: mode as 'public' | 'readonly' | 'editable' | 'sso',
     });
 
     return NextResponse.json({
