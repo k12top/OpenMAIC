@@ -48,6 +48,7 @@ import { VisuallyHidden } from 'radix-ui';
 export function Stage({
   onRetryOutline,
   onRegenerateScene,
+  autoPlayOnMount = false,
 }: {
   onRetryOutline?: (outlineId: string) => Promise<void>;
   onRegenerateScene?: (
@@ -55,6 +56,7 @@ export function Stage({
     overrides?: RegenerateSceneOverrides,
     modelOverride?: RegenerateModelOverride,
   ) => Promise<void> | void;
+  autoPlayOnMount?: boolean;
 }) {
   const { t } = useI18n();
   const { mode, getCurrentScene, scenes, currentSceneId, setCurrentSceneId, generatingOutlines } =
@@ -182,7 +184,7 @@ export function Stage({
   // Monotonic counter incremented on each scene switch — used to discard stale SSE callbacks
   const sceneEpochRef = useRef(0);
   // When true, the next engine init will auto-start playback (for auto-play scene advance)
-  const autoStartRef = useRef(false);
+  const autoStartRef = useRef(autoPlayOnMount);
   // Discussion buffer-level pause state (distinct from soft-pause which aborts SSE)
   const [isDiscussionPaused, setIsDiscussionPaused] = useState(false);
 

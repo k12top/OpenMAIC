@@ -162,7 +162,7 @@ function DirectClassroomView({
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Stage />
+            <Stage autoPlayOnMount={true} />
           </div>
         </div>
       </MediaStageProvider>

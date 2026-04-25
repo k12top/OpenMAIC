@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Save, X } from 'lucide-react';
+import { Loader2, Save, X, Code2, Columns, MonitorPlay } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useStageStore } from '@/lib/store';
 import type { Scene } from '@/lib/types/stage';
@@ -50,7 +50,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
   const [text, setText] = useState<string>('');
   const [parseError, setParseError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
+  const [viewMode, setViewMode] = useState<'split' | 'code' | 'preview'>('split');
 
   // Open-time setup: snapshot + seed the textarea.
   // We intentionally depend only on `sceneId` (not on the scene object) so
@@ -228,13 +228,14 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
         {/* Body: split pane */}
         <div className="flex-1 flex min-h-0">
           {/* Left: JSON editor */}
-          <div
-            className={cn(
-              'flex flex-col border-r border-gray-100 dark:border-gray-800 transition-all duration-300',
-              showPreview ? 'w-1/2' : 'w-full border-r-0',
-            )}
-          >
-            <textarea
+          {viewMode !== 'preview' && (
+            <div
+              className={cn(
+                'flex flex-col border-r border-gray-100 dark:border-gray-800 transition-all duration-300',
+                viewMode === 'split' ? 'w-1/2' : 'w-full border-r-0',
+              )}
+            >
+              <textarea
               ref={textareaRef}
               value={text}
               onChange={(e) => handleTextChange(e.target.value)}
@@ -254,10 +255,16 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
               </div>
             )}
           </div>
+          )}
 
           {/* Right: isolated preview (does not mutate current classroom view) */}
-          {showPreview && (
-            <div className="w-1/2 flex flex-col bg-gray-100 dark:bg-gray-950 min-w-0 transition-all duration-300">
+          {viewMode !== 'code' && (
+            <div
+              className={cn(
+                'flex flex-col bg-gray-100 dark:bg-gray-950 min-w-0 transition-all duration-300',
+                viewMode === 'split' ? 'w-1/2' : 'w-full'
+              )}
+            >
               <div className="px-3 py-1.5 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('stage.preview') || 'Preview'}
@@ -284,13 +291,47 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
           <div>
-            <button
-              type="button"
-              onClick={() => setShowPreview((p) => !p)}
-              className="px-3 py-1.5 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-            >
-              {showPreview ? 'Hide Preview' : 'Show Preview'}
-            </button>
+            <div className="flex bg-gray-100/80 dark:bg-gray-800 p-1 rounded-lg border border-gray-200/60 dark:border-gray-700/60 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setViewMode('code')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  viewMode === 'code'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                )}
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                代码
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  viewMode === 'split'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                )}
+              >
+                <Columns className="w-3.5 h-3.5" />
+                双栏
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('preview')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  viewMode === 'preview'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                )}
+              >
+                <MonitorPlay className="w-3.5 h-3.5" />
+                预览
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
