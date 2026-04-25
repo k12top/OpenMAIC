@@ -53,7 +53,44 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!classroom || classroom.userId !== user.id) {
+    if (!classroom) {
+      console.error(`[ShareAPI] Classroom ${classroomId} not found in DB or filesystem`);
+      return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
+    }
+
+    // Auto-claim orphaned classrooms: if the record has no userId (pre-auth
+    // sync) or the userId doesn't match, check whether anyone else owns it.
+    // If the classroom is truly unowned, assign it to the current user.
+    if (classroom.userId !== user.id) {
+      console.warn(
+        `[ShareAPI] userId mismatch for classroom ${classroomId}: ` +
+        `DB has "${classroom.userId}", current user is "${user.id}"`
+      );
+      // If the stored userId is empty or the owner user doesn't exist in the
+      // users table, treat it as orphaned and claim it for the current user.
+      let ownerExists = false;
+      if (classroom.userId) {
+        const ownerRow = await db.query.users.findFirst({
+          where: eq(schema.users.id, classroom.userId),
+        });
+        ownerExists = !!ownerRow;
+      }
+      if (!ownerExists) {
+        console.info(`[ShareAPI] Auto-claiming orphaned classroom ${classroomId} for user ${user.id}`);
+        await db
+          .update(schema.classrooms)
+          .set({ userId: user.id, updatedAt: new Date() })
+          .where(eq(schema.classrooms.id, classroomId));
+        // Re-read so the downstream code has the updated row
+        classroom = await db.query.classrooms.findFirst({
+          where: eq(schema.classrooms.id, classroomId),
+        });
+      } else {
+        return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
+      }
+    }
+
+    if (!classroom) {
       return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
     }
 

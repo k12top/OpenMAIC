@@ -8,6 +8,8 @@ import { useStageStore } from '@/lib/store';
 import type { Scene } from '@/lib/types/stage';
 import { flushClassroomSync } from '@/lib/sync/classroom-sync';
 import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
+import { SceneProvider } from '@/lib/contexts/scene-context';
+import { SceneRenderer } from './scene-renderer';
 import { cn } from '@/lib/utils';
 
 interface EditSceneSourceDialogProps {
@@ -44,9 +46,11 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
   // - `text` is the user's in-progress JSON text (may be invalid)
   // - `parseError` surfaces JSON errors in the UI without blocking typing
   const snapshotRef = useRef<Scene | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState<string>('');
   const [parseError, setParseError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
 
   // Open-time setup: snapshot + seed the textarea.
   // We intentionally depend only on `sceneId` (not on the scene object) so
@@ -138,6 +142,56 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
     }
   }, [sceneId, parseError, text, updateScene, onClose, t]);
 
+  // Click-to-locate: find ID from clicked preview element and highlight in JSON
+  const handlePreviewClick = useCallback(
+    (e: React.MouseEvent) => {
+      let current = e.target as HTMLElement | null;
+      let foundId: string | null = null;
+
+      while (current && current !== e.currentTarget) {
+        // Many openmaic elements store ID in DOM id or data-id or class
+        // E.g. <div id="editable-element-1234">
+        const idAttr = current.getAttribute('id');
+        if (idAttr) {
+          // Extract possible UUID from id string
+          const match = idAttr.match(
+            /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i,
+          );
+          const rawId = match ? match[0] : idAttr;
+          if (text.includes(`"${rawId}"`)) {
+            foundId = rawId;
+            break;
+          }
+        }
+
+        if (current.dataset) {
+          for (const key in current.dataset) {
+            const val = current.dataset[key];
+            if (val && text.includes(`"${val}"`)) {
+              foundId = val;
+              break;
+            }
+          }
+        }
+        current = current.parentElement;
+      }
+
+      if (foundId && textareaRef.current) {
+        const searchStr = `"${foundId}"`;
+        const index = text.indexOf(searchStr);
+        if (index !== -1) {
+          const textarea = textareaRef.current;
+          textarea.focus();
+          textarea.setSelectionRange(index, index + searchStr.length);
+
+          const lines = text.substring(0, index).split('\n');
+          textarea.scrollTop = Math.max(0, (lines.length - 5) * 18);
+        }
+      }
+    },
+    [text],
+  );
+
   if (!sceneId || !currentScene) return null;
   if (typeof document === 'undefined') return null;
 
@@ -174,8 +228,14 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
         {/* Body: split pane */}
         <div className="flex-1 flex min-h-0">
           {/* Left: JSON editor */}
-          <div className="w-1/2 flex flex-col border-r border-gray-100 dark:border-gray-800">
+          <div
+            className={cn(
+              'flex flex-col border-r border-gray-100 dark:border-gray-800 transition-all duration-300',
+              showPreview ? 'w-1/2' : 'w-full border-r-0',
+            )}
+          >
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(e) => handleTextChange(e.target.value)}
               spellCheck={false}
@@ -196,76 +256,70 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
           </div>
 
           {/* Right: isolated preview (does not mutate current classroom view) */}
-          <div className="w-1/2 flex flex-col bg-gray-100 dark:bg-gray-950 min-w-0">
-            <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60">
-              {t('stage.preview') || 'Preview'}
-            </div>
-            <div className="flex-1 overflow-auto p-2 min-h-0">
-              <div className="w-full h-full bg-white dark:bg-gray-900 rounded-md shadow-inner overflow-hidden">
-                <SourcePreview scene={localPreviewScene} />
+          {showPreview && (
+            <div className="w-1/2 flex flex-col bg-gray-100 dark:bg-gray-950 min-w-0 transition-all duration-300">
+              <div className="px-3 py-1.5 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {t('stage.preview') || 'Preview'}
+                </span>
+                <span className="text-[10px] text-gray-400">Click elements to locate code</span>
+              </div>
+              <div
+                className="flex-1 overflow-auto p-2 min-h-0 cursor-crosshair"
+                onClickCapture={handlePreviewClick}
+              >
+                <div className="w-full h-full bg-white dark:bg-gray-900 rounded-md shadow-inner overflow-hidden pointer-events-none relative">
+                  {/* pointer-events-none prevents sub-components from capturing clicks, so we can intercept them easily. But interactive components might need clicks. For preview-to-code mapping, we want click capture. */}
+                  <div className="absolute inset-0 pointer-events-auto">
+                    <SceneProvider scene={localPreviewScene}>
+                      <SceneRenderer scene={localPreviewScene} mode="preview" />
+                    </SceneProvider>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-3 py-1.5 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            {t('stage.cancel') || 'Cancel'}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!!parseError || saving}
-            className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md',
-              'bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
-          >
-            {saving ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Save className="w-3.5 h-3.5" />
-            )}
-            {t('stage.save') || 'Save'}
-          </button>
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowPreview((p) => !p)}
+              className="px-3 py-1.5 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              {showPreview ? 'Hide Preview' : 'Show Preview'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-3 py-1.5 text-sm rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              {t('stage.cancel') || 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!!parseError || saving}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md',
+                'bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed',
+              )}
+            >
+              {saving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              {t('stage.save') || 'Save'}
+            </button>
+          </div>
         </div>
       </div>
     </div>,
-    document.body
-  );
-}
-
-function SourcePreview({ scene }: { scene: Scene }) {
-  if (scene.type === 'slide' && scene.content?.type === 'slide') {
-    const canvas = scene.content.canvas;
-    return (
-      <div className="w-full h-full p-3 flex items-center justify-center bg-slate-100 dark:bg-slate-950">
-        <div className="w-full max-w-[760px]">
-          <ThumbnailSlide
-            slide={canvas}
-            viewportSize={canvas.viewportSize ?? 1000}
-            viewportRatio={canvas.viewportRatio ?? 0.5625}
-            size={760}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Fallback preview for non-slide scenes: keep it safe and context-free.
-  return (
-    <div className="w-full h-full overflow-auto p-3">
-      <div className="mb-2 text-xs font-semibold text-gray-600 dark:text-gray-300">
-        Scene Type: {scene.type}
-      </div>
-      <pre className="text-[11px] leading-relaxed p-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 overflow-auto">
-        {JSON.stringify(scene.content, null, 2)}
-      </pre>
-    </div>
+    document.body,
   );
 }

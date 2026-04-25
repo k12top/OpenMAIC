@@ -170,7 +170,7 @@ export function CanvasToolbar({
   const presentationLabel = isPresenting ? t('stage.exitFullscreen') : t('stage.fullscreen');
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5', className)}>
       {/* ── Left: sidebar toggle + page indicator ── */}
       <div className="flex items-center gap-1 shrink-0 pl-1">
         {onToggleSidebar && (
@@ -201,7 +201,7 @@ export function CanvasToolbar({
       <div className="flex-1 flex items-center justify-center min-w-0">
         <div
           className={cn(
-            'inline-flex items-center gap-0.5 px-1 h-7',
+            'flex flex-wrap items-center justify-center gap-0.5 px-1 min-h-[28px] py-0.5',
             isPresenting
               ? '' /* Single visual layer in fullscreen — buttons sit inside outer pill directly */
               : 'bg-gray-100/60 dark:bg-gray-800/60 rounded-lg',

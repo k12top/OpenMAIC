@@ -230,7 +230,7 @@ export function CanvasArea({
       {!hideToolbar && (
         <CanvasToolbar
           className={cn(
-            'shrink-0 h-9 px-2',
+            'shrink-0 min-h-[36px] py-1 px-2',
             'bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl',
             'border-t border-gray-200/40 dark:border-gray-700/40',
           )}
