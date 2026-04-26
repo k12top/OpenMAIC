@@ -540,15 +540,14 @@ export class PlaybackEngine {
           this.processNext();
           return;
         }
-        // Skip if the discussion's agent isn't in the user's selected list
+        // If the discussion's agent isn't in the selected list, clear agentId
+        // so onProactiveShow can re-assign a valid student agent via pickStudentAgent.
         if (
           discussionAction.agentId &&
           this.callbacks.isAgentSelected &&
           !this.callbacks.isAgentSelected(discussionAction.agentId)
         ) {
-          this.consumedDiscussions.add(discussionAction.id);
-          this.processNext();
-          return;
+          discussionAction.agentId = undefined;
         }
 
         // 3s delay before showing ProactiveCard (allows previous speech to finish naturally)

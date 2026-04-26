@@ -65,6 +65,23 @@ function DirectClassroomView({
     // from the share link.
     useStageStore.getState().setIsOwner(isOwnerOfSource);
     useStageStore.getState().setIsSharedView(true);
+
+    // Hydrate agents from stage.generatedAgentConfigs so roundtable discussions
+    // work on share pages. Without this, the agent registry is empty and
+    // discussions would have no participants.
+    const hydrateAgents = async () => {
+      const configs = classroom.stage.generatedAgentConfigs;
+      if (configs && configs.length > 0) {
+        const { saveGeneratedAgents } = await import(
+          '@/lib/orchestration/registry/store'
+        );
+        const { useSettingsStore } = await import('@/lib/store/settings');
+        const agentIds = await saveGeneratedAgents(classroom.stage.id, configs);
+        useSettingsStore.getState().setSelectedAgentIds(agentIds);
+      }
+    };
+    hydrateAgents();
+
     Promise.resolve().then(() => setReady(true));
     return () => {
       useStageStore.getState().clearStore();

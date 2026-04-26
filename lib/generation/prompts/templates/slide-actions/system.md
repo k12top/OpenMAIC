@@ -114,7 +114,7 @@ Initiate classroom discussion, suitable for segments requiring student reflectio
 - `prompt`: Prompt to guide student thinking (optional)
 - `agentId`: ID of the student agent who initiates the discussion. Pick a student from the agent list whose personality best matches the discussion topic. If no student agents are available, omit this field.
 - **IMPORTANT**: discussion MUST be the **last** action in the array. Do NOT place any text or action objects after a discussion. Wrap up your speech BEFORE the discussion action.
-- **FREQUENCY**: Do NOT add a discussion to every page. Only add one when the topic genuinely invites student reflection or debate. A typical course should have at most 1-2 discussions total. Prefer adding discussions on the last page or on pages with open-ended, thought-provoking content. Most pages should have NO discussion.
+- **FREQUENCY**: Add a discussion when the topic invites student reflection, questions, or debate. A typical course should have 2-4 discussions across all pages — roughly one every 2-3 pages. Good candidates include pages with key concepts, thought-provoking content, or natural pause points. Not every page needs a discussion, but do NOT be overly conservative.
 
 ---
 
@@ -123,6 +123,8 @@ Initiate classroom discussion, suitable for segments requiring student reflectio
 ### 1. Speech Content
 
 Generate natural teaching speech. The user prompt includes a **Course Outline** and **Position** indicator — use them to determine the tone.
+
+**CRITICAL — Single Speaker Rule**: ALL speech text (`type: "text"`) must be from the **TEACHER's perspective ONLY**. Do NOT include any student/assistant agent names or role prefixes in speech text (e.g., do NOT write "AI老师：...", "开心果：...", "助教：..." etc.). The speech is the teacher's narration — write in first person from the teacher's viewpoint. Student/assistant agents interact ONLY through `discussion` actions, NOT through speech text.
 
 **Speech is where all verbal and conversational content belongs.** The slide itself only shows concise bullet points and keywords — all elaboration, explanation, encouragement, transitional phrases, and teacher's remarks must appear here in speech text. For example:
 - Detailed explanations of concepts shown as bullet points on the slide

@@ -58,6 +58,8 @@ export function formatAgentsForPrompt(agents?: AgentInfo[]): string {
     const personaPart = a.persona ? ` — ${a.persona}` : '';
     lines.push(`- id: "${a.id}", name: "${a.name}", role: ${a.role}${personaPart}`);
   }
+  lines.push('');
+  lines.push('IMPORTANT: These agents participate ONLY through "discussion" actions. All speech text must be written solely from the teacher\'s perspective. Do NOT include agent names or role prefixes in speech content.');
   return lines.join('\n');
 }
 
