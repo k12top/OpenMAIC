@@ -111,7 +111,9 @@ export async function POST(req: NextRequest) {
     if (err instanceof UnauthenticatedError) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    console.error('[ShareAPI] POST error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: 'Internal error', detail: message }, { status: 500 });
   }
 }
 

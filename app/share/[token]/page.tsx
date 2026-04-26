@@ -46,7 +46,6 @@ function DirectClassroomView({
   copying: boolean;
 }) {
   const [ready, setReady] = useState(false);
-  const [userActivated, setUserActivated] = useState(false);
   const stageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -181,22 +180,7 @@ function DirectClassroomView({
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden relative" ref={stageContainerRef}>
-            <Stage autoPlayOnMount={userActivated} />
-
-            {/* Click-to-start overlay — satisfies browser autoplay policy */}
-            {!userActivated && (
-              <div
-                className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer transition-opacity"
-                onClick={() => setUserActivated(true)}
-              >
-                <div className="flex flex-col items-center gap-3 select-none">
-                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center ring-2 ring-white/30 hover:ring-white/50 hover:bg-white/30 transition-all">
-                    <Play className="size-7 text-white ml-1" />
-                  </div>
-                  <span className="text-white/90 text-sm font-medium">点击开始播放</span>
-                </div>
-              </div>
-            )}
+            <Stage autoPlayOnMount={true} />
           </div>
         </div>
       </MediaStageProvider>
