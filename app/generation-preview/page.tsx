@@ -931,9 +931,9 @@ function GenerationPreviewContent() {
   // Still loading session from sessionStorage
   if (!sessionLoaded) {
     return (
-      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] w-full bg-gradient-to-br from-slate-50 via-violet-50/40 to-slate-100 dark:from-slate-950 dark:via-violet-950/20 dark:to-slate-900 flex items-center justify-center p-4">
         <div className="text-center text-muted-foreground">
-          <div className="size-8 border-2 border-current border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="size-8 border-2 border-violet-500/30 border-t-violet-600 dark:border-t-violet-500 rounded-full animate-spin mx-auto" />
         </div>
       </div>
     );
@@ -942,13 +942,21 @@ function GenerationPreviewContent() {
   // No session found
   if (!session) {
     return (
-      <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
-        <Card className="p-8 max-w-md w-full">
-          <div className="text-center space-y-4">
-            <AlertCircle className="size-12 text-muted-foreground mx-auto" />
-            <h2 className="text-xl font-semibold">{t('generation.sessionNotFound')}</h2>
-            <p className="text-sm text-muted-foreground">{t('generation.sessionNotFoundDesc')}</p>
-            <Button onClick={() => router.push('/')} className="w-full">
+      <div className="min-h-[100dvh] w-full bg-gradient-to-br from-slate-50 via-violet-50/40 to-slate-100 dark:from-slate-950 dark:via-violet-950/20 dark:to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Background Decor */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '4s' }} />
+        </div>
+        <Card className="p-8 max-w-md w-full relative z-10 border-violet-100 dark:border-violet-900/50 shadow-xl shadow-violet-500/5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+          <div className="text-center space-y-5">
+            <div className="size-16 rounded-2xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center mx-auto mb-2">
+              <AlertCircle className="size-8 text-violet-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">{t('generation.sessionNotFound')}</h2>
+              <p className="text-sm text-muted-foreground mt-2">{t('generation.sessionNotFoundDesc')}</p>
+            </div>
+            <Button onClick={() => router.push('/')} className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-md shadow-violet-500/20">
               <ArrowLeft className="size-4 mr-2" />
               {t('generation.backToHome')}
             </Button>
@@ -964,249 +972,248 @@ function GenerationPreviewContent() {
       : ALL_STEPS[0];
 
   return (
-    <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden text-center">
-      {/* Background Decor */}
+    <div className="min-h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 flex relative overflow-hidden">
+      {/* Blueprint Grid Background */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] dark:opacity-[0.05]" 
+        style={{ 
+          backgroundImage: 'linear-gradient(to right, #8b5cf6 1px, transparent 1px), linear-gradient(to bottom, #8b5cf6 1px, transparent 1px)', 
+          backgroundSize: '32px 32px' 
+        }} 
+      />
+
+      {/* Background Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div
-          className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDuration: '4s' }}
+          className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-violet-500/20 dark:bg-violet-500/10 rounded-full blur-[120px] animate-pulse"
+          style={{ animationDuration: '7s' }}
         />
         <div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDuration: '6s' }}
+          className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-fuchsia-500/20 dark:bg-fuchsia-500/10 rounded-full blur-[150px] animate-pulse"
+          style={{ animationDuration: '10s' }}
         />
       </div>
 
       {/* Back button */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-4 left-4 z-20"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="absolute top-6 left-6 z-30"
       >
-        <Button variant="ghost" size="sm" onClick={goBackToHome}>
+        <Button variant="ghost" size="sm" onClick={goBackToHome} className="hover:bg-violet-100 dark:hover:bg-violet-900/30 text-slate-600 dark:text-slate-300">
           <ArrowLeft className="size-4 mr-2" />
           {t('generation.backToHome')}
         </Button>
       </motion.div>
 
-      <div className="z-10 w-full max-w-lg space-y-8 flex flex-col items-center">
+      {/* Main Layout Container */}
+      <div className="z-10 flex w-full h-[100dvh] pt-20 pb-8 px-8 gap-8 max-w-[1800px] mx-auto">
+        
+        {/* Left Sidebar: Timeline & Status */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full"
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="w-[350px] shrink-0 flex flex-col h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-3xl rounded-3xl border border-violet-200/50 dark:border-violet-800/30 shadow-2xl shadow-violet-900/10 p-8 relative overflow-hidden ring-1 ring-white/50 dark:ring-white/5"
         >
-          <Card className="relative overflow-hidden border-muted/40 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl min-h-[400px] flex flex-col items-center justify-center p-8 md:p-12">
-            {/* Progress Dots */}
-            <div className="absolute top-6 left-0 right-0 flex justify-center gap-2">
-              {activeSteps.map((step, idx) => (
-                <div
-                  key={step.id}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-500',
-                    idx < currentStepIndex
-                      ? 'w-1.5 bg-blue-500/30'
-                      : idx === currentStepIndex
-                        ? 'w-8 bg-blue-500'
-                        : 'w-1.5 bg-muted/50',
+          {/* Header Text */}
+          <div className="mb-8 relative z-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={error || insufficientCredits ? 'error' : isComplete ? 'done' : activeStep.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mb-2">
+                  {insufficientCredits
+                    ? t('generation.insufficientCreditsTitle')
+                    : error
+                      ? t('generation.generationFailed')
+                      : isComplete
+                        ? t('generation.generationComplete')
+                        : t(activeStep.title)}
+                </h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {insufficientCredits
+                    ? t('generation.insufficientCreditsDesc')
+                    : error
+                      ? error
+                      : isComplete
+                        ? t('generation.classroomReady')
+                        : statusMessage || t(activeStep.description)}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Timeline - Maps over activeSteps to ensure indices match exactly */}
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 relative z-10">
+            <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-violet-100 dark:bg-violet-900/50 z-0" />
+            
+            {activeSteps.map((step, idx) => {
+              const isActive = idx === currentStepIndex && !isComplete && !error && !insufficientCredits;
+              const isPast = idx < currentStepIndex || isComplete;
+              
+              return (
+                <div key={step.id} className="relative z-10 flex items-start gap-4">
+                  <div className={cn(
+                    "mt-1 size-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors duration-500 bg-white dark:bg-slate-900",
+                    isActive ? "border-violet-600 dark:border-violet-500 shadow-[0_0_10px_rgba(124,58,237,0.4)]" :
+                    isPast ? "border-violet-400 dark:border-violet-600" :
+                    "border-slate-200 dark:border-slate-800"
+                  )}>
+                    {isPast && <CheckCircle2 className="size-3 text-violet-500" />}
+                    {isActive && <div className="size-2 rounded-full bg-violet-600 dark:bg-violet-500 animate-pulse" />}
+                  </div>
+                  <div className={cn(
+                    "transition-all duration-500",
+                    isActive ? "opacity-100 translate-x-1" : "opacity-50 hover:opacity-70"
+                  )}>
+                    <h4 className={cn("text-sm font-semibold", isActive ? "text-violet-700 dark:text-violet-300" : "text-foreground")}>
+                      {t(step.title)}
+                    </h4>
+                    {isActive && (
+                      <p className="text-xs text-muted-foreground mt-0.5 max-w-[90%] leading-snug">
+                        {t(step.description)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer Action Area */}
+          <div className="mt-6 pt-6 border-t border-violet-100/50 dark:border-violet-900/30 flex flex-col gap-4 relative z-10">
+            <AnimatePresence mode="popLayout">
+              {error || insufficientCredits ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full flex flex-col gap-3"
+                >
+                  {insufficientCredits && (
+                    <Button className="w-full bg-violet-600 hover:bg-violet-700 text-white" asChild>
+                      {rechargeOpensNewTab ? (
+                        <a href={rechargeHref} target="_blank" rel="noopener noreferrer">
+                          {t('generation.goToRecharge')} <ArrowRight className="size-4 ml-2" />
+                        </a>
+                      ) : (
+                        <Link href={rechargeHref}>
+                          {t('generation.goToRecharge')} <ArrowRight className="size-4 ml-2" />
+                        </Link>
+                      )}
+                    </Button>
                   )}
-                />
-              ))}
-            </div>
+                  <Button variant="outline" className="w-full" onClick={goBackToHome}>
+                    {t('generation.goBackAndRetry')}
+                  </Button>
+                </motion.div>
+              ) : !isComplete ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="w-full flex flex-col gap-4"
+                >
+                  <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-sm font-medium text-violet-700 dark:text-violet-300 shadow-sm w-full justify-center">
+                    <Sparkles className="size-4 animate-pulse text-violet-500" />
+                    <span>{t('generation.aiWorking')}</span>
+                  </div>
 
-            {/* Central Content */}
-            <div className="flex-1 flex flex-col items-center justify-center w-full space-y-8 mt-4">
-              {/* Icon / Visualizer Container */}
-              <div className="relative size-48 flex items-center justify-center">
-                <AnimatePresence mode="popLayout">
-                  {error || insufficientCredits ? (
-                    <motion.div
-                      key="error"
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="size-32 rounded-full bg-red-500/10 flex items-center justify-center border-2 border-red-500/20"
-                    >
-                      <AlertCircle className="size-16 text-red-500" />
-                    </motion.div>
-                  ) : isComplete ? (
-                    <motion.div
-                      key="complete"
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="size-32 rounded-full bg-green-500/10 flex items-center justify-center border-2 border-green-500/20"
-                    >
-                      <CheckCircle2 className="size-16 text-green-500" />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key={activeStep.id}
-                      initial={{ scale: 0.8, opacity: 0, filter: 'blur(10px)' }}
-                      animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-                      exit={{ scale: 1.2, opacity: 0, filter: 'blur(10px)' }}
-                      transition={{ duration: 0.4 }}
-                      className="absolute inset-0 flex items-center justify-center"
-                    >
-                      <StepVisualizer
-                        stepId={activeStep.id}
-                        outlines={streamingOutlines}
-                        webSearchSources={webSearchSources}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Text Content */}
-              <div className="space-y-3 max-w-sm mx-auto">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={
-                      error || insufficientCredits ? 'error' : isComplete ? 'done' : activeStep.id
-                    }
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-2"
-                  >
-                    <h2 className="text-2xl font-bold tracking-tight">
-                      {insufficientCredits
-                        ? t('generation.insufficientCreditsTitle')
-                        : error
-                          ? t('generation.generationFailed')
-                          : isComplete
-                            ? t('generation.generationComplete')
-                            : t(activeStep.title)}
-                    </h2>
-                    <p className="text-muted-foreground text-base">
-                      {insufficientCredits
-                        ? t('generation.insufficientCreditsDesc')
-                        : error
-                          ? error
-                          : isComplete
-                            ? t('generation.classroomReady')
-                            : statusMessage || t(activeStep.description)}
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Truncation warning indicator */}
-                <AnimatePresence>
-                  {truncationWarnings.length > 0 && !error && !insufficientCredits && !isComplete && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 500,
-                        damping: 30,
-                      }}
-                      className="flex justify-center"
-                    >
+                  <div className="flex items-center justify-between w-full">
+                    {/* Truncation warning indicator */}
+                    {truncationWarnings.length > 0 ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <motion.button
+                          <button
                             type="button"
-                            animate={{
-                              boxShadow: [
-                                '0 0 0 0 rgba(251, 191, 36, 0), 0 0 0 0 rgba(251, 191, 36, 0)',
-                                '0 0 16px 4px rgba(251, 191, 36, 0.12), 0 0 4px 1px rgba(251, 191, 36, 0.08)',
-                                '0 0 0 0 rgba(251, 191, 36, 0), 0 0 0 0 rgba(251, 191, 36, 0)',
-                              ],
-                            }}
-                            transition={{
-                              duration: 3,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                            }}
-                            className="relative size-7 rounded-full flex items-center justify-center cursor-default
-                                       bg-gradient-to-br from-amber-400/15 to-orange-400/10
-                                       border border-amber-400/25 hover:border-amber-400/40
-                                       hover:from-amber-400/20 hover:to-orange-400/15
-                                       transition-colors duration-300
-                                       focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
+                            className="size-9 rounded-full flex items-center justify-center cursor-default bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
                           >
-                            <AlertTriangle
-                              className="size-3.5 text-amber-500 dark:text-amber-400"
-                              strokeWidth={2.5}
-                            />
-                          </motion.button>
+                            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
+                          </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={6}>
-                          <div className="space-y-1 py-0.5">
+                        <TooltipContent side="top" align="start" className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-amber-200 dark:border-amber-800/50 max-w-xs">
+                          <div className="space-y-1 py-1">
                             {truncationWarnings.map((w, i) => (
-                              <p key={i} className="text-xs leading-relaxed">
+                              <p key={i} className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
                                 {w}
                               </p>
                             ))}
                           </div>
                         </TooltipContent>
                       </Tooltip>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </Card>
+                    ) : <div />}
+
+                    {generatedAgents.length > 0 && !showAgentReveal && (
+                      <button
+                        onClick={() => setShowAgentReveal(true)}
+                        className="flex items-center gap-2 rounded-full border border-violet-300/40 bg-white/80 dark:bg-slate-800/80 px-4 py-2 text-sm font-medium text-violet-600 dark:text-violet-400 shadow-sm transition-all hover:bg-violet-50 dark:hover:bg-violet-900/50 hover:-translate-y-0.5"
+                      >
+                        <Bot className="size-4" />
+                        {t('generation.viewAgents')}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
         </motion.div>
 
-        {/* Footer Action */}
-        <div className="h-16 flex items-center justify-center w-full">
-          <AnimatePresence>
+        {/* Right Canvas: Detailed Content Visualizer */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex-1 h-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-violet-200/30 dark:border-violet-800/30 shadow-xl overflow-hidden relative flex flex-col"
+        >
+          <AnimatePresence mode="wait">
             {error || insufficientCredits ? (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-xs space-y-3"
+                key="error"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center"
               >
-                {insufficientCredits && (
-                  <Button size="lg" className="w-full h-12" asChild>
-                    {rechargeOpensNewTab ? (
-                      <a
-                        href={rechargeHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2"
-                      >
-                        {t('generation.goToRecharge')}
-                        <ArrowRight className="size-4 shrink-0" />
-                      </a>
-                    ) : (
-                      <Link
-                        href={rechargeHref}
-                        className="inline-flex items-center justify-center gap-2"
-                      >
-                        {t('generation.goToRecharge')}
-                        <ArrowRight className="size-4 shrink-0" />
-                      </Link>
-                    )}
-                  </Button>
-                )}
-                <Button size="lg" variant="outline" className="w-full h-12" onClick={goBackToHome}>
-                  {t('generation.goBackAndRetry')}
-                </Button>
+                <div className="size-32 rounded-full bg-red-500/10 flex items-center justify-center border-2 border-red-500/20 shadow-[0_0_40px_rgba(239,68,68,0.2)] mb-6">
+                  <AlertCircle className="size-16 text-red-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Process Halted</h3>
+                <p className="text-muted-foreground max-w-md">An error occurred during generation. Check the sidebar for details.</p>
               </motion.div>
-            ) : !isComplete ? (
+            ) : isComplete ? (
               <motion.div
+                key="complete"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center"
+              >
+                <div className="size-32 rounded-full bg-green-500/10 flex items-center justify-center border-2 border-green-500/20 shadow-[0_0_40px_rgba(34,197,94,0.2)] mb-6">
+                  <CheckCircle2 className="size-16 text-green-500" />
+                </div>
+                <h3 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">Ready to Launch</h3>
+                <p className="text-muted-foreground max-w-md">Your interactive classroom is ready. Redirecting you to the editor shortly.</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={activeStep.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex items-center gap-3 text-sm text-muted-foreground/50 font-medium uppercase tracking-widest"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 flex items-center justify-center p-8 overflow-y-auto custom-scrollbar"
               >
-                <Sparkles className="size-3 animate-pulse" />
-                {t('generation.aiWorking')}
-                {generatedAgents.length > 0 && !showAgentReveal && (
-                  <button
-                    onClick={() => setShowAgentReveal(true)}
-                    className="ml-2 flex items-center gap-1.5 rounded-full border border-purple-300/30 bg-purple-500/10 px-3 py-1 text-xs font-medium normal-case tracking-normal text-purple-400 transition-colors hover:bg-purple-500/20 hover:text-purple-300"
-                  >
-                    <Bot className="size-3" />
-                    {t('generation.viewAgents')}
-                  </button>
-                )}
+                <StepVisualizer
+                  stepId={activeStep.id}
+                  outlines={streamingOutlines}
+                  webSearchSources={webSearchSources}
+                />
               </motion.div>
-            ) : null}
+            )}
           </AnimatePresence>
-        </div>
+        </motion.div>
+
       </div>
 
       {/* Agent Reveal Modal */}
@@ -1227,10 +1234,11 @@ export default function GenerationPreviewPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[100dvh] w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center">
-          <div className="animate-pulse space-y-4 text-center">
-            <div className="h-8 w-48 bg-muted rounded mx-auto" />
-            <div className="h-4 w-64 bg-muted rounded mx-auto" />
+        <div className="min-h-[100dvh] w-full bg-gradient-to-br from-slate-50 via-violet-50/40 to-slate-100 dark:from-slate-950 dark:via-violet-950/20 dark:to-slate-900 flex items-center justify-center">
+          <div className="animate-pulse space-y-6 text-center">
+            <div className="h-10 w-10 bg-violet-200 dark:bg-violet-800/50 rounded-full mx-auto" />
+            <div className="h-6 w-56 bg-violet-100 dark:bg-violet-900/30 rounded-full mx-auto" />
+            <div className="h-4 w-40 bg-slate-100 dark:bg-slate-800 rounded-full mx-auto" />
           </div>
         </div>
       }

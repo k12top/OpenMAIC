@@ -155,6 +155,7 @@ const log = createLogger('PDFProviders');
 export async function parsePDF(
   config: PDFParserConfig,
   pdfBuffer: Buffer,
+  fileExtension: string = '.pdf',
 ): Promise<ParsedPdfContent> {
   const provider = PDF_PROVIDERS[config.providerId];
   if (!provider) {
@@ -172,11 +173,14 @@ export async function parsePDF(
 
   switch (config.providerId) {
     case 'unpdf':
+      if (fileExtension.toLowerCase() !== '.pdf') {
+        throw new Error('Unpdf provider only supports .pdf files. Please switch to MinerU.');
+      }
       result = await parseWithUnpdf(pdfBuffer);
       break;
 
     case 'mineru':
-      result = await parseWithMinerU(config, pdfBuffer);
+      result = await parseWithMinerU(config, pdfBuffer, fileExtension);
       break;
 
     default:
@@ -334,7 +338,7 @@ function isMinerUCloudMode(baseUrl: string): boolean {
  * identical files are stored only once and reused across requests.
  * The object is never deleted — it serves as a permanent cache.
  */
-async function ensurePdfInMinio(pdfBuffer: Buffer): Promise<string> {
+async function ensurePdfInMinio(pdfBuffer: Buffer, fileExtension: string = '.pdf'): Promise<string> {
   const endpoint = process.env.MINIO_ENDPOINT;
   const accessKey = process.env.MINIO_ACCESS_KEY;
   const secretKey = process.env.MINIO_SECRET_KEY || '';
@@ -356,7 +360,7 @@ async function ensurePdfInMinio(pdfBuffer: Buffer): Promise<string> {
   });
 
   const hash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
-  const key = `pdf/${hash}.pdf`;
+  const key = `uploads/${hash}${fileExtension}`;
 
   let alreadyExists = false;
   try {
@@ -369,10 +373,14 @@ async function ensurePdfInMinio(pdfBuffer: Buffer): Promise<string> {
   if (alreadyExists) {
     log.info(`[MinerU Cloud] Reusing cached PDF in MinIO: ${key}`);
   } else {
+    let contentType = 'application/pdf';
+    if (fileExtension.toLowerCase() === '.docx' || fileExtension.toLowerCase() === '.doc') contentType = 'application/msword';
+    else if (fileExtension.toLowerCase() === '.pptx' || fileExtension.toLowerCase() === '.ppt') contentType = 'application/vnd.ms-powerpoint';
+    
     await client.putObject(bucket, key, pdfBuffer, pdfBuffer.length, {
-      'Content-Type': 'application/pdf',
+      'Content-Type': contentType,
     });
-    log.info(`[MinerU Cloud] Uploaded PDF to MinIO: ${key} (${pdfBuffer.length} bytes)`);
+    log.info(`[MinerU Cloud] Uploaded file to MinIO: ${key} (${pdfBuffer.length} bytes)`);
   }
 
   const publicBaseUrl = process.env.MINIO_PUBLIC_URL?.replace(/\/$/, '');
@@ -398,6 +406,7 @@ async function ensurePdfInMinio(pdfBuffer: Buffer): Promise<string> {
 async function parseWithMinerUCloud(
   config: PDFParserConfig,
   pdfBuffer: Buffer,
+  fileExtension: string = '.pdf',
 ): Promise<ParsedPdfContent> {
   if (!config.apiKey) {
     throw new Error(
@@ -416,10 +425,10 @@ async function parseWithMinerUCloud(
       `(PDF_MINERU_BASE_URL / PDF_MINERU_CLOUD_API_BASE), submitUrl=${submitUrl}`,
   );
 
-  // 1. Ensure PDF is in MinIO and get a public / presigned URL
-  log.info('[MinerU Cloud] Ensuring PDF is available in MinIO...');
-  const pdfUrl = await ensurePdfInMinio(pdfBuffer);
-  log.info(`[MinerU Cloud] PDF URL for MinerU (truncated): ${truncateForLog(pdfUrl)}`);
+  // 1. Ensure file is in MinIO and get a public / presigned URL
+  log.info(`[MinerU Cloud] Ensuring file (${fileExtension}) is available in MinIO...`);
+  const pdfUrl = await ensurePdfInMinio(pdfBuffer, fileExtension);
+  log.info(`[MinerU Cloud] File URL for MinerU (truncated): ${truncateForLog(pdfUrl)}`);
 
   const submitBody = {
     url: pdfUrl,
@@ -592,6 +601,7 @@ async function parseWithMinerUCloud(
 async function parseWithMinerU(
   config: PDFParserConfig,
   pdfBuffer: Buffer,
+  fileExtension: string = '.pdf',
 ): Promise<ParsedPdfContent> {
   if (!config.baseUrl) {
     throw new Error(
@@ -603,12 +613,12 @@ async function parseWithMinerU(
 
   // Auto-detect cloud vs self-hosted based on the base URL
   if (isMinerUCloudMode(config.baseUrl)) {
-    return parseWithMinerUCloud(config, pdfBuffer);
+    return parseWithMinerUCloud(config, pdfBuffer, fileExtension);
   }
 
-  log.info('[MinerU] Parsing PDF with MinerU server:', config.baseUrl);
+  log.info('[MinerU] Parsing file with MinerU server:', config.baseUrl);
 
-  const fileName = 'document.pdf';
+  const fileName = `document${fileExtension}`;
 
   // Create FormData for file upload
   const formData = new FormData();
@@ -798,6 +808,7 @@ export interface PDFPollResult {
 export async function submitPDFParse(
   config: PDFParserConfig,
   pdfBuffer: Buffer,
+  fileExtension: string = '.pdf',
 ): Promise<PDFSubmitResult> {
   const provider = PDF_PROVIDERS[config.providerId];
   if (!provider) {
@@ -809,7 +820,7 @@ export async function submitPDFParse(
 
   // For MinerU cloud mode, use the async path
   if (config.providerId === 'mineru' && config.baseUrl && isMinerUCloudMode(config.baseUrl)) {
-    return submitMinerUCloudTask(config, pdfBuffer);
+    return submitMinerUCloudTask(config, pdfBuffer, fileExtension);
   }
 
   // All other providers (unpdf, MinerU self-hosted) run synchronously
@@ -818,10 +829,13 @@ export async function submitPDFParse(
 
   switch (config.providerId) {
     case 'unpdf':
+      if (fileExtension.toLowerCase() !== '.pdf') {
+        throw new Error('Unpdf provider only supports .pdf files. Please switch to MinerU.');
+      }
       result = await parseWithUnpdf(pdfBuffer);
       break;
     case 'mineru':
-      result = await parseWithMinerU(config, pdfBuffer);
+      result = await parseWithMinerU(config, pdfBuffer, fileExtension);
       break;
     default:
       throw new Error(`Unsupported PDF provider: ${config.providerId}`);
@@ -840,6 +854,7 @@ export async function submitPDFParse(
 async function submitMinerUCloudTask(
   config: PDFParserConfig,
   pdfBuffer: Buffer,
+  fileExtension: string = '.pdf',
 ): Promise<PDFSubmitAsyncResult> {
   if (!config.apiKey) {
     throw new Error(
@@ -857,10 +872,10 @@ async function submitMinerUCloudTask(
     `[MinerU Cloud] Async submit: apiBase=${apiBase}, submitUrl=${submitUrl}`,
   );
 
-  // 1. Ensure PDF is in MinIO and get a public / presigned URL
-  log.info('[MinerU Cloud] Ensuring PDF is available in MinIO...');
-  const pdfUrl = await ensurePdfInMinio(pdfBuffer);
-  log.info(`[MinerU Cloud] PDF URL (truncated): ${truncateForLog(pdfUrl)}`);
+  // 1. Ensure file is in MinIO and get a public / presigned URL
+  log.info(`[MinerU Cloud] Ensuring file (${fileExtension}) is available in MinIO...`);
+  const pdfUrl = await ensurePdfInMinio(pdfBuffer, fileExtension);
+  log.info(`[MinerU Cloud] File URL (truncated): ${truncateForLog(pdfUrl)}`);
 
   const submitBody = {
     url: pdfUrl,

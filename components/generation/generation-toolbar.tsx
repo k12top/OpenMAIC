@@ -113,9 +113,25 @@ export function GenerationToolbar({
 
   const currentProviderConfig = providersConfig?.[currentProviderId];
 
-  // PDF handler
+  // PDF / Document handler
   const handleFileSelect = (file: File) => {
-    if (file.type !== 'application/pdf') return;
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ];
+    
+    // Also check extensions as a fallback if mime type is missing
+    const validExtensions = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+    const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+
+    if (!validTypes.includes(file.type) && !hasValidExtension) {
+      onPdfError(t('upload.invalidFileType'));
+      return;
+    }
+    
     if (file.size > MAX_PDF_SIZE_BYTES) {
       onPdfError(t('upload.fileTooLarge'));
       return;
@@ -244,14 +260,14 @@ export function GenerationToolbar({
         </Tooltip>
       ))}
 
-      {/* PDF upload simple button (Bottom / All) */}
+      {/* PDF / Document upload simple button (Bottom / All) */}
       {(layoutMode === 'all' || layoutMode === 'bottom') && (
         <>
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
-            accept=".pdf"
+            accept=".pdf,.doc,.docx,.ppt,.pptx"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleFileSelect(f);

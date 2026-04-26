@@ -13,6 +13,9 @@ import {
   MessageSquare,
   Focus,
   Play,
+  FileText,
+  Bot,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SceneOutline } from '@/lib/types/generation';
@@ -45,195 +48,140 @@ export function StepVisualizer({
   }
 }
 
-// PDF: Document with scanning laser line
+// PDF: Large Document with scanning laser line
 function PdfScanVisualizer() {
   return (
-    <div className="size-32 relative flex items-center justify-center">
+    <div className="w-full h-full relative flex items-center justify-center p-8">
       <motion.div
-        className="absolute inset-2 bg-cyan-500/5 rounded-2xl blur-lg"
+        className="absolute inset-10 bg-cyan-500/5 rounded-full blur-[100px]"
         animate={{ opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 2, repeat: Infinity }}
+        transition={{ duration: 3, repeat: Infinity }}
       />
-      <div className="w-20 h-28 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xl relative overflow-hidden">
-        <div className="p-3 space-y-2 mt-1">
-          {[80, 60, 90, 45, 70].map((w, i) => (
+      <div className="w-full max-w-2xl aspect-[1/1.414] max-h-[80%] bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden flex flex-col p-8 md:p-12">
+        {/* Header Skeleton */}
+        <div className="space-y-4 mb-12">
+          <div className="h-4 w-3/4 bg-slate-100 dark:bg-slate-700 rounded-full" />
+          <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-700 rounded-full" />
+        </div>
+        
+        {/* Body Skeleton */}
+        <div className="space-y-6 flex-1">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <motion.div
               key={i}
-              className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded"
-              style={{ width: `${w}%` }}
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
-            />
+              className="space-y-2"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.15 }}
+            >
+              <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-full" />
+              <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-[90%]" />
+              <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-[95%]" />
+              <div className="h-2.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-[80%]" />
+            </motion.div>
           ))}
         </div>
+
         {/* Scanning laser */}
         <motion.div
-          className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(34,211,238,0.6)]"
-          animate={{ top: ['5%', '90%', '5%'] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute inset-x-0 h-[3px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_rgba(34,211,238,0.8)] z-10"
+          animate={{ top: ['0%', '100%', '0%'] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
+      
+      {/* Decorative Icon */}
       <motion.div
-        className="absolute -top-1 -right-1"
-        animate={{ rotate: [0, 10, -10, 0] }}
-        transition={{ duration: 3, repeat: Infinity }}
+        className="absolute top-12 right-12 bg-white/50 dark:bg-slate-800/50 p-4 rounded-2xl backdrop-blur-md shadow-lg border border-cyan-100 dark:border-cyan-900/50"
+        animate={{ y: [-10, 10, -10] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <ScanLine className="size-6 text-cyan-500/70" />
+        <ScanLine className="size-12 text-cyan-500" />
       </motion.div>
     </div>
   );
 }
 
-// Web Search: Miniature search engine results page with animated query + result rows
+// Web Search: Full width list of actual search results
 function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url: string }> }) {
-  const [activeResult, setActiveResult] = useState(0);
-
-  // Cycle through result highlight when we have sources
-  useEffect(() => {
-    if (sources.length === 0) return;
-    const timer = setInterval(() => {
-      setActiveResult((prev) => (prev + 1) % Math.min(sources.length, 4));
-    }, 1400);
-    return () => clearInterval(timer);
-  }, [sources.length]);
-
-  // Placeholder results for skeleton state
+  // Skeleton placeholders
   const skeletonResults = [
-    { titleW: 70, urlW: 45, snippetW: [90, 60] },
-    { titleW: 55, urlW: 50, snippetW: [80, 75] },
-    { titleW: 65, urlW: 40, snippetW: [85, 50] },
-    { titleW: 50, urlW: 55, snippetW: [70, 65] },
+    { titleW: 70, urlW: 45, snippetW: [90, 60, 80] },
+    { titleW: 55, urlW: 50, snippetW: [80, 75, 60] },
+    { titleW: 65, urlW: 40, snippetW: [85, 50, 90] },
+    { titleW: 50, urlW: 55, snippetW: [70, 65, 55] },
   ];
 
-  const ROW_H = 38;
-
   return (
-    <div className="size-56 relative flex items-center justify-center">
-      {/* Background glow */}
-      <motion.div
-        className="absolute inset-0 blur-3xl rounded-full bg-teal-500/8"
-        animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 3.5, repeat: Infinity }}
-      />
-
-      {/* Search results card */}
-      <div className="w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden relative">
-        {/* Search bar header */}
-        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-          <Search className="size-3 text-teal-500 shrink-0" />
-          <div className="flex-1 h-4 bg-slate-50 dark:bg-slate-700/50 rounded-full overflow-hidden flex items-center px-2">
-            <motion.div
-              className="h-1.5 bg-teal-500/25 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: '70%' }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            />
+    <div className="w-full h-full flex flex-col p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-teal-100 dark:border-teal-900/30">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-teal-100 dark:bg-teal-900/40 rounded-xl text-teal-600 dark:text-teal-400">
+            <Search className="size-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Live Web Search</h3>
+            <p className="text-sm text-muted-foreground">Gathering latest information from authoritative sources</p>
           </div>
         </div>
-
-        {/* Results list */}
-        <div className="p-2 space-y-0.5 relative">
-          {/* Sliding highlight */}
-          {sources.length > 0 && (
-            <motion.div
-              className="absolute left-2 right-2 rounded-lg bg-teal-500/[0.06] dark:bg-teal-400/[0.08]"
-              style={{ height: ROW_H - 6 }}
-              animate={{ y: activeResult * ROW_H }}
-              transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-            />
-          )}
-
-          {sources.length === 0
-            ? // Skeleton: pulsing result placeholders
-              skeletonResults.map((item, i) => (
-                <motion.div
-                  key={i}
-                  className="px-2 py-1.5 space-y-1"
-                  animate={{ opacity: [0.3, 0.7, 0.3] }}
-                  transition={{
-                    duration: 1.4,
-                    repeat: Infinity,
-                    delay: i * 0.15,
-                  }}
-                >
-                  <div
-                    className="h-1.5 bg-teal-200/40 dark:bg-teal-800/30 rounded"
-                    style={{ width: `${item.titleW}%` }}
-                  />
-                  <div
-                    className="h-1 bg-slate-100 dark:bg-slate-700 rounded"
-                    style={{ width: `${item.urlW}%` }}
-                  />
-                  <div className="flex gap-1">
-                    {item.snippetW.map((w, j) => (
-                      <div
-                        key={j}
-                        className="h-1 bg-slate-100 dark:bg-slate-700 rounded"
-                        style={{ width: `${w * 0.5}%` }}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              ))
-            : // Live results
-              sources.slice(0, 4).map((source, i) => {
-                const isActive = i === activeResult;
-                return (
-                  <motion.div
-                    key={source.url}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08, duration: 0.25 }}
-                    className="relative px-2 py-1.5 space-y-0.5"
-                  >
-                    <div
-                      className={cn(
-                        'text-[8px] font-semibold truncate transition-colors duration-300 leading-tight',
-                        isActive
-                          ? 'text-teal-600 dark:text-teal-400'
-                          : 'text-slate-600 dark:text-slate-400',
-                      )}
-                    >
-                      {source.title}
-                    </div>
-                    <div className="text-[6px] text-teal-500/50 truncate leading-tight">
-                      {source.url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 32)}
-                    </div>
-                    <div className="flex gap-1">
-                      <div className="h-0.5 flex-1 bg-slate-100 dark:bg-slate-700 rounded-full" />
-                      <div className="h-0.5 w-1/3 bg-slate-100 dark:bg-slate-700 rounded-full" />
-                    </div>
-                  </motion.div>
-                );
-              })}
-        </div>
-
-        {/* Scanning beam */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 dark:via-white/5 to-transparent -skew-x-12 pointer-events-none"
-          initial={{ left: '-150%' }}
-          animate={{ left: '200%' }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            repeatDelay: 2,
-            ease: 'linear',
-          }}
-        />
+        {sources.length > 0 && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-full font-bold shadow-lg shadow-teal-500/20"
+          >
+            <Globe className="size-4" />
+            <span>{sources.length} Sources Found</span>
+          </motion.div>
+        )}
       </div>
 
-      {/* Source count badge */}
-      {sources.length > 0 && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-          className="absolute -top-2 -right-2 h-6 px-2 rounded-full bg-teal-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg shadow-teal-500/25 z-20 gap-0.5"
-        >
-          <Globe className="size-2.5" />
-          {sources.length}
-        </motion.div>
-      )}
+      {/* Results List */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-4">
+        {sources.length === 0 ? (
+          // Skeleton loading
+          skeletonResults.map((item, i) => (
+            <motion.div
+              key={i}
+              className="p-6 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/50 space-y-3"
+              animate={{ opacity: [0.4, 0.8, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+            >
+              <div className="h-4 bg-teal-200/40 dark:bg-teal-800/30 rounded" style={{ width: `${item.titleW}%` }} />
+              <div className="h-3 bg-slate-100 dark:bg-slate-700/50 rounded" style={{ width: `${item.urlW}%` }} />
+              <div className="space-y-1.5 pt-2">
+                {item.snippetW.map((w, j) => (
+                  <div key={j} className="h-2 bg-slate-100 dark:bg-slate-700/50 rounded" style={{ width: `${w}%` }} />
+                ))}
+              </div>
+            </motion.div>
+          ))
+        ) : (
+          // Live Results
+          sources.map((source, i) => (
+            <motion.div
+              key={source.url}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1, duration: 0.4 }}
+              className="p-6 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <h4 className="text-lg font-semibold text-teal-700 dark:text-teal-400 mb-1 group-hover:underline decoration-teal-500/50 underline-offset-2">
+                {source.title}
+              </h4>
+              <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70 truncate mb-3 flex items-center gap-1.5">
+                <Globe className="size-3.5" />
+                {source.url}
+              </p>
+              <div className="space-y-2">
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-full" />
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-[85%]" />
+                <div className="h-1.5 bg-slate-100 dark:bg-slate-700/50 rounded-full w-[60%]" />
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -241,382 +189,354 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
 // Outline: Streams real outline data as it arrives from SSE
 function StreamingOutlineVisualizer({ outlines }: { outlines: SceneOutline[] }) {
   // Build display lines from outlines
-  const allLines: string[] = [];
+  const allLines: Array<{ text: string; isTitle: boolean }> = [];
   outlines.forEach((outline, i) => {
-    allLines.push(`${i + 1}. ${outline.title}`);
-    outline.keyPoints?.slice(0, 2).forEach((kp) => {
-      const text = kp.length > 18 ? kp.substring(0, 18) + '...' : kp;
-      allLines.push(`   • ${text}`);
+    allLines.push({ text: `${i + 1}. ${outline.title}`, isTitle: true });
+    outline.keyPoints?.forEach((kp) => {
+      allLines.push({ text: kp, isTitle: false });
     });
   });
 
   return (
-    <div className="w-40 h-52 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl p-4 overflow-hidden relative rotate-[-2deg] hover:rotate-0 transition-transform duration-500">
-      <div className="absolute top-0 inset-x-0 h-1 bg-blue-500/50" />
-      <div className="w-1/3 h-2 bg-slate-100 dark:bg-slate-700 rounded mb-3" />
-      <div className="space-y-1.5 font-mono text-[8px] text-muted-foreground leading-tight">
-        {allLines.length === 0 ? (
-          // Waiting for first outline — show placeholder skeleton
-          <div className="space-y-2">
-            {[60, 80, 50, 70].map((w, i) => (
-              <motion.div
-                key={i}
-                className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded"
-                style={{ width: `${w}%` }}
-                animate={{ opacity: [0.3, 0.7, 0.3] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-              />
-            ))}
+    <div className="w-full h-full flex flex-col p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-blue-100 dark:border-blue-900/30">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-blue-600 dark:text-blue-400">
+            <FileText className="size-6" />
           </div>
-        ) : (
-          allLines.map((line, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={cn(
-                'truncate',
-                !line.startsWith('   ')
-                  ? 'text-blue-600 dark:text-blue-400 font-semibold text-[9px]'
-                  : 'pl-1 opacity-80',
-              )}
-            >
-              {line}
-            </motion.div>
-          ))
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Course Outline Generation</h3>
+            <p className="text-sm text-muted-foreground">Structuring knowledge points into a logical flow</p>
+          </div>
+        </div>
+        {outlines.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center gap-2"
+          >
+            <div className="size-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Streaming...</span>
+          </motion.div>
         )}
       </div>
-      <motion.div
-        className="absolute bottom-3 right-3 size-2 bg-blue-500 rounded-full"
-        animate={{ opacity: [0, 1, 0] }}
-        transition={{ repeat: Infinity, duration: 0.8 }}
-      />
-    </div>
-  );
-}
 
-// Content: Cycles through distinct representations of Slides, Quiz, PBL, Interactive
-function AgentGenerationVisualizer() {
-  return (
-    <div className="w-60 h-40 mx-auto flex items-center justify-center">
-      <div className="flex gap-3">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="w-14 h-20 rounded-lg bg-gradient-to-br from-purple-400 to-blue-500 dark:from-purple-600 dark:to-blue-700 shadow-lg"
-            animate={{ y: [0, -8, 0], rotateZ: [0, 3, -3, 0] }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              delay: i * 0.3,
-              ease: 'easeInOut',
-            }}
-          >
-            <div className="w-full h-full flex items-center justify-center text-white/80 text-lg font-bold">
-              ?
+      {/* Document Area */}
+      <div className="flex-1 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 p-8 overflow-y-auto custom-scrollbar shadow-inner relative">
+        <div className="max-w-3xl mx-auto space-y-4">
+          {allLines.length === 0 ? (
+            // Skeleton State
+            <div className="space-y-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-3">
+                  <motion.div
+                    className="h-6 bg-slate-200 dark:bg-slate-700/80 rounded w-1/3"
+                    animate={{ opacity: [0.3, 0.7, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                  />
+                  <div className="pl-6 space-y-2">
+                    <motion.div
+                      className="h-4 bg-slate-100 dark:bg-slate-700/50 rounded w-[80%]"
+                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 + 0.1 }}
+                    />
+                    <motion.div
+                      className="h-4 bg-slate-100 dark:bg-slate-700/50 rounded w-[60%]"
+                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 + 0.2 }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
-          </motion.div>
-        ))}
+          ) : (
+            // Live Outline Data
+            allLines.map((line, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className={cn(
+                  'leading-relaxed',
+                  line.isTitle
+                    ? 'text-lg font-bold text-slate-900 dark:text-slate-100 mt-6 first:mt-0'
+                    : 'text-base text-slate-600 dark:text-slate-400 pl-6 flex items-start'
+                )}
+              >
+                {!line.isTitle && (
+                  <span className="text-blue-500 mr-2 mt-1.5 shrink-0 text-xl leading-none">•</span>
+                )}
+                <span>{line.text}</span>
+              </motion.div>
+            ))
+          )}
+        </div>
+        
+        {/* Blinking cursor at the end if we have content */}
+        {allLines.length > 0 && (
+          <motion.div
+            className="w-2 h-5 bg-blue-500 mt-2 ml-6 inline-block"
+            animate={{ opacity: [1, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity }}
+          />
+        )}
       </div>
     </div>
   );
 }
 
+// Agent Generation: Show cards representing characters being configured
+function AgentGenerationVisualizer() {
+  return (
+    <div className="w-full h-full flex flex-col p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-purple-100 dark:border-purple-900/30">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-purple-100 dark:bg-purple-900/40 rounded-xl text-purple-600 dark:text-purple-400">
+            <Bot className="size-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Instantiating AI Agents</h3>
+            <p className="text-sm text-muted-foreground">Configuring classroom roles, personas, and pedagogical strategies</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center relative">
+        <div className="flex gap-8 flex-wrap justify-center max-w-4xl">
+          {[
+            { role: 'Tutor', color: 'bg-blue-500', delay: 0 },
+            { role: 'Student', color: 'bg-purple-500', delay: 0.2 },
+            { role: 'Assistant', color: 'bg-emerald-500', delay: 0.4 },
+          ].map((agent, i) => (
+            <motion.div
+              key={i}
+              className="w-56 h-72 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl flex flex-col items-center justify-center p-6 relative overflow-hidden"
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: agent.delay, duration: 0.5, type: 'spring' }}
+            >
+              {/* Background glow */}
+              <div className={cn("absolute inset-0 opacity-10 blur-xl", agent.color)} />
+              
+              <motion.div 
+                className={cn("size-20 rounded-full flex items-center justify-center text-white shadow-lg mb-6 z-10", agent.color)}
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity, delay: agent.delay }}
+              >
+                <Bot className="size-10" />
+              </motion.div>
+              
+              <div className="space-y-3 w-full z-10">
+                <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-700 rounded-full mx-auto" />
+                <div className="h-3 w-3/4 bg-slate-50 dark:bg-slate-700/50 rounded-full mx-auto" />
+                <div className="h-3 w-2/3 bg-slate-50 dark:bg-slate-700/50 rounded-full mx-auto" />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Content: Large preview cards showing different page layouts being constructed
 function ContentVisualizer() {
   const [index, setIndex] = useState(0);
-
-  // 0: Slide (Blue)
-  // 1: Quiz (Purple)
-  // 2: PBL (Amber)
-  // 3: Interactive (Emerald)
   const totalTypes = 4;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % totalTypes);
-    }, 3200);
+    }, 4000);
     return () => clearInterval(timer);
   }, []);
-
-  const variants = {
-    enter: { x: 50, opacity: 0, scale: 0.9, rotateY: -15 },
-    center: { x: 0, opacity: 1, scale: 1, rotateY: 0 },
-    exit: { x: -50, opacity: 0, scale: 0.9, rotateY: 15 },
-  };
 
   const getTheme = (idx: number) => {
     switch (idx) {
       case 0:
         return {
           color: 'blue',
-          label: 'SLIDE',
-          badge:
-            'bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
+          label: 'SLIDE LAYOUT',
+          desc: 'Generating rich text and structured lists',
+          icon: BarChart3,
+          bg: 'bg-blue-500/10',
+          text: 'text-blue-600 dark:text-blue-400',
+          border: 'border-blue-200 dark:border-blue-800/50',
         };
       case 1:
         return {
           color: 'purple',
-          label: 'QUIZ',
-          badge:
-            'bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800',
+          label: 'QUIZ INTERFACE',
+          desc: 'Constructing interactive multiple-choice questions',
+          icon: Focus,
+          bg: 'bg-purple-500/10',
+          text: 'text-purple-600 dark:text-purple-400',
+          border: 'border-purple-200 dark:border-purple-800/50',
         };
       case 2:
         return {
           color: 'amber',
-          label: 'PBL',
-          badge:
-            'bg-amber-100 text-amber-600 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
+          label: 'PBL SCENARIO',
+          desc: 'Designing problem-based learning cases',
+          icon: Puzzle,
+          bg: 'bg-amber-500/10',
+          text: 'text-amber-600 dark:text-amber-400',
+          border: 'border-amber-200 dark:border-amber-800/50',
         };
       case 3:
         return {
           color: 'emerald',
-          label: 'WEB',
-          badge:
-            'bg-emerald-100 text-emerald-600 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800',
+          label: 'WEB CONTENT',
+          desc: 'Embedding interactive iframe components',
+          icon: Globe,
+          bg: 'bg-emerald-500/10',
+          text: 'text-emerald-600 dark:text-emerald-400',
+          border: 'border-emerald-200 dark:border-emerald-800/50',
         };
       default:
-        return { color: 'blue', label: '', badge: '' };
+        return { color: 'blue', label: '', desc: '', icon: BarChart3, bg: '', text: '', border: '' };
     }
   };
 
   const theme = getTheme(index);
+  const Icon = theme.icon;
 
   return (
-    <div className="size-56 relative flex items-center justify-center perspective-[800px]">
-      {/* Background glow based on current theme */}
+    <div className="w-full h-full flex flex-col p-4 relative overflow-hidden">
+      {/* Background glow transition */}
       <motion.div
         key={`glow-${index}`}
-        className={cn(
-          'absolute inset-0 blur-3xl rounded-full transition-colors duration-1000',
-          theme.color === 'blue' && 'bg-blue-500/10',
-          theme.color === 'purple' && 'bg-purple-500/10',
-          theme.color === 'amber' && 'bg-amber-500/10',
-          theme.color === 'emerald' && 'bg-emerald-500/10',
-        )}
-        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 4, repeat: Infinity }}
+        className={cn('absolute inset-0 blur-[100px] transition-colors duration-1000 -z-10 opacity-30', theme.bg)}
       />
 
-      {/* Subtle orbiting rings (pushed back, slower) */}
-      {[0, 1].map((i) => (
-        <motion.div
-          key={i}
-          className={cn(
-            'absolute border rounded-full transition-colors duration-1000',
-            theme.color === 'blue' && 'border-blue-500/10',
-            theme.color === 'purple' && 'border-purple-500/10',
-            theme.color === 'amber' && 'border-amber-500/10',
-            theme.color === 'emerald' && 'border-emerald-500/10',
-          )}
-          style={{
-            width: 180 + i * 50,
-            height: 180 + i * 50,
-            borderStyle: 'dashed',
-          }}
-          animate={{ rotate: 360 }}
-          transition={{
-            duration: 40 + i * 15,
-            ease: 'linear',
-            repeat: Infinity,
-            delay: i * -5,
-          }}
-        />
-      ))}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-4">
+          <motion.div 
+            key={`icon-${index}`}
+            initial={{ rotate: -90, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            className={cn("p-3 rounded-xl", theme.bg, theme.text)}
+          >
+            <Icon className="size-6" />
+          </motion.div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Page Content Generation</h3>
+            <motion.p 
+              key={`desc-${index}`}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-muted-foreground"
+            >
+              {theme.desc}
+            </motion.p>
+          </div>
+        </div>
+        
+        <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-semibold tracking-wider text-slate-500">
+          BUILDING UI
+        </div>
+      </div>
 
-      {/* Main Content Container */}
-      <div className="w-40 h-28 relative">
-        <AnimatePresence mode="popLayout">
+      {/* Main Canvas Area */}
+      <div className="flex-1 flex items-center justify-center">
+        <AnimatePresence mode="wait">
           <motion.div
             key={index}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ type: 'spring', stiffness: 80, damping: 16 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.05, y: -20 }}
+            transition={{ duration: 0.5, type: 'spring' }}
             className={cn(
-              'absolute inset-0 bg-white dark:bg-slate-800 rounded-xl border shadow-xl overflow-hidden flex flex-col p-3 origin-center',
-              theme.color === 'blue' && 'border-blue-200 dark:border-blue-900/30',
-              theme.color === 'purple' && 'border-purple-200 dark:border-purple-900/30',
-              theme.color === 'amber' && 'border-amber-200 dark:border-amber-900/30',
-              theme.color === 'emerald' && 'border-emerald-200 dark:border-emerald-900/30',
+              "w-full max-w-2xl aspect-[16/9] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border flex flex-col overflow-hidden",
+              theme.border
             )}
           >
-            {/* Consistent Badge - Now outside content logic */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className={cn(
-                'absolute top-1.5 right-1.5 z-20 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border backdrop-blur-md shadow-sm',
-                theme.badge,
-              )}
-            >
-              {theme.label}
-            </motion.div>
+            {/* Browser-like Header */}
+            <div className="h-10 border-b border-slate-100 dark:border-slate-800 flex items-center px-4 gap-2 bg-slate-50 dark:bg-slate-900/50">
+              <div className="size-3 rounded-full bg-red-400" />
+              <div className="size-3 rounded-full bg-amber-400" />
+              <div className="size-3 rounded-full bg-green-400" />
+              <div className="flex-1 ml-4 h-5 bg-white dark:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700" />
+            </div>
 
-            {/* --- SLIDE TYPE --- */}
-            {index === 0 && (
-              <div className="flex flex-col h-full pt-1">
-                <motion.div
-                  initial={{ width: '0%' }}
-                  animate={{ width: '55%' }}
-                  transition={{ delay: 0.2 }}
-                  className="h-2 bg-blue-500/20 rounded-full mb-3 shrink-0"
-                />
-                <div className="flex gap-2 flex-1">
-                  <div className="flex-1 space-y-2">
-                    {[0.8, 0.9, 0.6, 0.7].map((w, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${w * 100}%` }}
-                        transition={{ delay: 0.3 + i * 0.1 }}
-                        className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full"
-                      />
-                    ))}
-                  </div>
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center shrink-0"
-                  >
-                    <BarChart3 className="size-6 text-blue-500/60" />
-                  </motion.div>
-                </div>
+            {/* Simulated Content Body based on type */}
+            <div className="flex-1 p-8 flex flex-col relative overflow-hidden">
+              <div className="text-sm font-bold tracking-widest mb-6 opacity-50 flex items-center gap-2">
+                <Icon className="size-4" /> {theme.label}
               </div>
-            )}
 
-            {/* --- QUIZ TYPE --- */}
-            {index === 1 && (
-              <div className="flex flex-col h-full justify-center space-y-2 pt-2">
-                <motion.div
-                  initial={{ y: -5, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex justify-center mb-1"
-                >
-                  <div className="h-2 w-3/4 bg-purple-500/20 rounded-full" />
-                </motion.div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {[0, 1, 2, 3].map((i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                      className={cn(
-                        'h-6 rounded border flex items-center px-2',
-                        i === 1
-                          ? 'bg-purple-500 text-white border-purple-500'
-                          : 'bg-slate-50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-700',
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          'size-1.5 rounded-full mr-2',
-                          i === 1 ? 'bg-white' : 'bg-slate-300',
-                        )}
-                      />
-                      <div
-                        className={cn(
-                          'h-1 w-8 rounded-full',
-                          i === 1 ? 'bg-white/50' : 'bg-slate-200 dark:bg-slate-600',
-                        )}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* --- PBL TYPE --- */}
-            {index === 2 && (
-              <div className="flex flex-col h-full pt-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Puzzle className="size-3 text-amber-500 shrink-0" />
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: '40%' }}
-                    className="h-2 bg-amber-500/20 rounded-full"
-                  />
-                </div>
-                <div className="flex-1 flex gap-2 overflow-hidden">
-                  {[0, 1, 2].map((col) => (
-                    <motion.div
-                      key={col}
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.2 + col * 0.15 }}
-                      className="flex-1 bg-slate-50 dark:bg-slate-700/30 rounded flex flex-col gap-1 p-1"
-                    >
-                      <div className="h-1 w-6 bg-slate-200 dark:bg-slate-600 rounded mb-1" />
-                      {[0, 1].map((card) => (
-                        <div
-                          key={card}
-                          className="h-3 w-full bg-white dark:bg-slate-600 rounded border border-slate-100 dark:border-slate-500 shadow-sm"
-                        />
+              {index === 0 && ( // SLIDE
+                <div className="flex gap-8 h-full">
+                  <div className="w-1/3 h-full bg-slate-100 dark:bg-slate-800 rounded-xl" />
+                  <div className="flex-1 space-y-4">
+                    <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-lg w-3/4" />
+                    <div className="space-y-2 mt-8">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="size-2 rounded-full bg-blue-400" />
+                          <div className="h-4 bg-slate-50 dark:bg-slate-800/50 rounded flex-1" />
+                        </div>
                       ))}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* --- INTERACTIVE TYPE --- */}
-            {index === 3 && (
-              <div className="flex flex-col h-full relative pt-1">
-                {/* Browser Chrome - Padded right to avoid badge */}
-                <div className="flex items-center gap-1 mb-2 border-b border-slate-100 dark:border-slate-700 pb-1 pr-10">
-                  <div className="flex gap-0.5">
-                    <div className="size-1.5 rounded-full bg-red-400" />
-                    <div className="size-1.5 rounded-full bg-amber-400" />
-                    <div className="size-1.5 rounded-full bg-green-400" />
+                    </div>
                   </div>
-                  <div className="h-1.5 flex-1 bg-slate-100 dark:bg-slate-700 rounded-full ml-1" />
                 </div>
+              )}
 
-                <div className="flex-1 flex gap-2 relative">
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="w-1/3 bg-slate-50 dark:bg-slate-700/30 rounded p-1 space-y-1"
-                  >
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="h-1 w-full bg-slate-200 dark:bg-slate-600 rounded-full"
-                      />
+              {index === 1 && ( // QUIZ
+                <div className="max-w-md mx-auto w-full h-full flex flex-col justify-center space-y-6">
+                  <div className="h-12 bg-slate-100 dark:bg-slate-800 rounded-xl w-full" />
+                  <div className="grid grid-cols-2 gap-4">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className={cn(
+                        "h-16 rounded-xl border-2 flex items-center px-4",
+                        i === 2 ? "border-purple-400 bg-purple-50 dark:bg-purple-900/20" : "border-slate-100 dark:border-slate-800"
+                      )}>
+                        <div className={cn("size-4 rounded-full border-2 mr-3", i === 2 ? "border-purple-500 bg-purple-500" : "border-slate-300")} />
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-full w-24" />
+                      </div>
                     ))}
-                  </motion.div>
-                  <div className="flex-1 bg-emerald-50 dark:bg-emerald-900/10 rounded border border-emerald-100 dark:border-emerald-900/30 relative overflow-hidden flex items-center justify-center">
-                    <Globe className="size-8 text-emerald-200 dark:text-emerald-800" />
-                    <motion.div
-                      className="absolute"
-                      animate={{ x: [20, -10, 15, 0], y: [10, -15, 5, 0] }}
-                      transition={{ duration: 3, ease: 'easeInOut' }}
-                    >
-                      <MousePointer2 className="size-3 text-emerald-600 fill-emerald-600" />
-                    </motion.div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Scanning beam (shared) */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 dark:via-white/10 to-transparent -skew-x-12 pointer-events-none"
-              initial={{ left: '-150%' }}
-              animate={{ left: '200%' }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                repeatDelay: 1,
-                ease: 'linear',
-              }}
-            />
+              {index === 2 && ( // PBL
+                <div className="h-full flex flex-col">
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex-1 h-24 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4" />
+                  </div>
+                  <div className="flex-1 flex gap-4">
+                    <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl" />
+                    <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl" />
+                    <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 rounded-xl" />
+                  </div>
+                </div>
+              )}
+
+              {index === 3 && ( // WEB
+                <div className="h-full w-full bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-center justify-center relative">
+                  <Globe className="size-20 text-emerald-300 dark:text-emerald-700/50" />
+                  <motion.div 
+                    className="absolute"
+                    animate={{ x: [-50, 50, -20, 0], y: [-20, 30, -40, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <MousePointer2 className="size-8 text-emerald-600 drop-shadow-md" />
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Scanning overlay */}
+              <motion.div
+                className="absolute inset-y-0 w-32 bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent skew-x-[-20deg]"
+                initial={{ left: '-20%' }}
+                animate={{ left: '120%' }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+              />
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -624,137 +544,129 @@ function ContentVisualizer() {
   );
 }
 
-// Actions: Timeline of speech, spotlight, and interactions being orchestrated
+// Actions: Large Timeline of speech, spotlight, and interactions being orchestrated
 function ActionsVisualizer() {
   const [activeIdx, setActiveIdx] = useState(0);
 
   const actionItems = [
     {
       icon: MessageSquare,
-      label: 'Speech',
+      label: 'Synthesizing Tutor Speech',
       color: 'text-violet-500',
-      activeBg: 'bg-violet-500/10',
-      activeBorder: 'border-violet-200 dark:border-violet-800',
+      bg: 'bg-violet-500/10',
+      border: 'border-violet-200 dark:border-violet-800',
     },
     {
       icon: Focus,
-      label: 'Spotlight',
+      label: 'Configuring Camera Spotlight',
       color: 'text-amber-500',
-      activeBg: 'bg-amber-500/10',
-      activeBorder: 'border-amber-200 dark:border-amber-800',
+      bg: 'bg-amber-500/10',
+      border: 'border-amber-200 dark:border-amber-800',
     },
     {
       icon: MessageSquare,
-      label: 'Speech',
-      color: 'text-violet-500',
-      activeBg: 'bg-violet-500/10',
-      activeBorder: 'border-violet-200 dark:border-violet-800',
+      label: 'Synthesizing Student Query',
+      color: 'text-purple-500',
+      bg: 'bg-purple-500/10',
+      border: 'border-purple-200 dark:border-purple-800',
     },
     {
       icon: Play,
-      label: 'Interact',
+      label: 'Binding Interactive Events',
       color: 'text-emerald-500',
-      activeBg: 'bg-emerald-500/10',
-      activeBorder: 'border-emerald-200 dark:border-emerald-800',
+      bg: 'bg-emerald-500/10',
+      border: 'border-emerald-200 dark:border-emerald-800',
     },
     {
-      icon: MessageSquare,
-      label: 'Speech',
-      color: 'text-violet-500',
-      activeBg: 'bg-violet-500/10',
-      activeBorder: 'border-violet-200 dark:border-violet-800',
+      icon: Clapperboard,
+      label: 'Finalizing Scene Timeline',
+      color: 'text-blue-500',
+      bg: 'bg-blue-500/10',
+      border: 'border-blue-200 dark:border-blue-800',
     },
   ];
-
-  // Row height (py-1.5 = 6px×2 padding + icon ~16px) + gap 6px ≈ 34px per row
-  const ROW_H = 34;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveIdx((prev) => (prev + 1) % actionItems.length);
-    }, 1600);
+    }, 1800);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [actionItems.length]);
 
   return (
-    <div className="size-56 relative flex items-center justify-center">
-      {/* Background pulse */}
-      <motion.div
-        className="absolute inset-0 blur-3xl rounded-full bg-violet-500/8"
-        animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 3.5, repeat: Infinity }}
-      />
-
-      {/* Timeline card */}
-      <div className="w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden relative">
-        {/* Header */}
-        <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700 flex items-center gap-2">
-          <Clapperboard className="size-3 text-violet-500" />
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: '50%' }}
-            transition={{ delay: 0.2 }}
-            className="h-1.5 bg-violet-500/20 rounded-full"
-          />
+    <div className="w-full h-full flex flex-col p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-violet-100 dark:border-violet-900/30">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-violet-100 dark:bg-violet-900/40 rounded-xl text-violet-600 dark:text-violet-400">
+            <Clapperboard className="size-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Generating Instructional Actions</h3>
+            <p className="text-sm text-muted-foreground">Orchestrating TTS, camera movements, and UI interactions</p>
+          </div>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="size-2 rounded-full bg-violet-500 animate-pulse" />
+          <span className="text-sm font-medium text-violet-600 dark:text-violet-400">Processing Timeline</span>
+        </div>
+      </div>
 
-        {/* Action items */}
-        <div className="p-2 space-y-1.5 relative">
-          {/* Sliding highlight — absolute, animates via y transform, no layout impact */}
-          <motion.div
-            className="absolute left-2 right-2 rounded-lg bg-violet-500/[0.06] dark:bg-violet-400/[0.08]"
-            style={{ height: ROW_H - 6 }}
-            animate={{ y: activeIdx * ROW_H }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-          />
+      <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full space-y-4">
+        {actionItems.map((item, i) => {
+          const Icon = item.icon;
+          const isActive = i === activeIdx;
+          const isPast = i < activeIdx;
+          
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: isPast ? 0.5 : 1, x: 0 }}
+              transition={{ duration: 0.4 }}
+              className={cn(
+                "flex items-center gap-6 p-4 rounded-2xl border transition-all duration-500",
+                isActive ? cn("bg-white dark:bg-slate-800 shadow-xl scale-[1.02]", item.border) : "bg-white/50 dark:bg-slate-800/50 border-transparent shadow-sm"
+              )}
+            >
+              {/* Status Indicator */}
+              <div className="w-12 flex justify-center shrink-0">
+                {isPast ? (
+                  <CheckCircle2 className={cn("size-6", item.color)} />
+                ) : isActive ? (
+                  <div className="relative flex items-center justify-center">
+                    <div className={cn("absolute size-8 rounded-full animate-ping opacity-20", item.bg.replace('/10', ''))} />
+                    <div className={cn("size-4 rounded-full", item.color.replace('text-', 'bg-'))} />
+                  </div>
+                ) : (
+                  <div className="size-4 rounded-full bg-slate-200 dark:bg-slate-700" />
+                )}
+              </div>
 
-          {actionItems.map((item, i) => {
-            const Icon = item.icon;
-            const isActive = i === activeIdx;
-            const isPast = i < activeIdx;
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: isPast ? 0.4 : 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.08, duration: 0.3 }}
-                className="relative flex items-center gap-2 px-2 py-1.5 rounded-lg"
-              >
-                <div
-                  className={cn(
-                    'size-4 rounded flex items-center justify-center shrink-0 transition-colors duration-300',
-                    isActive ? item.color : 'text-slate-300 dark:text-slate-600',
-                  )}
-                >
-                  <Icon className="size-3" />
-                </div>
-                <div className="flex-1 flex items-center gap-1.5">
-                  <span
-                    className={cn(
-                      'text-[8px] font-semibold uppercase tracking-wider transition-colors duration-300',
-                      isActive ? item.color : 'text-slate-400 dark:text-slate-500',
-                    )}
+              {/* Icon Container */}
+              <div className={cn("size-12 rounded-xl flex items-center justify-center shrink-0", isActive ? item.bg : "bg-slate-100 dark:bg-slate-800")}>
+                <Icon className={cn("size-6", isActive ? item.color : "text-slate-400")} />
+              </div>
+
+              {/* Text Content */}
+              <div className="flex-1">
+                <h4 className={cn("text-lg font-semibold", isActive ? item.color : "text-slate-600 dark:text-slate-400")}>
+                  {item.label}
+                </h4>
+                {isActive && (
+                  <motion.div 
+                    initial={{ width: 0 }} 
+                    animate={{ width: "100%" }} 
+                    transition={{ duration: 1.8, ease: "linear" }}
+                    className={cn("h-1 mt-2 rounded-full", item.color.replace('text-', 'bg-').replace('-500', '-200 dark:bg-opacity-20'))} 
                   >
-                    {item.label}
-                  </span>
-                  <div
-                    className={cn(
-                      'h-1 flex-1 rounded-full transition-colors duration-300',
-                      isActive ? 'bg-current opacity-20' : 'bg-slate-100 dark:bg-slate-700',
-                    )}
-                  />
-                </div>
-                {/* Pulsing dot — always rendered, opacity-controlled, no layout shift */}
-                <motion.div
-                  className="size-1.5 rounded-full bg-violet-500"
-                  animate={{ opacity: isActive ? [1, 0.3, 1] : 0 }}
-                  transition={isActive ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
-                />
-              </motion.div>
-            );
-          })}
-        </div>
+                    <div className={cn("h-full rounded-full w-full", item.color.replace('text-', 'bg-'))} />
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

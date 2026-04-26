@@ -67,12 +67,16 @@ export async function POST(req: NextRequest) {
         : resolvePDFBaseUrl(effectiveProviderId, baseUrl || undefined),
     };
 
+    // Extract file extension
+    const extensionMatch = pdfFile.name.match(/(\.[a-zA-Z0-9]+)$/);
+    const fileExtension = extensionMatch ? extensionMatch[1].toLowerCase() : '.pdf';
+
     // Convert PDF to buffer
     const arrayBuffer = await pdfFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // Submit for parsing
-    const submitResult = await submitPDFParse(config, buffer);
+    const submitResult = await submitPDFParse(config, buffer, fileExtension);
 
     if (!submitResult.async) {
       // Synchronous provider — return full result (same shape as old /api/parse-pdf)
