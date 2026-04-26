@@ -279,7 +279,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
                   {/* pointer-events-none prevents sub-components from capturing clicks, so we can intercept them easily. But interactive components might need clicks. For preview-to-code mapping, we want click capture. */}
                   <div className="absolute inset-0 pointer-events-auto">
                     <SceneProvider scene={localPreviewScene}>
-                      <SceneRenderer scene={localPreviewScene} mode="preview" />
+                      <SceneRenderer scene={localPreviewScene} mode="playback" />
                     </SceneProvider>
                   </div>
                 </div>
