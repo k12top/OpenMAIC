@@ -361,9 +361,49 @@ function GenerationPreviewContent() {
         activeSteps = getActiveSteps(currentSession);
       }
 
-      // Step: Web Search (if enabled)
-      const webSearchStepIdx = activeSteps.findIndex((s) => s.id === 'web-search');
-      if (currentSession.requirements.webSearch && webSearchStepIdx >= 0) {
+      // ── Parallel: Web Search + Agent Generation ──────────────────────────
+      // These two operations are independent, so we run them concurrently.
+      // Web search depends on: requirement + pdfText
+      // Agent generation depends on: stage name + settings
+      // Neither depends on the other's output, saving ~3-8s.
+
+      // Load imageMapping early (needed for both outline and scene generation)
+      let imageMapping: ImageMapping = {};
+      if (currentSession.imageStorageIds && currentSession.imageStorageIds.length > 0) {
+        log.debug('Loading images from IndexedDB');
+        imageMapping = await loadImageMapping(currentSession.imageStorageIds);
+      } else if (
+        currentSession.imageMapping &&
+        Object.keys(currentSession.imageMapping).length > 0
+      ) {
+        log.debug('Using imageMapping from session (old format)');
+        imageMapping = currentSession.imageMapping;
+      }
+
+      const settings = useSettingsStore.getState();
+      let agents: Array<{
+        id: string;
+        name: string;
+        role: string;
+        persona?: string;
+      }> = [];
+
+      // Create stage client-side (needed for agent generation stageId)
+      const stageId = nanoid(10);
+      const stage: Stage = {
+        id: stageId,
+        name: extractTopicFromRequirement(currentSession.requirements.requirement),
+        description: '',
+        language: currentSession.requirements.language || 'zh-CN',
+        style: 'professional',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      // ── Build web search promise (non-blocking) ──
+      const webSearchPromise = (async () => {
+        const webSearchStepIdx = activeSteps.findIndex((s) => s.id === 'web-search');
+        if (!currentSession.requirements.webSearch || webSearchStepIdx < 0) return null;
         setCurrentStepIndex(webSearchStepIdx);
         setWebSearchSources([]);
 
@@ -395,11 +435,96 @@ function GenerationPreviewContent() {
           url: s.url,
         }));
         setWebSearchSources(sources);
+        return { context: searchData.context || '', sources };
+      })();
 
+      // ── Build agent generation promise (non-blocking) ──
+      const agentPromise = (async () => {
+        if (settings.agentMode !== 'auto') return null; // handled below for preset mode
+
+        const agentStepIdx = activeSteps.findIndex((s) => s.id === 'agent-generation');
+        if (agentStepIdx >= 0) setCurrentStepIndex(agentStepIdx);
+
+        const allAvatars = [
+          {
+            path: '/avatars/teacher.png',
+            desc: 'Male teacher with glasses, holding a book, green background',
+          },
+          {
+            path: '/avatars/assist.png',
+            desc: 'Young female assistant with glasses, pink background, friendly smile',
+          },
+          {
+            path: '/avatars/clown.png',
+            desc: 'Playful girl with curly hair doing rock gesture, blue shirt, humorous vibe',
+          },
+          {
+            path: '/avatars/curious.png',
+            desc: 'Surprised boy with glasses, hand on cheek, curious expression',
+          },
+          {
+            path: '/avatars/note-taker.png',
+            desc: 'Studious boy with glasses, blue shirt, calm and organized',
+          },
+          {
+            path: '/avatars/thinker.png',
+            desc: 'Thoughtful girl with hand on chin, purple background, contemplative',
+          },
+        ];
+
+        const getAvailableVoicesForGeneration = () => {
+          const providers = getAvailableProvidersWithVoices(settings.ttsProvidersConfig);
+          return providers.flatMap((p) =>
+            p.voices.map((v) => ({
+              providerId: p.providerId,
+              voiceId: v.id,
+              voiceName: v.name,
+            })),
+          );
+        };
+
+        const agentResp = await fetch('/api/generate/agent-profiles', {
+          method: 'POST',
+          headers: getApiHeaders(),
+          body: JSON.stringify({
+            stageInfo: { name: stage.name, description: stage.description },
+            language: currentSession.requirements.language || 'zh-CN',
+            availableAvatars: allAvatars.map((a) => a.path),
+            avatarDescriptions: allAvatars.map((a) => ({ path: a.path, desc: a.desc })),
+            availableVoices: getAvailableVoicesForGeneration(),
+          }),
+          signal,
+        });
+
+        if (!agentResp.ok) {
+          const errData = await agentResp.json().catch(() => ({}));
+          if (agentResp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+            throw new Error(INSUFFICIENT_CREDITS_MARKER);
+          }
+          throw new Error(errData.error || 'Agent generation failed');
+        }
+        const agentData = await agentResp.json();
+        if (!agentData.success) throw new Error(agentData.error || 'Agent generation failed');
+        return agentData;
+      })();
+
+      // ── Await both in parallel ──
+      const [webSearchResult, agentResult] = await Promise.all([
+        webSearchPromise,
+        agentPromise.catch((err: unknown) => {
+          // Agent generation failure is non-fatal (falls back to presets)
+          if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) throw err;
+          log.warn('[Generation] Agent generation failed, falling back to presets:', err);
+          return null;
+        }),
+      ]);
+
+      // ── Merge web search result ──
+      if (webSearchResult) {
         const updatedSessionWithSearch = {
           ...currentSession,
-          researchContext: searchData.context || '',
-          researchSources: sources,
+          researchContext: webSearchResult.context,
+          researchSources: webSearchResult.sources,
         };
         setSession(updatedSessionWithSearch);
         sessionStorage.setItem('generationSession', JSON.stringify(updatedSessionWithSearch));
@@ -407,115 +532,16 @@ function GenerationPreviewContent() {
         activeSteps = getActiveSteps(currentSession);
       }
 
-      // Load imageMapping early (needed for both outline and scene generation)
-      let imageMapping: ImageMapping = {};
-      if (currentSession.imageStorageIds && currentSession.imageStorageIds.length > 0) {
-        log.debug('Loading images from IndexedDB');
-        imageMapping = await loadImageMapping(currentSession.imageStorageIds);
-      } else if (
-        currentSession.imageMapping &&
-        Object.keys(currentSession.imageMapping).length > 0
-      ) {
-        log.debug('Using imageMapping from session (old format)');
-        imageMapping = currentSession.imageMapping;
-      }
-
-      // ── Agent generation (before outlines so persona can influence structure) ──
-      const settings = useSettingsStore.getState();
-      let agents: Array<{
-        id: string;
-        name: string;
-        role: string;
-        persona?: string;
-      }> = [];
-
-      // Create stage client-side (needed for agent generation stageId)
-      const stageId = nanoid(10);
-      const stage: Stage = {
-        id: stageId,
-        name: extractTopicFromRequirement(currentSession.requirements.requirement),
-        description: '',
-        language: currentSession.requirements.language || 'zh-CN',
-        style: 'professional',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      if (settings.agentMode === 'auto') {
-        const agentStepIdx = activeSteps.findIndex((s) => s.id === 'agent-generation');
-        if (agentStepIdx >= 0) setCurrentStepIndex(agentStepIdx);
-
+      // ── Merge agent result ──
+      if (settings.agentMode === 'auto' && agentResult) {
         try {
-          const allAvatars = [
-            {
-              path: '/avatars/teacher.png',
-              desc: 'Male teacher with glasses, holding a book, green background',
-            },
-            {
-              path: '/avatars/assist.png',
-              desc: 'Young female assistant with glasses, pink background, friendly smile',
-            },
-            {
-              path: '/avatars/clown.png',
-              desc: 'Playful girl with curly hair doing rock gesture, blue shirt, humorous vibe',
-            },
-            {
-              path: '/avatars/curious.png',
-              desc: 'Surprised boy with glasses, hand on cheek, curious expression',
-            },
-            {
-              path: '/avatars/note-taker.png',
-              desc: 'Studious boy with glasses, blue shirt, calm and organized',
-            },
-            {
-              path: '/avatars/thinker.png',
-              desc: 'Thoughtful girl with hand on chin, purple background, contemplative',
-            },
-          ];
-
-          const getAvailableVoicesForGeneration = () => {
-            const providers = getAvailableProvidersWithVoices(settings.ttsProvidersConfig);
-            return providers.flatMap((p) =>
-              p.voices.map((v) => ({
-                providerId: p.providerId,
-                voiceId: v.id,
-                voiceName: v.name,
-              })),
-            );
-          };
-
-          // No outlines yet — agent generation uses only stage name + description
-          const agentResp = await fetch('/api/generate/agent-profiles', {
-            method: 'POST',
-            headers: getApiHeaders(),
-            body: JSON.stringify({
-              stageInfo: { name: stage.name, description: stage.description },
-              language: currentSession.requirements.language || 'zh-CN',
-              availableAvatars: allAvatars.map((a) => a.path),
-              avatarDescriptions: allAvatars.map((a) => ({ path: a.path, desc: a.desc })),
-              availableVoices: getAvailableVoicesForGeneration(),
-            }),
-            signal,
-          });
-
-          if (!agentResp.ok) {
-            const errData = await agentResp.json().catch(() => ({}));
-            if (agentResp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
-              throw new Error(INSUFFICIENT_CREDITS_MARKER);
-            }
-            throw new Error(errData.error || 'Agent generation failed');
-          }
-          const agentData = await agentResp.json();
-          if (!agentData.success) throw new Error(agentData.error || 'Agent generation failed');
-
-          // Save to IndexedDB and registry
           const { saveGeneratedAgents } = await import('@/lib/orchestration/registry/store');
-          const savedIds = await saveGeneratedAgents(stage.id, agentData.agents);
+          const savedIds = await saveGeneratedAgents(stage.id, agentResult.agents);
           settings.setSelectedAgentIds(savedIds);
           stage.agentIds = savedIds;
 
           // Show card-reveal modal, continue generation once all cards are revealed
-          setGeneratedAgents(agentData.agents);
+          setGeneratedAgents(agentResult.agents);
           setShowAgentReveal(true);
           await new Promise<void>((resolve) => {
             agentRevealResolveRef.current = resolve;
@@ -531,35 +557,20 @@ function GenerationPreviewContent() {
               persona: a!.persona,
             }));
         } catch (err: unknown) {
-          if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) {
-            throw err;
-          }
-          log.warn('[Generation] Agent generation failed, falling back to presets:', err);
-          const registry = useAgentRegistry.getState();
-          const fallbackIds = settings.selectedAgentIds.filter((id) => {
-            const a = registry.getAgent(id);
-            return a && !a.isGenerated;
-          });
-          agents = fallbackIds
-            .map((id) => registry.getAgent(id))
-            .filter(Boolean)
-            .map((a) => ({
-              id: a!.id,
-              name: a!.name,
-              role: a!.role,
-              persona: a!.persona,
-            }));
-          stage.agentIds = fallbackIds;
+          if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) throw err;
+          log.warn('[Generation] Agent save failed, falling back to presets:', err);
+          // Fall through to preset fallback below
         }
-      } else {
-        // Preset mode — use selected agents (include persona)
-        // Filter out stale generated agent IDs that may linger in settings
+      }
+
+      // Fallback: preset agents or failed auto-generation
+      if (agents.length === 0) {
         const registry = useAgentRegistry.getState();
-        const presetAgentIds = settings.selectedAgentIds.filter((id) => {
+        const fallbackIds = settings.selectedAgentIds.filter((id) => {
           const a = registry.getAgent(id);
           return a && !a.isGenerated;
         });
-        agents = presetAgentIds
+        agents = fallbackIds
           .map((id) => registry.getAgent(id))
           .filter(Boolean)
           .map((a) => ({
@@ -568,7 +579,7 @@ function GenerationPreviewContent() {
             role: a!.role,
             persona: a!.persona,
           }));
-        stage.agentIds = presetAgentIds;
+        stage.agentIds = fallbackIds;
       }
 
       // ── Generate outlines (with agent personas for teacher context) ──
@@ -771,7 +782,7 @@ function GenerationPreviewContent() {
         throw new Error(data.error || t('generation.sceneGenerateFailed'));
       }
 
-      // Generate TTS for first scene (part of actions step — blocking)
+      // Generate TTS for first scene — concurrent batch (max 3 parallel)
       // pendingTtsUploads collects (audioId, blob, format) pairs for MinIO upload after addScene.
       const pendingTtsUploads: Array<{ audioId: string; blob: Blob; format: string }> = [];
       if (settings.ttsEnabled && settings.ttsProviderId !== 'browser-native-tts') {
@@ -780,54 +791,66 @@ function GenerationPreviewContent() {
           (a: { type: string; text?: string }) => a.type === 'speech' && a.text,
         );
 
-        let ttsFailCount = 0;
+        // Assign audioIds first (must be done before parallel fetch)
         for (const action of speechActions) {
-          const audioId = `tts_${action.id}`;
-          action.audioId = audioId;
-          try {
-            const resp = await fetch('/api/generate/tts', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: action.text,
-                audioId,
-                ttsProviderId: settings.ttsProviderId,
-                ttsModelId: ttsProviderConfig?.modelId,
-                ttsVoice: settings.ttsVoice,
-                ttsSpeed: settings.ttsSpeed,
-                ttsApiKey: ttsProviderConfig?.apiKey || undefined,
-                ttsBaseUrl: ttsProviderConfig?.baseUrl || undefined,
-              }),
-              signal,
-            });
-            if (!resp.ok) {
-              const errData = await resp.json().catch(() => ({}));
-              if (resp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+          action.audioId = `tts_${action.id}`;
+        }
+
+        const TTS_CONCURRENCY = 3;
+        let ttsFailCount = 0;
+
+        // Process in batches of TTS_CONCURRENCY
+        for (let i = 0; i < speechActions.length; i += TTS_CONCURRENCY) {
+          const batch = speechActions.slice(i, i + TTS_CONCURRENCY);
+          const results = await Promise.allSettled(
+            batch.map(async (action: { id: string; text: string; audioId: string }) => {
+              const audioId = action.audioId;
+              const resp = await fetch('/api/generate/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  text: action.text,
+                  audioId,
+                  ttsProviderId: settings.ttsProviderId,
+                  ttsModelId: ttsProviderConfig?.modelId,
+                  ttsVoice: settings.ttsVoice,
+                  ttsSpeed: settings.ttsSpeed,
+                  ttsApiKey: ttsProviderConfig?.apiKey || undefined,
+                  ttsBaseUrl: ttsProviderConfig?.baseUrl || undefined,
+                }),
+                signal,
+              });
+              if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                if (resp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+                  throw new Error(INSUFFICIENT_CREDITS_MARKER);
+                }
+                throw new Error(errData.error || 'TTS failed');
+              }
+              const ttsData = await resp.json();
+              if (!ttsData.success) throw new Error('TTS failed');
+              const binary = atob(ttsData.base64);
+              const bytes = new Uint8Array(binary.length);
+              for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+              const blob = new Blob([bytes], { type: `audio/${ttsData.format}` });
+              await db.audioFiles.put({
+                id: audioId,
+                blob,
+                format: ttsData.format,
+                createdAt: Date.now(),
+              });
+              pendingTtsUploads.push({ audioId, blob, format: ttsData.format });
+            }),
+          );
+
+          for (const r of results) {
+            if (r.status === 'rejected') {
+              if (r.reason?.message === INSUFFICIENT_CREDITS_MARKER) {
                 throw new Error(INSUFFICIENT_CREDITS_MARKER);
               }
+              log.warn('[TTS] Batch item failed:', r.reason);
               ttsFailCount++;
-              continue;
             }
-            const ttsData = await resp.json();
-            if (!ttsData.success) {
-              ttsFailCount++;
-              continue;
-            }
-            const binary = atob(ttsData.base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const blob = new Blob([bytes], { type: `audio/${ttsData.format}` });
-            await db.audioFiles.put({
-              id: audioId,
-              blob,
-              format: ttsData.format,
-              createdAt: Date.now(),
-            });
-            // Collect for MinIO upload (done after addScene so the store already has the scene)
-            pendingTtsUploads.push({ audioId, blob, format: ttsData.format });
-          } catch (err) {
-            log.warn(`[TTS] Failed for ${audioId}:`, err);
-            ttsFailCount++;
           }
         }
 

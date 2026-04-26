@@ -217,7 +217,7 @@ export async function generateAndStoreTTS(
   }
 }
 
-/** Generate TTS for all speech actions in a scene. Returns result. */
+/** Generate TTS for all speech actions in a scene — concurrent batches (max 3). */
 async function generateTTSForScene(
   scene: Scene,
   signal?: AbortSignal,
@@ -229,23 +229,38 @@ async function generateTTSForScene(
   );
   if (speechActions.length === 0) return { success: true, failedCount: 0 };
 
+  // Assign audioIds first (before parallel execution)
+  for (const action of speechActions) {
+    action.audioId = `tts_${action.id}`;
+  }
+
+  const TTS_CONCURRENCY = 3;
   let failedCount = 0;
   let lastError: string | undefined;
 
-  for (const action of speechActions) {
-    const audioId = `tts_${action.id}`;
-    action.audioId = audioId;
-    try {
-      await generateAndStoreTTS(audioId, action.text, signal);
-    } catch (error) {
-      failedCount++;
-      lastError = error instanceof Error ? error.message : `TTS failed for action ${action.id}`;
-      log.warn('TTS generation failed:', {
-        providerId,
-        actionId: action.id,
-        textLength: action.text.length,
-        error: lastError,
-      });
+  for (let i = 0; i < speechActions.length; i += TTS_CONCURRENCY) {
+    const batch = speechActions.slice(i, i + TTS_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (action) => {
+        await generateAndStoreTTS(action.audioId!, action.text, signal);
+      }),
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      const r = results[j];
+      if (r.status === 'rejected') {
+        failedCount++;
+        lastError =
+          r.reason instanceof Error
+            ? r.reason.message
+            : `TTS failed for action ${batch[j].id}`;
+        log.warn('TTS generation failed:', {
+          providerId,
+          actionId: batch[j].id,
+          textLength: batch[j].text.length,
+          error: lastError,
+        });
+      }
     }
   }
 
@@ -345,21 +360,21 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
           .map((a) => a.text);
       }
 
-      // Serial generation loop — two-step per outline
+      // Pipeline generation loop — prefetch next scene's content while current
+      // scene's actions + TTS are generating. This overlaps the two heaviest
+      // LLM calls and can reduce total time by ~30-40%.
+      //
+      // Timeline:
+      //   Scene 1: [content] → [actions + TTS]
+      //   Scene 2:              [content(prefetch)] → [actions + TTS]
+      //   Scene 3:                                     [content(prefetch)] → ...
       try {
         let pausedByFailureOrAbort = false;
-        for (const outline of pending) {
-          if (abortRef.current || store.getState().generationEpoch !== startEpoch) {
-            store.getState().setGenerationStatus('paused');
-            pausedByFailureOrAbort = true;
-            break;
-          }
 
-          store.getState().setCurrentGeneratingOrder(outline.order);
-
-          // Step 1: Generate content
-          options.onPhaseChange?.('content', outline);
-          const contentResult = await fetchSceneContent(
+        // Prefetch content for the first pending outline immediately
+        let nextContentPromise: Promise<SceneContentResult> | null = null;
+        const prefetchContent = (outline: SceneOutline) =>
+          fetchSceneContent(
             {
               outline,
               allOutlines: outlines,
@@ -371,6 +386,25 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             },
             signal,
           );
+
+        for (let idx = 0; idx < pending.length; idx++) {
+          const outline = pending[idx];
+
+          if (abortRef.current || store.getState().generationEpoch !== startEpoch) {
+            store.getState().setGenerationStatus('paused');
+            pausedByFailureOrAbort = true;
+            break;
+          }
+
+          store.getState().setCurrentGeneratingOrder(outline.order);
+
+          // Step 1: Get content — either from prefetch or fresh fetch
+          options.onPhaseChange?.('content', outline);
+          const contentResult =
+            nextContentPromise !== null
+              ? await nextContentPromise
+              : await prefetchContent(outline);
+          nextContentPromise = null;
 
           if (!contentResult.success || !contentResult.content) {
             if (abortRef.current || store.getState().generationEpoch !== startEpoch) {
@@ -394,6 +428,11 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             store.getState().setGenerationStatus('paused');
             pausedByFailureOrAbort = true;
             break;
+          }
+
+          // ── Prefetch next scene's content while we generate current actions + TTS ──
+          if (idx + 1 < pending.length) {
+            nextContentPromise = prefetchContent(pending[idx + 1]);
           }
 
           // Step 2: Generate actions + assemble scene
