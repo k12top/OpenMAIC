@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, useCallback, useRef, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, Copy, LogIn, Globe, Loader2, Lock } from 'lucide-react';
+import { Eye, Copy, LogIn, Globe, Loader2, Lock, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Stage } from '@/components/stage';
@@ -46,6 +46,8 @@ function DirectClassroomView({
   copying: boolean;
 }) {
   const [ready, setReady] = useState(false);
+  const [userActivated, setUserActivated] = useState(false);
+  const stageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     useStageStore.getState().setStage(classroom.stage);
@@ -161,8 +163,23 @@ function DirectClassroomView({
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Stage autoPlayOnMount={true} />
+          <div className="flex-1 flex flex-col overflow-hidden relative" ref={stageContainerRef}>
+            <Stage autoPlayOnMount={userActivated} />
+
+            {/* Click-to-start overlay — satisfies browser autoplay policy */}
+            {!userActivated && (
+              <div
+                className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm cursor-pointer transition-opacity"
+                onClick={() => setUserActivated(true)}
+              >
+                <div className="flex flex-col items-center gap-3 select-none">
+                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center ring-2 ring-white/30 hover:ring-white/50 hover:bg-white/30 transition-all">
+                    <Play className="size-7 text-white ml-1" />
+                  </div>
+                  <span className="text-white/90 text-sm font-medium">点击开始播放</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </MediaStageProvider>

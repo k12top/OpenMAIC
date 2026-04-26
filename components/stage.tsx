@@ -565,6 +565,28 @@ export function Stage({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only re-run when scene changes, functions are stable refs
   }, [currentScene]);
 
+  // Deferred auto-play: when autoPlayOnMount transitions to true after mount
+  // (e.g. user clicked the "click to start" overlay on the share page),
+  // kick off the already-initialised engine. This satisfies browser autoplay
+  // policy because the prop change is triggered by a user click.
+  useEffect(() => {
+    if (!autoPlayOnMount) return;
+    const engine = engineRef.current;
+    if (!engine) return;
+    // Only auto-start if the engine is idle (not already playing/paused)
+    if (engine.getMode() !== 'idle') return;
+
+    (async () => {
+      if (currentScene && chatAreaRef.current) {
+        const sessionId = await chatAreaRef.current.startLecture(currentScene.id);
+        lectureSessionIdRef.current = sessionId;
+        lectureActionCounterRef.current = 0;
+      }
+      engine.start();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only trigger when autoPlayOnMount changes
+  }, [autoPlayOnMount]);
+
   // Cleanup on unmount
   useEffect(() => {
     const audioPlayer = audioPlayerRef.current;

@@ -65,9 +65,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const apiKey = clientBaseUrl
-      ? ttsApiKey || ''
-      : resolveTTSApiKey(ttsProviderId, ttsApiKey || undefined);
+    // Always resolve API key through the server chain (client key → server key).
+    // A client-supplied baseUrl does NOT imply a fully custom key — it may just
+    // be the serverBaseUrl echoed back by the settings store.
+    const apiKey = resolveTTSApiKey(ttsProviderId, ttsApiKey || undefined);
     const baseUrl = clientBaseUrl
       ? clientBaseUrl
       : resolveTTSBaseUrl(ttsProviderId, ttsBaseUrl || undefined);
