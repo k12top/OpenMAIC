@@ -758,6 +758,244 @@ function extractMinerUResult(fileResult: Record<string, unknown>): ParsedPdfCont
   };
 }
 
+// ---------------------------------------------------------------------------
+// Async submit / poll / process — serverless-friendly API
+// ---------------------------------------------------------------------------
+
+/** Result of submitPDFParse when the provider is synchronous (e.g. unpdf). */
+export interface PDFSubmitSyncResult {
+  async: false;
+  data: ParsedPdfContent;
+}
+
+/** Result of submitPDFParse when the provider is asynchronous (MinerU cloud). */
+export interface PDFSubmitAsyncResult {
+  async: true;
+  taskId: string;
+  provider: 'mineru-cloud';
+  /** Resolved MinerU API base URL — needed for subsequent poll calls. */
+  apiBase: string;
+}
+
+export type PDFSubmitResult = PDFSubmitSyncResult | PDFSubmitAsyncResult;
+
+/** Result of a single poll call. */
+export interface PDFPollResult {
+  /** 'processing' | 'done' | 'failed' */
+  status: 'processing' | 'done' | 'failed';
+  /** Present when status === 'done'. */
+  data?: ParsedPdfContent;
+  /** Present when status === 'failed'. */
+  error?: string;
+}
+
+/**
+ * Submit a PDF for parsing. For synchronous providers (unpdf, MinerU self-hosted)
+ * this returns the full result immediately. For MinerU cloud it uploads the PDF
+ * to MinIO, submits the task, and returns a taskId — completing in ~1-2 s, well
+ * within serverless timeout limits.
+ */
+export async function submitPDFParse(
+  config: PDFParserConfig,
+  pdfBuffer: Buffer,
+): Promise<PDFSubmitResult> {
+  const provider = PDF_PROVIDERS[config.providerId];
+  if (!provider) {
+    throw new Error(`Unknown PDF provider: ${config.providerId}`);
+  }
+  if (provider.requiresApiKey && !config.apiKey) {
+    throw new Error(`API key required for PDF provider: ${config.providerId}`);
+  }
+
+  // For MinerU cloud mode, use the async path
+  if (config.providerId === 'mineru' && config.baseUrl && isMinerUCloudMode(config.baseUrl)) {
+    return submitMinerUCloudTask(config, pdfBuffer);
+  }
+
+  // All other providers (unpdf, MinerU self-hosted) run synchronously
+  const startTime = Date.now();
+  let result: ParsedPdfContent;
+
+  switch (config.providerId) {
+    case 'unpdf':
+      result = await parseWithUnpdf(pdfBuffer);
+      break;
+    case 'mineru':
+      result = await parseWithMinerU(config, pdfBuffer);
+      break;
+    default:
+      throw new Error(`Unsupported PDF provider: ${config.providerId}`);
+  }
+
+  if (result.metadata) {
+    result.metadata.processingTime = Date.now() - startTime;
+  }
+  return { async: false, data: result };
+}
+
+/**
+ * Submit a MinerU Cloud task: upload to MinIO + POST /extract/task.
+ * Returns within ~1-2 seconds.
+ */
+async function submitMinerUCloudTask(
+  config: PDFParserConfig,
+  pdfBuffer: Buffer,
+): Promise<PDFSubmitAsyncResult> {
+  if (!config.apiKey) {
+    throw new Error(
+      'MinerU cloud API requires an API key (Token). ' +
+        'Please set PDF_MINERU_API_KEY. ' +
+        'See: https://mineru.net/apiManage',
+    );
+  }
+
+  const apiBase = resolveMinerUCloudApiBase(config.baseUrl);
+  const submitUrl = `${apiBase}/api/v4/extract/task`;
+  const authHeaders = { Authorization: `Bearer ${config.apiKey}` };
+
+  log.info(
+    `[MinerU Cloud] Async submit: apiBase=${apiBase}, submitUrl=${submitUrl}`,
+  );
+
+  // 1. Ensure PDF is in MinIO and get a public / presigned URL
+  log.info('[MinerU Cloud] Ensuring PDF is available in MinIO...');
+  const pdfUrl = await ensurePdfInMinio(pdfBuffer);
+  log.info(`[MinerU Cloud] PDF URL (truncated): ${truncateForLog(pdfUrl)}`);
+
+  const submitBody = {
+    url: pdfUrl,
+    model_version: 'vlm' as const,
+    enable_formula: true,
+    enable_table: true,
+  };
+
+  // 2. Submit parse task
+  const submitRes = await fetch(submitUrl, {
+    method: 'POST',
+    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify(submitBody),
+  });
+
+  const submitText = await submitRes.text();
+  if (!submitRes.ok) {
+    log.error(
+      `[MinerU Cloud] Submit failed status=${submitRes.status} response=${truncateForLog(submitText, 800)}`,
+    );
+    throw new Error(`MinerU Cloud submit failed (${submitRes.status}): ${submitText}`);
+  }
+
+  let submitJson: Record<string, unknown>;
+  try {
+    submitJson = JSON.parse(submitText) as Record<string, unknown>;
+  } catch {
+    throw new Error(`MinerU Cloud: submit response is not JSON: ${truncateForLog(submitText, 500)}`);
+  }
+
+  const taskId: string = (submitJson?.data as { task_id?: string } | undefined)?.task_id ?? '';
+  log.info(
+    `[MinerU Cloud] Submit OK: task_id=${taskId || '(missing)'} raw=${truncateForLog(JSON.stringify(submitJson), 400)}`,
+  );
+  if (!taskId) {
+    throw new Error(
+      `MinerU Cloud: no task_id in response: ${JSON.stringify(submitJson)}`,
+    );
+  }
+
+  return { async: true, taskId, provider: 'mineru-cloud', apiBase };
+}
+
+/**
+ * Poll a MinerU Cloud task **once**. Returns within ~200 ms.
+ *
+ * Call this from the `/api/parse-pdf/poll` route. The frontend drives the
+ * polling loop via `setInterval`, so each individual poll request stays well
+ * under any serverless timeout.
+ */
+export async function pollMinerUCloudTask(
+  taskId: string,
+  apiKey: string,
+  apiBase: string,
+): Promise<PDFPollResult> {
+  const authHeaders = { Authorization: `Bearer ${apiKey}` };
+  const pollUrl = `${apiBase}/api/v4/extract/task/${taskId}`;
+
+  log.info(`[MinerU Cloud] Poll: GET ${pollUrl}`);
+
+  const pollRes = await fetch(pollUrl, { headers: authHeaders });
+
+  if (!pollRes.ok) {
+    const pollErrText = await pollRes.text().catch(() => pollRes.statusText);
+    log.warn(
+      `[MinerU Cloud] Poll HTTP ${pollRes.status} body=${truncateForLog(pollErrText, 400)}`,
+    );
+    // Non-fatal HTTP errors (e.g. 502 gateway) → treat as still processing
+    return { status: 'processing' };
+  }
+
+  const pollJson = (await pollRes.json()) as Record<string, unknown>;
+  const data = pollJson?.data as Record<string, unknown> | undefined;
+  const state: string = (data?.state as string) ?? 'unknown';
+
+  log.info(
+    `[MinerU Cloud] Poll state=${state} detail=${truncateForLog(JSON.stringify(pollJson), 500)}`,
+  );
+
+  if (state === 'done') {
+    const zipUrl = extractMinerUResultZipUrl(data);
+    if (!zipUrl) {
+      return {
+        status: 'failed',
+        error:
+          'MinerU Cloud: task finished (state=done) but full_zip_url was not returned.',
+      };
+    }
+
+    // Download and extract the result within this same request
+    const result = await processMinerUCloudZip(zipUrl);
+    return { status: 'done', data: result };
+  }
+
+  if (state === 'failed') {
+    const errMsg = (data?.err_msg as string) ?? 'unknown error';
+    return { status: 'failed', error: `MinerU Cloud task failed: ${errMsg}` };
+  }
+
+  // Any other state (pending, running, etc.)
+  return { status: 'processing' };
+}
+
+/**
+ * Download and extract a MinerU Cloud result ZIP. Runs in-memory with JSZip.
+ */
+async function processMinerUCloudZip(zipUrl: string): Promise<ParsedPdfContent> {
+  log.info(`[MinerU Cloud] Downloading result zip: ${truncateForLog(zipUrl)}`);
+  const zipArrayBuffer = await fetch(zipUrl).then((r) => r.arrayBuffer());
+  const zipBuf = Buffer.from(new Uint8Array(zipArrayBuffer));
+
+  const zip = await JSZip.loadAsync(zipBuf);
+
+  const mdFile = Object.values(zip.files).find((f) => !f.dir && f.name.endsWith('.md'));
+  if (!mdFile) {
+    throw new Error('MinerU Cloud: no markdown file found in result zip');
+  }
+  const markdown = await mdFile.async('string');
+
+  const imageData: Record<string, string> = {};
+  await Promise.all(
+    Object.values(zip.files)
+      .filter((f) => !f.dir && /^images\//i.test(f.name))
+      .map(async (f) => {
+        const b64 = await f.async('base64');
+        const ext = f.name.split('.').pop()?.toLowerCase() ?? 'png';
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
+        const filename = f.name.split('/').pop()!;
+        imageData[filename] = `data:${mime};base64,${b64}`;
+      }),
+  );
+
+  return extractMinerUResult({ md_content: markdown, images: imageData });
+}
+
 /**
  * Get current PDF parser configuration from settings store
  * Note: This function should only be called in browser context

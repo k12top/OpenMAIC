@@ -207,21 +207,71 @@ function GenerationPreviewContent() {
           parseFormData.append('baseUrl', currentSession.pdfProviderConfig.baseUrl);
         }
 
-        const parseResponse = await fetch('/api/parse-pdf', {
+        const submitResponse = await fetch('/api/parse-pdf/submit', {
           method: 'POST',
           body: parseFormData,
           signal,
         });
 
-        if (!parseResponse.ok) {
-          const errorData = await parseResponse.json();
+        if (!submitResponse.ok) {
+          const errorData = await submitResponse.json();
           throw new Error(errorData.error || t('generation.pdfParseFailed'));
         }
 
-        const parseResult = await parseResponse.json();
-        if (!parseResult.success || !parseResult.data) {
+        const submitResult = await submitResponse.json();
+        if (!submitResult.success) {
           throw new Error(t('generation.pdfParseFailed'));
         }
+
+        let parseResultData: Record<string, unknown>;
+
+        if (submitResult.async) {
+          // MinerU cloud — poll until done
+          const { taskId, provider, apiBase } = submitResult;
+          const POLL_INTERVAL_MS = 3000;
+          const POLL_TIMEOUT_MS = 15 * 60 * 1000; // 15 min max
+          const pollDeadline = Date.now() + POLL_TIMEOUT_MS;
+
+          while (Date.now() < pollDeadline) {
+            if (signal.aborted) throw new Error('Aborted');
+            await new Promise<void>((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+            const pollRes = await fetch('/api/parse-pdf/poll', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ taskId, provider, apiBase }),
+              signal,
+            });
+
+            if (!pollRes.ok) {
+              const pollErr = await pollRes.json().catch(() => ({ error: 'Poll failed' }));
+              throw new Error(pollErr.error || t('generation.pdfParseFailed'));
+            }
+
+            const pollResult = await pollRes.json();
+            if (pollResult.status === 'failed') {
+              throw new Error(pollResult.error || t('generation.pdfParseFailed'));
+            }
+            if (pollResult.status === 'done') {
+              parseResultData = pollResult.data;
+              break;
+            }
+            // status === 'processing' — continue polling
+          }
+
+          if (!parseResultData!) {
+            throw new Error('PDF parsing timed out');
+          }
+        } else {
+          // Synchronous provider (unpdf / MinerU self-hosted)
+          if (!submitResult.data) {
+            throw new Error(t('generation.pdfParseFailed'));
+          }
+          parseResultData = submitResult.data;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- API response shape is validated above
+        const parseResult = { data: parseResultData as any };
 
         let pdfText = parseResult.data.text as string;
 
