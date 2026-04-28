@@ -18,5 +18,16 @@ export async function GET(request: Request) {
     signinUrl = signinUrlObj.toString();
   }
 
-  return NextResponse.redirect(signinUrl);
+  // Set sso_probed cookie to prevent infinite redirect loops when the
+  // middleware auto-probes for an existing Casdoor session. TTL: 5 minutes.
+  const response = NextResponse.redirect(signinUrl);
+  response.cookies.set('sso_probed', '1', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 5 * 60, // 5 minutes
+  });
+
+  return response;
 }

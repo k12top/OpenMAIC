@@ -31,10 +31,33 @@ export const casdoorSDK = new SDK(casdoorConfig);
 
 /**
  * OAuth redirect_uri and post-login redirects must use the URL users see in the browser.
- * If the process listens on 0.0.0.0 or a proxy sends a non-public Host, `request.url` can
- * become e.g. https://0.0.0.0:8080 — set APP_PUBLIC_URL to your real origin (no trailing slash).
+ *
+ * Detection priority:
+ *  1. `x-forwarded-host` + `x-forwarded-proto` headers (Vercel / Nginx / Caddy proxies)
+ *  2. `host` header (when not a loopback address)
+ *  3. `APP_PUBLIC_URL` env var (manual override for edge cases)
+ *  4. `request.url` (final fallback)
+ *
+ * For multi-domain deployments (e.g. multiple custom domains on Vercel pointing to the
+ * same app), do NOT set APP_PUBLIC_URL — the origin will be derived dynamically from
+ * each request's proxy headers, allowing correct per-domain OAuth redirect_uri.
  */
 export function getPublicAppOrigin(request: Request): string {
+  // 1. Proxy headers — most reliable on Vercel / behind reverse proxies
+  const fwdHost = request.headers.get('x-forwarded-host');
+  if (fwdHost) {
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    return `${proto}://${fwdHost}`;
+  }
+
+  // 2. Host header — works for direct connections (not behind proxy)
+  const host = request.headers.get('host');
+  if (host && !/^(0\.0\.0\.0|127\.0\.0\.1|localhost)(:|$)/.test(host)) {
+    const proto = request.url.startsWith('https') ? 'https' : 'http';
+    return `${proto}://${host}`;
+  }
+
+  // 3. APP_PUBLIC_URL — manual single-domain override (bare Node.js deployments)
   const raw = process.env.APP_PUBLIC_URL?.trim();
   if (raw) {
     try {
@@ -43,5 +66,7 @@ export function getPublicAppOrigin(request: Request): string {
       // ignore invalid APP_PUBLIC_URL
     }
   }
+
+  // 4. Final fallback
   return new URL(request.url).origin;
 }

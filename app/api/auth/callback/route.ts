@@ -52,6 +52,9 @@ export async function GET(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    // Clear the SSO probe marker so future cross-site probes work correctly
+    response.cookies.delete('sso_probed');
+
     return response;
   } catch (error) {
     console.error('Casdoor authentication error:', error);

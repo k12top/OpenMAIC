@@ -57,7 +57,20 @@ export function middleware(request: NextRequest) {
         { status: 401 },
       );
     }
-    // Page routes -> redirect to home with login prompt
+    // Page routes -> attempt SSO auto-login or redirect to home
+    // If we haven't probed Casdoor for an existing session yet, redirect to
+    // the login endpoint which will bounce through Casdoor. If the user has an
+    // active Casdoor session, they'll be logged in transparently. The login
+    // route sets a `sso_probed` cookie to prevent infinite redirect loops.
+    const ssoProbed = request.cookies.get('sso_probed')?.value;
+    if (!ssoProbed) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/api/auth/login';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('returnUrl', pathname + (request.nextUrl.search || ''));
+      return NextResponse.redirect(loginUrl);
+    }
+    // Already probed — fall back to home with login prompt
     const url = request.nextUrl.clone();
     url.pathname = '/';
     url.searchParams.set('login', 'required');
