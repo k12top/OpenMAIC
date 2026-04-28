@@ -84,6 +84,7 @@ async function gradeShortAnswerQuestion(
   q: QuizQuestion,
   userAnswer: string,
   language: string,
+  t: any,
 ): Promise<QuestionResult> {
   const pts = q.points ?? 1;
   try {
@@ -126,7 +127,7 @@ async function gradeShortAnswerQuestion(
       correct: null,
       status: 'incorrect',
       earned: Math.round(pts * 0.5),
-      aiComment: t('quiz.gradingFallback'),
+      aiComment: t ? t('quiz.gradingFallback') : 'Grading failed, please try again.',
     };
   }
 }
@@ -749,7 +750,7 @@ export function QuizView({ questions, sceneId }: QuizViewProps) {
       const shortAnswerQs = questions.filter(isShortAnswer);
       const aiResults = await Promise.all(
         shortAnswerQs.map((q) =>
-          gradeShortAnswerQuestion(q, (answers[q.id] as string) ?? '', locale),
+          gradeShortAnswerQuestion(q, (answers[q.id] as string) ?? '', locale, t),
         ),
       );
 

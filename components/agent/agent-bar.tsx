@@ -185,6 +185,7 @@ function AgentVoicePill({
   availableProviders: ProviderWithVoices[];
   disabled?: boolean;
 }) {
+  const { t } = useI18n();
   const updateAgent = useAgentRegistry((s) => s.updateAgent);
   const ttsProvidersConfig = useSettingsStore((s) => s.ttsProvidersConfig);
   const resolved = resolveAgentVoice(agent, agentIndex, availableProviders);
@@ -324,6 +325,7 @@ function AgentVoicePill({
  * Teacher Voice Pill — Global sync
  */
 function TeacherVoicePill({ availableProviders, disabled }: { availableProviders: ProviderWithVoices[]; disabled?: boolean; }) {
+  const { t } = useI18n();
   const ttsProviderId = useSettingsStore((s) => s.ttsProviderId);
   const ttsVoice = useSettingsStore((s) => s.ttsVoice);
   const setTTSProvider = useSettingsStore((s) => s.setTTSProvider);
