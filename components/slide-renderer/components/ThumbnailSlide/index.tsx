@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Slide } from '@/lib/types/slides';
 import { useSlideBackgroundStyle } from '@/lib/hooks/use-slide-background-style';
 import { ThumbnailElement } from './ThumbnailElement';
+import { useI18n } from '@/lib/hooks/use-i18n';
 
 interface ThumbnailSlideProps {
   /** Slide data */
@@ -29,6 +30,7 @@ export function ThumbnailSlide({
   viewportRatio,
   visible = true,
 }: ThumbnailSlideProps) {
+  const { t } = useI18n();
   // Calculate scale ratio
   const scale = useMemo(() => size / viewportSize, [size, viewportSize]);
 
@@ -45,7 +47,7 @@ export function ThumbnailSlide({
         }}
       >
         <div className="placeholder w-full h-full flex justify-center items-center text-gray-400 text-sm">
-          加载中 ...
+          {t('common.loading')}
         </div>
       </div>
     );

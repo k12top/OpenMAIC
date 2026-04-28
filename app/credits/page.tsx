@@ -90,45 +90,45 @@ export default function CreditsPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Coins className="size-5" />
-              <span className="text-sm font-medium opacity-90">Credits Balance</span>
+              <span className="text-sm font-medium opacity-90">{t('credits.balance')}</span>
             </div>
             <button
               onClick={() => router.push('/credits/recharge')}
               className="px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-medium transition-colors"
             >
-              Recharge
+              {t('credits.recharge')}
             </button>
           </div>
           <div className="text-4xl font-bold">
             {loading ? (
               <RefreshCw className="size-6 animate-spin" />
             ) : unlimited ? (
-              <span className="text-2xl">∞ Unlimited</span>
+              <span className="text-2xl">∞ {t('credits.unlimited')}</span>
             ) : (
               balance?.toLocaleString()
             )}
           </div>
           <p className="text-xs opacity-70 mt-1">
             {unlimited
-              ? 'Credits tracking is not enabled (no database configured)'
-              : 'Available credits for AI operations'}
+              ? t('credits.unlimitedDesc')
+              : t('credits.balanceDesc')}
           </p>
         </div>
 
         {/* Transactions */}
         <div className="rounded-2xl border border-border/40 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-border/30">
-            <h2 className="text-sm font-semibold text-foreground">Transaction History</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('credits.history')}</h2>
           </div>
 
           {loading ? (
             <div className="p-8 text-center text-muted-foreground/50">
               <RefreshCw className="size-5 animate-spin mx-auto mb-2" />
-              Loading...
+              {t('credits.loading')}
             </div>
           ) : transactions.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground/50 text-sm">
-              No transactions yet
+              {t('credits.noTransactions')}
             </div>
           ) : (
             <div className="divide-y divide-border/20">
@@ -143,7 +143,7 @@ export default function CreditsPage() {
                     </p>
                     <p className="text-xs text-muted-foreground/60">
                       {formatDate(tx.createdAt)}
-                      {tx.tokenCount > 0 && ` · ${tx.tokenCount.toLocaleString()} tokens`}
+                      {tx.tokenCount > 0 && ` · ${tx.tokenCount.toLocaleString()} ${t('credits.tokens')}`}
                     </p>
                   </div>
                   <span

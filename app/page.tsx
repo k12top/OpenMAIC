@@ -490,7 +490,7 @@ function HomePage() {
             {/* Language Section */}
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                输出语言
+                {t('generation.outputLanguage')}
               </h3>
               <GenerationToolbar
                 layoutMode="left"
@@ -511,7 +511,7 @@ function HomePage() {
             {/* Roles Section */}
             <div className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                课堂角色
+                {t('generation.classroomRoles')}
               </h3>
               <div className="p-3 rounded-xl border border-border/60 bg-slate-50/50 dark:bg-slate-800/50">
                 <AgentBar inline={true} />
@@ -728,7 +728,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
               className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-foreground/80 hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
             >
               <Pencil className="size-3.5" />
-              {t('profile.editNickname') || '修改资料'}
+              {t('profile.editNickname')}
             </button>
             <button
               onClick={async () => {
@@ -738,7 +738,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
               className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all"
             >
               <LogOut className="size-3.5" />
-              {t('home.logout') || '退出登录'}
+              {t('home.logout')}
             </button>
           </div>
         </PopoverContent>
@@ -769,7 +769,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
           )}
           onClick={() => setEditing(true)}
         >
-          {bio || t('profile.defaultBioDesc') || '在这里分享你的学习格言...'}
+          {bio || t('profile.defaultBioDesc')}
         </p>
       </div>
 
@@ -778,7 +778,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
         <DialogContent className="sm:max-w-[425px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black">
-              {t('profile.editProfile') || '编辑个人资料'}
+              {t('profile.editProfile')}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
@@ -807,7 +807,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
 
             <div className="grid gap-2">
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('profile.nickname') || '昵称'}
+                {t('profile.nickname')}
               </label>
               <input
                 value={nicknameDraft}
@@ -818,7 +818,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
             </div>
             <div className="grid gap-2">
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t('profile.bio') || '个人简介'}
+                {t('profile.bio')}
               </label>
               <textarea
                 value={bioDraft}

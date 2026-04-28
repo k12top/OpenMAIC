@@ -22,6 +22,8 @@ import {
 import { ElementOrderCommands, ElementAlignCommands } from '@/lib/types/edit';
 import { useCanvasOperations } from '@/lib/hooks/use-canvas-operations';
 
+import { useI18n } from '@/lib/hooks/use-i18n';
+
 export interface ContextmenuItem {
   text?: string;
   subText?: string;
@@ -51,6 +53,8 @@ export function EditableElement({
   selectElement,
   openLinkDialog,
 }: EditableElementProps) {
+  const { t } = useI18n();
+
   const CurrentElementComponent = useMemo(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- element components have varying prop signatures
     const elementTypeMap: Record<string, any> = {
@@ -86,7 +90,7 @@ export function EditableElement({
     if (elementInfo.lock) {
       return [
         {
-          text: '解锁',
+          text: t('canvas.contextMenu.unlock'),
           handler: () => unlockElement(elementInfo),
         },
       ];
@@ -94,120 +98,120 @@ export function EditableElement({
 
     return [
       {
-        text: '剪切',
+        text: t('canvas.contextMenu.cut'),
         subText: 'Ctrl + X',
         handler: cutElement,
       },
       {
-        text: '复制',
+        text: t('canvas.contextMenu.copy'),
         subText: 'Ctrl + C',
         handler: copyElement,
       },
       {
-        text: '粘贴',
+        text: t('canvas.contextMenu.paste'),
         subText: 'Ctrl + V',
         handler: pasteElement,
       },
       { divider: true },
       {
-        text: '水平居中',
+        text: t('canvas.contextMenu.centerHorizontal'),
         handler: () => alignElementToCanvas(ElementAlignCommands.HORIZONTAL),
         children: [
           {
-            text: '水平垂直居中',
+            text: t('canvas.contextMenu.centerBoth'),
             handler: () => alignElementToCanvas(ElementAlignCommands.CENTER),
           },
           {
-            text: '水平居中',
+            text: t('canvas.contextMenu.centerHorizontal'),
             handler: () => alignElementToCanvas(ElementAlignCommands.HORIZONTAL),
           },
           {
-            text: '左对齐',
+            text: t('canvas.contextMenu.alignLeft'),
             handler: () => alignElementToCanvas(ElementAlignCommands.LEFT),
           },
           {
-            text: '右对齐',
+            text: t('canvas.contextMenu.alignRight'),
             handler: () => alignElementToCanvas(ElementAlignCommands.RIGHT),
           },
         ],
       },
       {
-        text: '垂直居中',
+        text: t('canvas.contextMenu.centerVertical'),
         handler: () => alignElementToCanvas(ElementAlignCommands.VERTICAL),
         children: [
           {
-            text: '水平垂直居中',
+            text: t('canvas.contextMenu.centerBoth'),
             handler: () => alignElementToCanvas(ElementAlignCommands.CENTER),
           },
           {
-            text: '垂直居中',
+            text: t('canvas.contextMenu.centerVertical'),
             handler: () => alignElementToCanvas(ElementAlignCommands.VERTICAL),
           },
           {
-            text: '顶部对齐',
+            text: t('canvas.contextMenu.alignTop'),
             handler: () => alignElementToCanvas(ElementAlignCommands.TOP),
           },
           {
-            text: '底部对齐',
+            text: t('canvas.contextMenu.alignBottom'),
             handler: () => alignElementToCanvas(ElementAlignCommands.BOTTOM),
           },
         ],
       },
       { divider: true },
       {
-        text: '置于顶层',
+        text: t('canvas.contextMenu.bringToFront'),
         disable: isMultiSelect && !elementInfo.groupId,
         handler: () => orderElement(elementInfo, ElementOrderCommands.TOP),
         children: [
           {
-            text: '置于顶层',
+            text: t('canvas.contextMenu.bringToFront'),
             handler: () => orderElement(elementInfo, ElementOrderCommands.TOP),
           },
           {
-            text: '上移一层',
+            text: t('canvas.contextMenu.bringForward'),
             handler: () => orderElement(elementInfo, ElementOrderCommands.UP),
           },
         ],
       },
       {
-        text: '置于底层',
+        text: t('canvas.contextMenu.sendToBack'),
         disable: isMultiSelect && !elementInfo.groupId,
         handler: () => orderElement(elementInfo, ElementOrderCommands.BOTTOM),
         children: [
           {
-            text: '置于底层',
+            text: t('canvas.contextMenu.sendToBack'),
             handler: () => orderElement(elementInfo, ElementOrderCommands.BOTTOM),
           },
           {
-            text: '下移一层',
+            text: t('canvas.contextMenu.sendBackward'),
             handler: () => orderElement(elementInfo, ElementOrderCommands.DOWN),
           },
         ],
       },
       { divider: true },
       {
-        text: '设置链接',
+        text: t('canvas.contextMenu.setLink'),
         handler: openLinkDialog,
         disable: true,
       },
       {
-        text: elementInfo.groupId ? '取消组合' : '组合',
+        text: elementInfo.groupId ? t('canvas.contextMenu.ungroup') : t('canvas.contextMenu.group'),
         subText: 'Ctrl + G',
         handler: elementInfo.groupId ? uncombineElements : combineElements,
         hide: !isMultiSelect,
       },
       {
-        text: '全选',
+        text: t('canvas.contextMenu.selectAll'),
         subText: 'Ctrl + A',
         handler: selectAllElements,
       },
       {
-        text: '锁定',
+        text: t('canvas.contextMenu.lock'),
         subText: 'Ctrl + L',
         handler: lockElement,
       },
       {
-        text: '删除',
+        text: t('canvas.contextMenu.delete'),
         subText: 'Delete',
         handler: deleteElement,
       },

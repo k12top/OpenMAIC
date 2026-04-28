@@ -59,28 +59,6 @@ const VIDEO_PROVIDER_ICONS: Record<string, string> = {
 
 type TabId = 'image' | 'video' | 'tts' | 'asr';
 
-const LANG_LABELS: Record<string, string> = {
-  zh: '中文',
-  en: 'English',
-  ja: '日本語',
-  ko: '한국어',
-  fr: 'Français',
-  de: 'Deutsch',
-  es: 'Español',
-  pt: 'Português',
-  ru: 'Русский',
-  it: 'Italiano',
-  ar: 'العربية',
-  hi: 'हिन्दी',
-};
-
-const TABS: Array<{ id: TabId; icon: LucideIcon; label: string }> = [
-  { id: 'image', icon: ImageIcon, label: 'Image' },
-  { id: 'video', icon: Video, label: 'Video' },
-  { id: 'tts', icon: Volume2, label: 'TTS' },
-  { id: 'asr', icon: Mic, label: 'ASR' },
-];
-
 /** Localized TTS provider name (mirrors audio-settings.tsx) */
 function getTTSProviderName(providerId: TTSProviderId, t: (key: string) => string): string {
   const names: Record<TTSProviderId, string> = {
@@ -110,6 +88,28 @@ export function MediaPopover({ onSettingsOpen }: MediaPopoverProps) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('image');
   const { previewing, startPreview, stopPreview } = useTTSPreview();
+
+  const LANG_LABELS: Record<string, string> = {
+    zh: t('media.languages.zh'),
+    en: t('media.languages.en'),
+    ja: t('media.languages.ja'),
+    ko: t('media.languages.ko'),
+    fr: t('media.languages.fr'),
+    de: t('media.languages.de'),
+    es: t('media.languages.es'),
+    pt: t('media.languages.pt'),
+    ru: t('media.languages.ru'),
+    it: t('media.languages.it'),
+    ar: t('media.languages.ar'),
+    hi: t('media.languages.hi'),
+  };
+
+  const TABS: Array<{ id: TabId; icon: LucideIcon; label: string }> = [
+    { id: 'image', icon: ImageIcon, label: t('media.tabImage') },
+    { id: 'video', icon: Video, label: t('media.tabVideo') },
+    { id: 'tts', icon: Volume2, label: t('media.tabTTS') },
+    { id: 'asr', icon: Mic, label: t('media.tabASR') },
+  ];
 
   // ─── Store ───
   const imageGenerationEnabled = useSettingsStore((s) => s.imageGenerationEnabled);
@@ -269,7 +269,7 @@ export function MediaPopover({ onSettingsOpen }: MediaPopoverProps) {
     try {
       const providerConfig = ttsProvidersConfig[ttsProviderId];
       await startPreview({
-        text: t('settings.ttsTestTextDefault'),
+        text: t('media.voicePreviewText') || t('settings.ttsTestTextDefault'),
         providerId: ttsProviderId,
         modelId: providerConfig?.modelId,
         voice: ttsVoice,

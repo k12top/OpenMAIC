@@ -44,7 +44,7 @@ const SLIDE_ACTIONS = ['spotlight', 'laser', 'play_video'];
 const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   'default-1': {
     id: 'default-1',
-    name: '王老师',
+    name: '林老师',
     role: 'teacher',
     persona: `You are the lead teacher of this classroom. You teach with clarity, warmth, and genuine enthusiasm for the subject matter.
 
@@ -232,7 +232,7 @@ export const useAgentRegistry = create<AgentRegistryState>()(
     }),
     {
       name: 'agent-registry-storage',
-      version: 11, // Bumped: add voiceOverrides field to AgentConfig
+      version: 12, // Bumped: rename teacher 王老师 → 林老师
       migrate: (persistedState: unknown) => persistedState,
       // Merge persisted state with default agents
       // Default agents always use code-defined values (not cached)

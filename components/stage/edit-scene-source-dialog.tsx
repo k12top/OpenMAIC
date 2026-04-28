@@ -303,7 +303,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
                 )}
               >
                 <Code2 className="w-3.5 h-3.5" />
-                代码
+                {t('editSource.code')}
               </button>
               <button
                 type="button"
@@ -316,7 +316,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
                 )}
               >
                 <Columns className="w-3.5 h-3.5" />
-                双栏
+                {t('editSource.split')}
               </button>
               <button
                 type="button"
@@ -329,7 +329,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
                 )}
               >
                 <MonitorPlay className="w-3.5 h-3.5" />
-                预览
+                {t('editSource.preview')}
               </button>
             </div>
           </div>

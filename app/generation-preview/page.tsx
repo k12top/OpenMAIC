@@ -1178,8 +1178,8 @@ function GenerationPreviewContent() {
                 <div className="size-32 rounded-full bg-red-500/10 flex items-center justify-center border-2 border-red-500/20 shadow-[0_0_40px_rgba(239,68,68,0.2)] mb-6">
                   <AlertCircle className="size-16 text-red-500" />
                 </div>
-                <h3 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Process Halted</h3>
-                <p className="text-muted-foreground max-w-md">An error occurred during generation. Check the sidebar for details.</p>
+                <h3 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">{t('generation.processHalted')}</h3>
+                <p className="text-muted-foreground max-w-md">{t('generation.processHaltedDesc')}</p>
               </motion.div>
             ) : isComplete ? (
               <motion.div
@@ -1192,8 +1192,8 @@ function GenerationPreviewContent() {
                 <div className="size-32 rounded-full bg-green-500/10 flex items-center justify-center border-2 border-green-500/20 shadow-[0_0_40px_rgba(34,197,94,0.2)] mb-6">
                   <CheckCircle2 className="size-16 text-green-500" />
                 </div>
-                <h3 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">Ready to Launch</h3>
-                <p className="text-muted-foreground max-w-md">Your interactive classroom is ready. Redirecting you to the editor shortly.</p>
+                <h3 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">{t('generation.readyToLaunch')}</h3>
+                <p className="text-muted-foreground max-w-md">{t('generation.readyToLaunchDesc')}</p>
               </motion.div>
             ) : (
               <motion.div

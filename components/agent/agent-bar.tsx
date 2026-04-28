@@ -33,9 +33,9 @@ import type { ProviderWithVoices } from '@/lib/audio/voice-resolver';
 function RoleBadge({ role }: { role: string }) {
   const { t } = useI18n();
   const getLabel = () => {
-    if (role === 'teacher') return t('settings.agentRoles.teacher') || '教师';
-    if (role === 'assistant') return t('settings.agentRoles.assistant') || '助教';
-    return t('settings.agentRoles.student') || '学生';
+    if (role === 'teacher') return t('settings.agentRoles.teacher') || 'Teacher';
+    if (role === 'assistant') return t('settings.agentRoles.assistant') || 'Assistant';
+    return t('settings.agentRoles.student') || 'Student';
   };
 
   return (
@@ -135,7 +135,7 @@ function VoiceSelectorContent({
       <div className="px-2 py-2 mb-1 border-b border-border/40">
         <h4 className="text-[13px] font-bold text-foreground flex items-center gap-2">
           <Volume2 className="size-3.5 text-primary" />
-          {t('toolbar.voiceSettings') || '选择音色'}
+          {t('toolbar.voiceSettings') || 'Voice Settings'}
         </h4>
       </div>
       {availableProviders.map((provider) =>
@@ -230,7 +230,7 @@ function AgentVoicePill({
       const courseLanguage =
         (typeof localStorage !== 'undefined' && localStorage.getItem('generationLanguage')) ||
         'zh-CN';
-      const previewText = courseLanguage === 'en-US' ? 'Welcome to AI Classroom' : '欢迎来到AI课堂';
+      const previewText = courseLanguage === 'en-US' ? 'Welcome to AI Classroom' : t('agentBar.readyToLearn');
 
       if (providerId === 'browser-native-tts') {
         const { promise, cancel } = playBrowserTTSPreview({ text: previewText, voice: voiceId });
@@ -370,7 +370,7 @@ function TeacherVoicePill({ availableProviders, disabled }: { availableProviders
       setPreviewingId(key);
 
       const courseLanguage = (typeof localStorage !== 'undefined' && localStorage.getItem('generationLanguage')) || 'zh-CN';
-      const previewText = courseLanguage === 'en-US' ? 'Welcome to AI Classroom' : '欢迎来到AI课堂';
+      const previewText = courseLanguage === 'en-US' ? 'Welcome to AI Classroom' : t('agentBar.readyToLearn');
 
       if (providerId === 'browser-native-tts') {
         const { promise, cancel } = playBrowserTTSPreview({ text: previewText, voice: voiceId });
@@ -567,7 +567,7 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
           )}
         >
           <Users className="size-3.5" />
-          {t('settings.agentModePreset') || '预设角色'}
+          {t('settings.agentModePreset') || 'Preset'}
         </button>
         <button
           onClick={() => handleModeChange('auto')}
@@ -577,7 +577,7 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
           )}
         >
           <Sparkles className="size-3.5" />
-          {t('settings.agentModeAuto') || '自动配置'}
+          {t('settings.agentModeAuto') || 'Auto'}
         </button>
       </div>
 
@@ -657,10 +657,10 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
               </div>
             </div>
             <h5 className="text-[14px] font-bold text-violet-600 dark:text-violet-400 mb-1 flex items-center justify-center gap-2">
-              <Sparkles className="size-3.5" /> 智能模式开启
+              <Sparkles className="size-3.5" /> {t('agentBar.smartModeOn')}
             </h5>
             <p className="text-[11px] text-muted-foreground/80 leading-relaxed max-w-[240px]">
-              系统将根据输入的课程内容，自动为您匹配最合适的助教与学伴组合。
+              {t('agentBar.smartModeDesc')}
             </p>
             <div className="mt-4 px-3 py-1.5 rounded-full bg-violet-500/5 border border-violet-500/10 text-[10px] text-violet-500 font-bold uppercase tracking-widest">
               Dynamic orchestration
@@ -690,19 +690,19 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
                <img src={teacherAgent?.avatar} alt="" className="size-full object-cover" />
             </div>
             <div className="hidden sm:flex flex-col items-start leading-tight min-w-[70px]">
-               <span className="text-[11px] font-bold truncate">
-                 {open ? '正在设置' : (teacherAgent?.name || '教师设置')}
-               </span>
-               <span className={cn("text-[9px] font-medium opacity-60", !open && "text-primary/80")}>
-                 {agentMode === 'auto' ? '自动编排中' : `已选 ${selectedAgentIds.length} 位角色`}
-               </span>
+             <span className="text-[11px] font-bold truncate">
+               {open ? t('agentBar.settingUp') : (teacherAgent?.name || t('agentBar.teacherSettings'))}
+             </span>
+             <span className={cn("text-[9px] font-medium opacity-60", !open && "text-primary/80")}>
+               {agentMode === 'auto' ? t('agentBar.autoOrchestrating') : t('agentBar.rolesSelected', { count: selectedAgentIds.length })}
+             </span>
             </div>
             <div className={cn("size-6 rounded-full flex items-center justify-center transition-transform duration-300 bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700", open && "rotate-180 bg-white/20 dark:bg-slate-900/10")}>
                <ChevronDown className="size-3.5" />
             </div>
           </button>
         </TooltipTrigger>
-        {!open && <TooltipContent side="bottom" sideOffset={8}>配置课堂角色与音色</TooltipContent>}
+        {!open && <TooltipContent side="bottom" sideOffset={8}>{t('agentBar.configTooltip')}</TooltipContent>}
       </Tooltip>
 
       <AnimatePresence>

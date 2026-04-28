@@ -127,7 +127,15 @@
     "configTooltip": "点击配置课堂角色",
     "voiceLabel": "音色",
     "voiceLoading": "加载中...",
-    "voiceAutoAssign": "音色将自动分配"
+    "voiceAutoAssign": "音色将自动分配",
+    "smartModeOn": "智能模式开启",
+    "smartModeDesc": "系统将根据输入的课程内容，自动为您匹配最合适的助教与学伴组合。",
+    "settingUp": "正在设置",
+    "autoOrchestrating": "自动编排中",
+    "rolesSelected": "已选 {{count}} 位角色",
+    "configTooltip": "配置课堂角色与音色",
+    "dynamicOrchestration": "动态编排",
+    "teacherSettings": "教师设置"
   },
   "proactiveCard": {
     "discussion": "讨论",
@@ -222,7 +230,8 @@
     "aiGrading": "AI 正在批改中...",
     "aiGradingWait": "请稍候，正在分析你的答案",
     "quizReport": "答题报告",
-    "retry": "重新答题"
+    "retry": "重新答题",
+    "gradingFallback": "评分服务暂时不可用，已给予基础分。"
   },
   "roundtable": {
     "teacher": "教师",
@@ -375,7 +384,13 @@
     "webSearchFailed": "网络搜索失败",
     "insufficientCreditsTitle": "积分不足",
     "insufficientCreditsDesc": "您的积分已用完，请前往充值后再继续生成。",
-    "goToRecharge": "前往充值"
+    "goToRecharge": "前往充值",
+    "outputLanguage": "输出语言",
+    "classroomRoles": "课堂角色",
+    "processHalted": "生成中断",
+    "processHaltedDesc": "生成过程中出现错误，请检查侧边栏了解详情。",
+    "readyToLaunch": "生成完成",
+    "readyToLaunchDesc": "您的互动课堂已准备就绪，即将为您跳转到编辑器。"
   },
   "settings": {
     "title": "设置",
@@ -432,7 +447,7 @@
     "selectedAgents": "选中的智能体",
     "required": "必选",
     "agentNames": {
-      "default-1": "王老师",
+      "default-1": "林老师",
       "default-2": "张助教",
       "default-3": "李同学",
       "default-4": "好奇宝宝",
@@ -945,6 +960,141 @@
     "model": "模型",
     "voice": "音色",
     "speed": "语速",
-    "language": "语言"
+    "language": "语言",
+    "tabImage": "图片",
+    "tabVideo": "视频",
+    "tabTTS": "语音",
+    "tabASR": "录音",
+    "languages": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "fr": "Français",
+      "de": "Deutsch",
+      "es": "Español",
+      "pt": "Português",
+      "ru": "Русский",
+      "it": "Italiano",
+      "ar": "العربية",
+      "hi": "हिन्दी"
+    }
+  },
+  "outlinesEditor": {
+    "title": "场景大纲",
+    "description": "共 {{count}} 个场景，可编辑、添加、删除或重排序",
+    "addScene": "添加场景",
+    "sceneTitlePlaceholder": "场景标题",
+    "sceneType": {
+      "slide": "幻灯片",
+      "quiz": "测验"
+    },
+    "sceneDescriptionLabel": "场景描述",
+    "sceneDescriptionPlaceholder": "简短描述这个场景的目的和内容",
+    "keyPointsLabel": "关键要点（每行一个）",
+    "keyPointsPlaceholder": "输入关键要点，每行一个",
+    "quizConfig": {
+      "title": "测验配置",
+      "questionCount": "题目数量",
+      "difficulty": "难度",
+      "difficultyLevel": {
+        "easy": "简单",
+        "medium": "中等",
+        "hard": "困难"
+      },
+      "questionType": "题型",
+      "questionTypeType": {
+        "single": "单选",
+        "multiple": "多选",
+        "text": "简答"
+      }
+    },
+    "empty": "暂无场景大纲",
+    "addFirst": "添加第一个场景",
+    "back": "返回修改需求",
+    "confirm": "确认并生成课程"
+  },
+  "canvas": {
+    "contextMenu": {
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "ruler": "标尺",
+      "gridLine": "网格线",
+      "gridSize": {
+        "none": "无",
+        "small": "小",
+        "medium": "中",
+        "large": "大"
+      },
+      "resetPage": "重置当前页",
+      "unlock": "解锁",
+      "cut": "剪切",
+      "copy": "复制",
+      "centerHorizontal": "水平居中",
+      "centerVertical": "垂直居中",
+      "centerBoth": "水平垂直居中",
+      "alignLeft": "左对齐",
+      "alignRight": "右对齐",
+      "alignTop": "顶部对齐",
+      "alignBottom": "底部对齐",
+      "bringToFront": "置于顶层",
+      "sendToBack": "置于底层",
+      "bringForward": "上移一层",
+      "sendBackward": "下移一层",
+      "group": "组合",
+      "ungroup": "取消组合",
+      "lock": "锁定",
+      "setLink": "设置链接",
+      "delete": "删除"
+    }
+  },
+  "profile": {
+    "editNickname": "修改资料",
+    "defaultBioDesc": "在这里分享你的学习格言...",
+    "editProfile": "编辑个人资料",
+    "nickname": "昵称",
+    "bio": "个人简介"
+  },
+  "credits": {
+    "insufficient": "积分不足",
+    "recharge": "充值",
+    "dialogTitle": "积分不足",
+    "dialogDesc": "您的积分已用完，请前往充值后再继续生成。",
+    "title": "我的积分",
+    "history": "交易记录",
+    "balance": "积分余额",
+    "unlimited": "无限额度",
+    "unlimitedDesc": "积分跟踪未开启（未配置数据库）",
+    "balanceDesc": "可用于AI操作的积分",
+    "noTransactions": "暂无记录",
+    "loading": "加载中...",
+    "tokens": "tokens",
+    "rechargeTitle": "积分充值",
+    "comingSoon": "即将推出",
+    "rechargeDesc": "充值功能正在开发中。未来您可以购买积分，以继续使用AI辅助生成、语音合成、图像生成等功能。",
+    "popular": "最热门",
+    "paymentComingSoon": "支付功能即将上线",
+    "backToCredits": "返回积分"
+  },
+  "agentConfig": {
+    "title": "智能体配置",
+    "description": "管理课堂讨论的AI智能体",
+    "newAgent": "新建",
+    "deleteConfirm": "确定要删除这个智能体吗？",
+    "priority": "优先级 {{priority}}",
+    "default": "默认",
+    "persona": "能力描述",
+    "allowedActions": "可用动作 ({{count}})",
+    "edit": "编辑",
+    "empty": "还没有配置智能体",
+    "createFirst": "创建第一个智能体"
+  },
+  "editSource": {
+    "code": "代码",
+    "split": "双栏",
+    "preview": "预览"
+  },
+  "common": {
+    "loading": "加载中..."
   }
 }

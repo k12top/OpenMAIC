@@ -2,10 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowLeft, CreditCard, Sparkles } from 'lucide-react';
+import { CreditCard, Sparkles, ArrowLeft } from 'lucide-react';
 import { BRAND_NAME } from '@/lib/constants/brand';
+import { useI18n } from '@/lib/hooks/use-i18n';
 
 export default function RechargePage() {
+  const { t } = useI18n();
   const router = useRouter();
 
   return (
@@ -16,7 +18,7 @@ export default function RechargePage() {
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="size-4" />
-          Back to Credits
+          {t('credits.backToCredits')}
         </button>
       </div>
 
@@ -31,20 +33,18 @@ export default function RechargePage() {
           </div>
 
           <h1 className="text-2xl font-semibold text-foreground mb-3">
-            Credits Recharge
+            {t('credits.rechargeTitle')}
           </h1>
 
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/40 mb-6">
             <Sparkles className="size-3.5 text-amber-600 dark:text-amber-400" />
             <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
-              Coming Soon
+              {t('credits.comingSoon')}
             </span>
           </div>
 
           <p className="text-sm text-muted-foreground/70 max-w-md mx-auto leading-relaxed mb-8">
-            The recharge feature is under development. You will be able to purchase
-            credits to continue using AI-powered courseware generation, TTS, image
-            generation, and more.
+            {t('credits.rechargeDesc')}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -63,11 +63,11 @@ export default function RechargePage() {
               >
                 {plan.popular && (
                   <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-violet-500 text-white text-[10px] font-medium">
-                    Popular
+                    {t('credits.popular')}
                   </span>
                 )}
                 <p className="text-2xl font-bold text-foreground">{plan.credits}</p>
-                <p className="text-xs text-muted-foreground mb-3">credits</p>
+                <p className="text-xs text-muted-foreground mb-3">{t('credits.tokens')}</p>
                 <p className="text-sm font-semibold text-foreground">{plan.price}</p>
               </div>
             ))}
@@ -77,7 +77,7 @@ export default function RechargePage() {
             disabled
             className="px-6 py-2.5 rounded-xl bg-muted text-muted-foreground/50 font-medium cursor-not-allowed"
           >
-            Payment Coming Soon
+            {t('credits.paymentComingSoon')}
           </button>
         </div>
       </motion.div>

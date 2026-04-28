@@ -29,6 +29,7 @@ import type { AlignmentLineProps } from '@/lib/types/edit';
 import type { ContextmenuItem } from './EditableElement';
 import type { SlideContent } from '@/lib/types/stage';
 import { useCanvasOperations } from '@/lib/hooks/use-canvas-operations';
+import { useI18n } from '@/lib/hooks/use-i18n';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -171,53 +172,54 @@ export function Canvas(_props: CanvasProps) {
     setLinkDialogVisible(true);
   };
 
+  const { t } = useI18n();
   const { pasteElement, selectAllElements, deleteAllElements } = useCanvasOperations();
 
   const contextmenus = (): ContextmenuItem[] => {
     return [
       {
-        text: '粘贴',
+        text: t('canvas.contextMenu.paste'),
         subText: 'Ctrl + V',
         handler: pasteElement,
       },
       {
-        text: '全选',
+        text: t('canvas.contextMenu.selectAll'),
         subText: 'Ctrl + A',
         handler: selectAllElements,
       },
       {
-        text: '标尺',
+        text: t('canvas.contextMenu.ruler'),
         subText: showRuler ? '√' : '',
         handler: () => setRulerState(!showRuler),
       },
       {
-        text: '网格线',
+        text: t('canvas.contextMenu.gridLine'),
         handler: () => setGridLineSize(gridLineSize ? 0 : 50),
         children: [
           {
-            text: '无',
+            text: t('canvas.contextMenu.gridSize.none'),
             subText: gridLineSize === 0 ? '√' : '',
             handler: () => setGridLineSize(0),
           },
           {
-            text: '小',
+            text: t('canvas.contextMenu.gridSize.small'),
             subText: gridLineSize === 25 ? '√' : '',
             handler: () => setGridLineSize(25),
           },
           {
-            text: '中',
+            text: t('canvas.contextMenu.gridSize.medium'),
             subText: gridLineSize === 50 ? '√' : '',
             handler: () => setGridLineSize(50),
           },
           {
-            text: '大',
+            text: t('canvas.contextMenu.gridSize.large'),
             subText: gridLineSize === 100 ? '√' : '',
             handler: () => setGridLineSize(100),
           },
         ],
       },
       {
-        text: '重置当前页',
+        text: t('canvas.contextMenu.resetPage'),
         handler: deleteAllElements,
       },
     ];

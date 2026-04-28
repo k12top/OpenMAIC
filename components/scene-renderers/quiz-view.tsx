@@ -126,10 +126,7 @@ async function gradeShortAnswerQuestion(
       correct: null,
       status: 'incorrect',
       earned: Math.round(pts * 0.5),
-      aiComment:
-        language?.startsWith('zh')
-          ? '评分服务暂时不可用，已给予基础分。'
-          : 'Grading service unavailable. Base score given.',
+      aiComment: t('quiz.gradingFallback'),
     };
   }
 }
