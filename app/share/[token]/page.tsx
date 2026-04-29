@@ -113,24 +113,6 @@ function DirectClassroomView({
           ? Copy
           : Lock;
 
-  const modeLabel =
-    mode === 'public'
-      ? 'Public View'
-      : mode === 'readonly'
-        ? 'Read Only'
-        : mode === 'editable'
-          ? 'Editable'
-          : 'SSO (Signed-in only)';
-
-  const modeHint =
-    mode === 'editable'
-      ? authenticated
-        ? 'You can copy this classroom to your account to edit it.'
-        : 'Sign in to copy this classroom to your account and edit it.'
-      : mode === 'sso'
-        ? 'Access restricted to signed-in members of this organization.'
-        : null;
-
   return (
     <ThemeProvider>
       <MediaStageProvider value={classroom.id}>
@@ -145,10 +127,6 @@ function DirectClassroomView({
             <div className="flex items-center gap-2 min-w-0">
               <BannerIcon className="size-3.5 shrink-0" />
               <span className="font-medium truncate">{classroom.title}</span>
-              <span className="opacity-60 shrink-0">· {modeLabel}</span>
-              {modeHint && (
-                <span className="opacity-75 truncate hidden sm:inline">— {modeHint}</span>
-              )}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -180,7 +158,7 @@ function DirectClassroomView({
           </div>
 
           <div className="flex-1 flex flex-col overflow-hidden relative" ref={stageContainerRef}>
-            <Stage autoPlayOnMount={true} />
+            <Stage autoPlayOnMount={false} />
           </div>
         </div>
       </MediaStageProvider>

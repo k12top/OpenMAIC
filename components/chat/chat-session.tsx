@@ -163,6 +163,7 @@ export function ChatSessionComponent({
 }: ChatSessionProps) {
   const { t } = useI18n();
   const userProfileAvatar = useUserProfileStore((s) => s.avatar);
+  const userProfileNickname = useUserProfileStore((s) => s.nickname);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const activeBubbleRef = useRef<HTMLDivElement>(null);
@@ -298,10 +299,16 @@ export function ChatSessionComponent({
                   )}
                 >
                   {(() => {
+                    if (isUser) {
+                      return userProfileNickname || t('common.you');
+                    }
                     const agentId = message.metadata?.agentId;
                     if (agentId) {
                       const i18nName = t(`settings.agentNames.${agentId}`);
                       if (i18nName !== `settings.agentNames.${agentId}`) return i18nName;
+                    }
+                    if (message.metadata?.senderName === 'common.you') {
+                      return t('common.you');
                     }
                     return message.metadata?.senderName || t('chat.unknown');
                   })()}

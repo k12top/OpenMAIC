@@ -1002,7 +1002,7 @@ export function useChatSessions(options: UseChatSessionsOptions = {}) {
         role: 'user',
         parts: [{ type: 'text', text: content }],
         metadata: {
-          senderName: t('common.you'),
+          senderName: 'common.you',
           senderAvatar: USER_AVATAR,
           originalRole: 'user',
           createdAt: now,
