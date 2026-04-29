@@ -207,7 +207,7 @@
     "incorrect": "不正解",
     "answering": "回答中",
     "submitAnswers": "回答を提出",
-    "aiGrading": "AIが採点中...",
+    "aiGrading": "採点中...",
     "aiGradingWait": "回答を分析しています。お待ちください",
     "quizReport": "クイズレポート",
     "retry": "やり直す"
