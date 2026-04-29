@@ -10,14 +10,15 @@ import { PBLRenderer } from '../scene-renderers/pbl-renderer';
 interface SceneRendererProps {
   readonly scene: Scene;
   readonly mode: StageMode;
+  readonly isPreview?: boolean;
 }
 
-export function SceneRenderer({ scene, mode }: SceneRendererProps) {
+export function SceneRenderer({ scene, mode, isPreview = false }: SceneRendererProps) {
   const renderer = useMemo(() => {
     switch (scene.type) {
       case 'slide':
         if (scene.content.type !== 'slide') return <div>Invalid slide content</div>;
-        return <SlideRenderer mode={mode} />;
+        return <SlideRenderer mode={mode} isPreview={isPreview} />;
       case 'quiz':
         if (scene.content.type !== 'quiz') return <div>Invalid quiz content</div>;
         return <QuizView key={scene.id} questions={scene.content.questions} sceneId={scene.id} />;

@@ -15,15 +15,14 @@ import { useViewportSize } from './Canvas/hooks/useViewportSize';
 import { useRef, useMemo } from 'react';
 import { AnimatePresence } from 'motion/react';
 
-export function ScreenCanvas() {
-  const canvasScale = useCanvasStore.use.canvasScale();
+export function ScreenCanvas({ isPreview = false }: { isPreview?: boolean }) {
   const elements = useSceneSelector<SlideContent, PPTElement[]>(
     (content) => content.canvas.elements,
   );
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Viewport size and positioning
-  const { viewportStyles } = useViewportSize(canvasRef);
+  const { viewportStyles, canvasScale } = useViewportSize(canvasRef, isPreview);
 
   // Get background style
   const background = useSceneSelector<SlideContent, SlideBackground | undefined>(
