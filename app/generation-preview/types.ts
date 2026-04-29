@@ -25,6 +25,9 @@ export interface GenerationSessionState {
   // Web search context
   researchContext?: string;
   researchSources?: Array<{ title: string; url: string }>;
+  // Outline confirmation: when true, generation pauses after outlines stream
+  // for user review/edit before continuing to slide-content.
+  outlineConfirmEnabled?: boolean;
 }
 
 export type GenerationStep = {

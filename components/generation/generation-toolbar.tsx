@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Bot, Check, ChevronLeft, ChevronDown, Globe, Paperclip, FileText, X, Globe2 } from 'lucide-react';
+import { Bot, Check, ChevronLeft, ChevronDown, Globe, ListChecks, Paperclip, FileText, X, Globe2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -46,6 +46,8 @@ export interface GenerationToolbarProps {
   onLanguageChange: (lang: string) => void;
   webSearch: boolean;
   onWebSearchChange: (v: boolean) => void;
+  outlineConfirm: boolean;
+  onOutlineConfirmChange: (v: boolean) => void;
   onSettingsOpen: (section?: SettingsSection) => void;
   // PDF
   pdfFile: File | null;
@@ -61,6 +63,8 @@ export function GenerationToolbar({
   onLanguageChange,
   webSearch,
   onWebSearchChange,
+  outlineConfirm,
+  onOutlineConfirmChange,
   onSettingsOpen,
   pdfFile,
   onPdfFileChange,
@@ -315,6 +319,24 @@ export function GenerationToolbar({
           </TooltipTrigger>
           <TooltipContent>
             {webSearch ? t('toolbar.webSearchOn') : t('toolbar.webSearchOff')}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Outline confirm toggle (Bottom / All) */}
+      {(layoutMode === 'all' || layoutMode === 'bottom') && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={outlineConfirm ? pillActive : pillMuted}
+              onClick={() => onOutlineConfirmChange(!outlineConfirm)}
+              aria-pressed={outlineConfirm}
+            >
+              <ListChecks className={cn('size-3.5', outlineConfirm && 'animate-pulse')} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {outlineConfirm ? t('toolbar.outlineConfirmOn') : t('toolbar.outlineConfirmOff')}
           </TooltipContent>
         </Tooltip>
       )}

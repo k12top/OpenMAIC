@@ -114,13 +114,24 @@ export async function POST(req: NextRequest) {
       return apiError('MISSING_REQUIRED_FIELD', 400, 'Requirements are required');
     }
 
-    const { requirements, pdfText, pdfImages, imageMapping, researchContext, agents } = body as {
+    const {
+      requirements,
+      pdfText,
+      pdfImages,
+      imageMapping,
+      researchContext,
+      agents,
+      userFeedback,
+      previousOutlines,
+    } = body as {
       requirements: UserRequirements;
       pdfText?: string;
       pdfImages?: PdfImage[];
       imageMapping?: ImageMapping;
       researchContext?: string;
       agents?: AgentInfo[];
+      userFeedback?: string;
+      previousOutlines?: SceneOutline[];
     };
     requirementSnippet = requirements?.requirement?.substring(0, 60);
 
@@ -180,6 +191,19 @@ export async function POST(req: NextRequest) {
     // Build teacher context from agents (if available)
     const teacherContext = formatTeacherPersonaForPrompt(agents);
 
+    // Build revision instructions when the user is asking to regenerate with feedback.
+    // Empty string means "first generation" — template will render no extra section.
+    let revisionInstructions = '';
+    const trimmedFeedback = userFeedback?.trim();
+    if (trimmedFeedback || (previousOutlines && previousOutlines.length > 0)) {
+      const previousJson = previousOutlines
+        ? JSON.stringify(previousOutlines, null, 2)
+        : '[]';
+      revisionInstructions = isChinese
+        ? `\n## 上一版课程大纲（用户已经看过并希望修订）\n\n\`\`\`json\n${previousJson}\n\`\`\`\n\n## 用户修订反馈\n\n${trimmedFeedback || '（用户未填写具体反馈，请基于上一版做整体优化）'}\n\n请按反馈修订大纲，保留用户没有提出意见的场景；输出格式与首次生成完全一致。\n`
+        : `\n## Previous Outline Draft (the user already saw this and asked for revisions)\n\n\`\`\`json\n${previousJson}\n\`\`\`\n\n## User Revision Feedback\n\n${trimmedFeedback || '(No specific feedback — improve the overall structure.)'}\n\nPlease revise the outline accordingly. Preserve scenes the user did not complain about. Use the same JSON output format as a first-time generation.\n`;
+    }
+
     const prompts = buildPrompt(PROMPT_IDS.REQUIREMENTS_TO_OUTLINES, {
       requirement: requirements.requirement,
       language: requirements.language,
@@ -192,6 +216,7 @@ export async function POST(req: NextRequest) {
       researchContext: researchContext || (isChinese ? '无' : 'None'),
       mediaGenerationPolicy,
       teacherContext,
+      revisionInstructions,
     });
 
     if (!prompts) {

@@ -63,6 +63,7 @@ import { BRAND_NAME } from '@/lib/constants/brand';
 const log = createLogger('Home');
 
 const WEB_SEARCH_STORAGE_KEY = 'webSearchEnabled';
+const OUTLINE_CONFIRM_STORAGE_KEY = 'outlineConfirmEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
 
@@ -71,6 +72,7 @@ interface FormState {
   requirement: string;
   language: string;
   webSearch: boolean;
+  outlineConfirm: boolean;
 }
 
 const initialFormState: FormState = {
@@ -78,6 +80,7 @@ const initialFormState: FormState = {
   requirement: '',
   language: 'zh-CN',
   webSearch: false,
+  outlineConfirm: true,
 };
 
 function HomePage() {
@@ -132,9 +135,16 @@ function HomePage() {
     }
     try {
       const savedWebSearch = localStorage.getItem(WEB_SEARCH_STORAGE_KEY);
+      const savedOutlineConfirm = localStorage.getItem(OUTLINE_CONFIRM_STORAGE_KEY);
       const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       const updates: Partial<FormState> = {};
       if (savedWebSearch === 'true') updates.webSearch = true;
+      // Outline confirm: per-task value falls back to global persisted setting (default true).
+      if (savedOutlineConfirm !== null) {
+        updates.outlineConfirm = savedOutlineConfirm !== 'false';
+      } else {
+        updates.outlineConfirm = useSettingsStore.getState().outlineConfirmEnabled ?? true;
+      }
       if (savedLanguage) {
         updates.language = savedLanguage;
       } else {
@@ -235,6 +245,8 @@ function HomePage() {
     setForm((prev) => ({ ...prev, [field]: value }));
     try {
       if (field === 'webSearch') localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(value));
+      if (field === 'outlineConfirm')
+        localStorage.setItem(OUTLINE_CONFIRM_STORAGE_KEY, String(value));
       if (field === 'language') localStorage.setItem(LANGUAGE_STORAGE_KEY, String(value));
       if (field === 'requirement') updateRequirementCache(value as string);
     } catch {
@@ -333,6 +345,7 @@ function HomePage() {
         pdfProviderConfig,
         sceneOutlines: null,
         currentStep: 'generating' as const,
+        outlineConfirmEnabled: form.outlineConfirm,
       };
       sessionStorage.setItem('generationSession', JSON.stringify(sessionState));
 
@@ -498,6 +511,8 @@ function HomePage() {
                 onLanguageChange={(lang) => updateForm('language', lang)}
                 webSearch={form.webSearch}
                 onWebSearchChange={(v) => updateForm('webSearch', v)}
+                outlineConfirm={form.outlineConfirm}
+                onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
                 onSettingsOpen={(section) => {
                   setSettingsSection(section);
                   setSettingsOpen(true);
@@ -571,6 +586,8 @@ function HomePage() {
                     onLanguageChange={(lang) => updateForm('language', lang)}
                     webSearch={form.webSearch}
                     onWebSearchChange={(v) => updateForm('webSearch', v)}
+                    outlineConfirm={form.outlineConfirm}
+                    onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
                     onSettingsOpen={(section) => {
                       setSettingsSection(section);
                       setSettingsOpen(true);

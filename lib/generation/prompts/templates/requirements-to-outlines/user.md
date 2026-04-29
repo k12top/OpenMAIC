@@ -34,6 +34,8 @@ Please generate scene outlines based on the following course requirements.
 
 {{teacherContext}}
 
+{{revisionInstructions}}
+
 ---
 
 ## Output Requirements

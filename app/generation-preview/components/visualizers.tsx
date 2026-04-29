@@ -26,10 +26,17 @@ export function StepVisualizer({
   stepId,
   outlines,
   webSearchSources,
+  outlineSlot,
 }: {
   stepId: string;
   outlines?: SceneOutline[] | null;
   webSearchSources?: Array<{ title: string; url: string }>;
+  /**
+   * When provided AND the active step is 'outline', this slot replaces the
+   * default streaming visualizer. Used by the generation-preview page to
+   * swap in the editable outline review panel during user-confirmation.
+   */
+  outlineSlot?: React.ReactNode;
 }) {
   switch (stepId) {
     case 'pdf-analysis':
@@ -37,7 +44,7 @@ export function StepVisualizer({
     case 'web-search':
       return <WebSearchVisualizer sources={webSearchSources || []} />;
     case 'outline':
-      return <StreamingOutlineVisualizer outlines={outlines || []} />;
+      return outlineSlot ?? <StreamingOutlineVisualizer outlines={outlines || []} />;
     case 'agent-generation':
       return <AgentGenerationVisualizer />;
     case 'slide-content':

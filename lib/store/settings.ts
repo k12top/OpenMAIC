@@ -152,6 +152,9 @@ export interface SettingsState {
   agentMode: 'preset' | 'auto';
   autoAgentCount: number;
 
+  // Outline confirmation (pause generation after outlines stream so user can review/edit)
+  outlineConfirmEnabled: boolean;
+
   // Layout preferences (persisted via localStorage)
   sidebarCollapsed: boolean;
   chatAreaCollapsed: boolean;
@@ -170,6 +173,7 @@ export interface SettingsState {
   setMaxTurns: (turns: string) => void;
   setAgentMode: (mode: 'preset' | 'auto') => void;
   setAutoAgentCount: (count: number) => void;
+  setOutlineConfirmEnabled: (enabled: boolean) => void;
 
   // Layout actions
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -546,6 +550,7 @@ export const useSettingsStore = create<SettingsState>()(
         maxTurns: migratedData?.maxTurns?.toString() || '10',
         agentMode: 'auto' as const,
         autoAgentCount: 3,
+        outlineConfirmEnabled: true,
 
         // Playback controls
         ttsMuted: false,
@@ -614,6 +619,7 @@ export const useSettingsStore = create<SettingsState>()(
         setMaxTurns: (turns) => set({ maxTurns: turns }),
         setAgentMode: (mode) => set({ agentMode: mode }),
         setAutoAgentCount: (count) => set({ autoAgentCount: count }),
+        setOutlineConfirmEnabled: (enabled) => set({ outlineConfirmEnabled: enabled }),
 
         // Layout actions
         setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -1360,6 +1366,9 @@ export const useSettingsStore = create<SettingsState>()(
         }
         if ((state as Record<string, unknown>).autoAgentCount === undefined) {
           (state as Record<string, unknown>).autoAgentCount = 3;
+        }
+        if ((state as Record<string, unknown>).outlineConfirmEnabled === undefined) {
+          (state as Record<string, unknown>).outlineConfirmEnabled = true;
         }
 
         // Migrate Web Search: old flat fields → new provider-based config

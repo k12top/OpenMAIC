@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,8 +14,9 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, ListChecks, Trash2, AlertTriangle } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { useSettingsStore } from '@/lib/store/settings';
 import { clearDatabase } from '@/lib/utils/database';
 import { toast } from 'sonner';
 import { createLogger } from '@/lib/logger';
@@ -23,6 +25,8 @@ const log = createLogger('GeneralSettings');
 
 export function GeneralSettings() {
   const { t } = useI18n();
+  const outlineConfirmEnabled = useSettingsStore((s) => s.outlineConfirmEnabled);
+  const setOutlineConfirmEnabled = useSettingsStore((s) => s.setOutlineConfirmEnabled);
 
   // Clear cache state
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -63,6 +67,32 @@ export function GeneralSettings() {
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Generation Preferences */}
+      <div className="rounded-xl border bg-card p-4 space-y-4">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+            <ListChecks className="w-4 h-4" />
+          </div>
+          <h3 className="text-sm font-semibold">{t('settings.generationPreferences')}</h3>
+        </div>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <Label htmlFor="outline-confirm-toggle" className="text-sm font-medium">
+              {t('settings.outlineConfirmEnabled')}
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              {t('settings.outlineConfirmEnabledDesc')}
+            </p>
+          </div>
+          <Switch
+            id="outline-confirm-toggle"
+            checked={outlineConfirmEnabled}
+            onCheckedChange={setOutlineConfirmEnabled}
+          />
+        </div>
+      </div>
+
       {/* Danger Zone - Clear Cache */}
       <div className="relative rounded-xl border border-destructive/30 bg-destructive/[0.03] dark:bg-destructive/[0.06] overflow-hidden">
         {/* Subtle diagonal stripe pattern for danger emphasis */}

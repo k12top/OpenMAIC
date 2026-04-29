@@ -38,6 +38,8 @@ import { AgentRevealModal } from '@/components/agent/agent-reveal-modal';
 import { createLogger } from '@/lib/logger';
 import { type GenerationSessionState, ALL_STEPS, getActiveSteps } from './types';
 import { StepVisualizer } from './components/visualizers';
+import { OutlineEditor } from './components/outline-editor';
+import { toast } from 'sonner';
 
 const log = createLogger('GenerationPreview');
 
@@ -75,6 +77,30 @@ function GenerationPreviewContent() {
     }>
   >([]);
   const agentRevealResolveRef = useRef<(() => void) | null>(null);
+
+  // Outline-confirmation review state. When the user has opted into
+  // "confirm before continue", generation pauses here after outlines stream
+  // until the user clicks confirm. We also support full / per-card
+  // regeneration with optional feedback.
+  const [outlineReview, setOutlineReview] = useState<{
+    status: 'idle' | 'awaiting' | 'regenerating-all' | 'regenerating-one';
+    editing: SceneOutline[];
+    regeneratingId: string | null;
+    error: string | null;
+  }>({ status: 'idle', editing: [], regeneratingId: null, error: null });
+  const outlineConfirmResolveRef = useRef<((outlines: SceneOutline[]) => void) | null>(null);
+  // Snapshot of generation context needed to call the regenerate endpoints.
+  // Captured at the moment we enter the awaiting state so handlers (which run
+  // outside of `startGeneration`) have everything they need without re-reading
+  // session state asynchronously.
+  const regenContextRef = useRef<{
+    requirements: GenerationSessionState['requirements'];
+    pdfText?: string;
+    pdfImages?: GenerationSessionState['pdfImages'];
+    imageMapping: ImageMapping;
+    researchContext?: string;
+    agents: Array<{ id: string; name: string; role: string; persona?: string }>;
+  } | null>(null);
 
   // Compute active steps based on session state
   const activeSteps = getActiveSteps(session);
@@ -676,6 +702,7 @@ function GenerationPreviewContent() {
         const updatedSession = { ...currentSession, sceneOutlines: outlines };
         setSession(updatedSession);
         sessionStorage.setItem('generationSession', JSON.stringify(updatedSession));
+        currentSession = updatedSession;
 
         // Outline generation succeeded — clear homepage draft cache
         try {
@@ -684,8 +711,48 @@ function GenerationPreviewContent() {
           /* ignore */
         }
 
-        // Brief pause to let user see the final outline state
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        if (currentSession.outlineConfirmEnabled) {
+          // Stash the inputs each regenerate handler will need so they can
+          // execute outside this async function.
+          regenContextRef.current = {
+            requirements: currentSession.requirements,
+            pdfText: currentSession.pdfText,
+            pdfImages: currentSession.pdfImages,
+            imageMapping,
+            researchContext: currentSession.researchContext,
+            agents,
+          };
+
+          setStreamingOutlines(null);
+          setStatusMessage(t('generation.outlineAwaitConfirmDesc'));
+          setOutlineReview({
+            status: 'awaiting',
+            editing: outlines,
+            regeneratingId: null,
+            error: null,
+          });
+
+          // Block until the user confirms (handler resolves with the final list).
+          outlines = await new Promise<SceneOutline[]>((resolve) => {
+            outlineConfirmResolveRef.current = resolve;
+          });
+
+          // Persist confirmed outlines to session/state so a refresh can resume.
+          const confirmedSession = { ...currentSession, sceneOutlines: outlines };
+          setSession(confirmedSession);
+          sessionStorage.setItem('generationSession', JSON.stringify(confirmedSession));
+          currentSession = confirmedSession;
+          setOutlineReview({
+            status: 'idle',
+            editing: [],
+            regeneratingId: null,
+            error: null,
+          });
+          setStatusMessage('');
+        } else {
+          // Original behavior: brief pause to let user see the final outline state
+          await new Promise((resolve) => setTimeout(resolve, 800));
+        }
       }
 
       // Move to scene generation step
@@ -914,6 +981,211 @@ function GenerationPreviewContent() {
     }
   };
 
+  // ── Outline review handlers (only active in 'awaiting' state) ──────────
+
+  const handleOutlineEditChange = (next: SceneOutline[]) => {
+    setOutlineReview((prev) =>
+      prev.status === 'idle'
+        ? prev
+        : { ...prev, editing: next, error: null },
+    );
+  };
+
+  const handleConfirmOutlines = () => {
+    setOutlineReview((prev) => {
+      const finalOutlines = prev.editing;
+      // Resolve the awaiting promise inside startGeneration() so the rest of
+      // the pipeline picks up the user-confirmed outlines.
+      outlineConfirmResolveRef.current?.(finalOutlines);
+      outlineConfirmResolveRef.current = null;
+      return { status: 'idle', editing: [], regeneratingId: null, error: null };
+    });
+  };
+
+  const handleRegenerateAll = async (feedback: string) => {
+    const ctx = regenContextRef.current;
+    if (!ctx) return;
+    const previous = outlineReview.editing;
+    setOutlineReview((prev) => ({ ...prev, status: 'regenerating-all', error: null }));
+    setStreamingOutlines([]);
+    setStatusMessage(t('generation.outlineRegenerating'));
+
+    try {
+      const collected = await new Promise<SceneOutline[]>((resolve, reject) => {
+        const buffer: SceneOutline[] = [];
+        fetch('/api/generate/scene-outlines-stream', {
+          method: 'POST',
+          headers: getApiHeaders(),
+          body: JSON.stringify({
+            requirements: ctx.requirements,
+            pdfText: ctx.pdfText,
+            pdfImages: ctx.pdfImages,
+            imageMapping: ctx.imageMapping,
+            researchContext: ctx.researchContext,
+            agents: ctx.agents,
+            userFeedback: feedback,
+            previousOutlines: previous,
+          }),
+          signal: abortControllerRef.current?.signal,
+        })
+          .then((res) => {
+            if (!res.ok) {
+              return res.json().then((d) => {
+                if (res.status === 402 || d.code === 'INSUFFICIENT_CREDITS') {
+                  reject(new Error(INSUFFICIENT_CREDITS_MARKER));
+                  return;
+                }
+                reject(new Error(d.error || t('generation.outlineGenerateFailed')));
+              });
+            }
+            const reader = res.body?.getReader();
+            if (!reader) {
+              reject(new Error(t('generation.streamNotReadable')));
+              return;
+            }
+            const decoder = new TextDecoder();
+            let sseBuffer = '';
+            const pump = (): Promise<void> =>
+              reader.read().then(({ done, value }) => {
+                if (value) {
+                  sseBuffer += decoder.decode(value, { stream: !done });
+                  const lines = sseBuffer.split('\n');
+                  sseBuffer = lines.pop() || '';
+                  for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    try {
+                      const evt = JSON.parse(line.slice(6));
+                      if (evt.type === 'outline') {
+                        buffer.push(evt.data);
+                        setStreamingOutlines([...buffer]);
+                      } else if (evt.type === 'retry') {
+                        buffer.length = 0;
+                        setStreamingOutlines([]);
+                      } else if (evt.type === 'done') {
+                        resolve(evt.outlines || buffer);
+                        return;
+                      } else if (evt.type === 'error') {
+                        reject(new Error(evt.error));
+                        return;
+                      }
+                    } catch (e) {
+                      log.error('Failed to parse outline SSE:', line, e);
+                    }
+                  }
+                }
+                if (done) {
+                  if (buffer.length > 0) resolve(buffer);
+                  else reject(new Error(t('generation.outlineEmptyResponse')));
+                  return;
+                }
+                return pump();
+              });
+            pump().catch(reject);
+          })
+          .catch(reject);
+      });
+
+      setOutlineReview({
+        status: 'awaiting',
+        editing: collected,
+        regeneratingId: null,
+        error: null,
+      });
+      setStreamingOutlines(null);
+      setStatusMessage(t('generation.outlineAwaitConfirmDesc'));
+      toast.success(t('generation.outlineRegeneratedAll'));
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      const message =
+        err instanceof Error
+          ? err.message === INSUFFICIENT_CREDITS_MARKER
+            ? t('generation.insufficientCreditsTitle')
+            : err.message
+          : t('generation.outlineGenerateFailed');
+      log.error('Regenerate-all failed:', err);
+      // Restore previous editing list so the user does not lose their work.
+      setOutlineReview({
+        status: 'awaiting',
+        editing: previous,
+        regeneratingId: null,
+        error: message,
+      });
+      setStreamingOutlines(null);
+      setStatusMessage(t('generation.outlineAwaitConfirmDesc'));
+      toast.error(message);
+    }
+  };
+
+  const handleRegenerateOne = async (outlineId: string, feedback: string) => {
+    const ctx = regenContextRef.current;
+    if (!ctx) return;
+    const target = outlineReview.editing.find((o) => o.id === outlineId);
+    if (!target) return;
+
+    setOutlineReview((prev) => ({
+      ...prev,
+      status: 'regenerating-one',
+      regeneratingId: outlineId,
+      error: null,
+    }));
+
+    try {
+      const resp = await fetch('/api/generate/scene-outline-single', {
+        method: 'POST',
+        headers: getApiHeaders(),
+        body: JSON.stringify({
+          requirements: ctx.requirements,
+          pdfText: ctx.pdfText,
+          pdfImages: ctx.pdfImages,
+          imageMapping: ctx.imageMapping,
+          researchContext: ctx.researchContext,
+          agents: ctx.agents,
+          targetOutline: target,
+          allOutlines: outlineReview.editing,
+          userFeedback: feedback,
+        }),
+        signal: abortControllerRef.current?.signal,
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        if (resp.status === 402 || errData.code === 'INSUFFICIENT_CREDITS') {
+          throw new Error(INSUFFICIENT_CREDITS_MARKER);
+        }
+        throw new Error(errData.error || t('generation.outlineGenerateFailed'));
+      }
+
+      const data = await resp.json();
+      if (!data.success || !data.outline) {
+        throw new Error(t('generation.outlineGenerateFailed'));
+      }
+
+      setOutlineReview((prev) => ({
+        status: 'awaiting',
+        editing: prev.editing.map((o) => (o.id === outlineId ? data.outline : o)),
+        regeneratingId: null,
+        error: null,
+      }));
+      toast.success(t('generation.outlineRegeneratedOne'));
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      const message =
+        err instanceof Error
+          ? err.message === INSUFFICIENT_CREDITS_MARKER
+            ? t('generation.insufficientCreditsTitle')
+            : err.message
+          : t('generation.outlineGenerateFailed');
+      log.error('Regenerate-one failed:', err);
+      setOutlineReview((prev) => ({
+        ...prev,
+        status: 'awaiting',
+        regeneratingId: null,
+        error: message,
+      }));
+      toast.error(message);
+    }
+  };
+
   const extractTopicFromRequirement = (requirement: string): string => {
     const trimmed = requirement.trim();
     if (trimmed.length <= 500) {
@@ -924,6 +1196,8 @@ function GenerationPreviewContent() {
 
   const goBackToHome = () => {
     abortControllerRef.current?.abort();
+    // Drop any pending outline-confirm gate so startGeneration can settle cleanly.
+    outlineConfirmResolveRef.current = null;
     sessionStorage.removeItem('generationSession');
     router.push('/');
   };
@@ -1019,7 +1293,15 @@ function GenerationPreviewContent() {
           <div className="mb-8 relative z-10">
             <AnimatePresence mode="wait">
               <motion.div
-                key={error || insufficientCredits ? 'error' : isComplete ? 'done' : activeStep.id}
+                key={
+                  error || insufficientCredits
+                    ? 'error'
+                    : isComplete
+                      ? 'done'
+                      : outlineReview.status === 'awaiting'
+                        ? 'outline-awaiting'
+                        : activeStep.id
+                }
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -1031,7 +1313,9 @@ function GenerationPreviewContent() {
                       ? t('generation.generationFailed')
                       : isComplete
                         ? t('generation.generationComplete')
-                        : t(activeStep.title)}
+                        : outlineReview.status === 'awaiting'
+                          ? t('generation.outlineAwaitConfirm')
+                          : t(activeStep.title)}
                 </h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {insufficientCredits
@@ -1040,7 +1324,9 @@ function GenerationPreviewContent() {
                       ? error
                       : isComplete
                         ? t('generation.classroomReady')
-                        : statusMessage || t(activeStep.description)}
+                        : outlineReview.status === 'awaiting'
+                          ? t('generation.outlineAwaitConfirmDesc')
+                          : statusMessage || t(activeStep.description)}
                 </p>
               </motion.div>
             </AnimatePresence>
@@ -1208,6 +1494,26 @@ function GenerationPreviewContent() {
                   stepId={activeStep.id}
                   outlines={streamingOutlines}
                   webSearchSources={webSearchSources}
+                  outlineSlot={
+                    activeStep.id === 'outline' && outlineReview.status !== 'idle' ? (
+                      <OutlineEditor
+                        outlines={outlineReview.editing}
+                        onChange={handleOutlineEditChange}
+                        onConfirm={handleConfirmOutlines}
+                        onRegenerateAll={handleRegenerateAll}
+                        onRegenerateOne={handleRegenerateOne}
+                        busy={
+                          outlineReview.status === 'regenerating-all'
+                            ? 'all'
+                            : outlineReview.status === 'regenerating-one'
+                              ? 'one'
+                              : 'none'
+                        }
+                        regeneratingId={outlineReview.regeneratingId}
+                        errorMessage={outlineReview.error}
+                      />
+                    ) : undefined
+                  }
                 />
               </motion.div>
             )}
