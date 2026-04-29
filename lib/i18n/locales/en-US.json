@@ -3,7 +3,8 @@
         "you": "You",
         "confirm": "Confirm",
         "cancel": "Cancel",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "save": "Save"
     },
     "home": {
         "slogan": "Interactive classroom & AI document creation",
@@ -386,7 +387,35 @@
         "processHalted": "Process Halted",
         "processHaltedDesc": "An error occurred during generation. Check the sidebar for details.",
         "readyToLaunch": "Ready to Launch",
-        "readyToLaunchDesc": "Your interactive classroom is ready. Redirecting you to the editor shortly."
+        "readyToLaunchDesc": "Your interactive classroom is ready. Redirecting you to the editor shortly.",
+        "visualizer": {
+            "webSearchTitle": "Live Web Search",
+            "webSearchDesc": "Gathering latest information from authoritative sources",
+            "sourcesFound": "{{count}} Sources Found",
+            "outlineTitle": "Course Outline Generation",
+            "outlineDesc": "Structuring knowledge points into a logical flow",
+            "streaming": "Streaming...",
+            "agentGenTitle": "Instantiating AI Agents",
+            "agentGenDesc": "Configuring classroom roles, personas, and pedagogical strategies",
+            "pageContentTitle": "Page Content Generation",
+            "buildingUi": "BUILDING UI",
+            "slideLayout": "SLIDE LAYOUT",
+            "slideLayoutDesc": "Generating rich text and structured lists",
+            "quizInterface": "QUIZ INTERFACE",
+            "quizInterfaceDesc": "Constructing interactive multiple-choice questions",
+            "pblScenario": "PBL SCENARIO",
+            "pblScenarioDesc": "Designing problem-based learning cases",
+            "webContent": "WEB CONTENT",
+            "webContentDesc": "Embedding interactive iframe components",
+            "actionsGenTitle": "Generating Instructional Actions",
+            "actionsGenDesc": "Orchestrating TTS, camera movements, and UI interactions",
+            "processingTimeline": "Processing Timeline",
+            "tutorSpeech": "Synthesizing Tutor Speech",
+            "cameraSpotlight": "Configuring Camera Spotlight",
+            "studentQuery": "Synthesizing Student Query",
+            "interactiveEvents": "Binding Interactive Events",
+            "sceneTimeline": "Finalizing Scene Timeline"
+        }
     },
     "settings": {
         "title": "Settings",
@@ -925,6 +954,12 @@
     },
     "profile": {
         "title": "Profile",
+        "editProfile": "Edit Profile",
+        "nickname": "Nickname",
+        "nicknamePlaceholder": "Enter your nickname...",
+        "editNickname": "Edit Profile",
+        "bio": "Bio",
+        "defaultBioDesc": "Share your learning motto here...",
         "defaultNickname": "Learner",
         "chooseAvatar": "Choose Avatar",
         "uploadAvatar": "Upload",
@@ -1035,13 +1070,7 @@
             "delete": "Delete"
         }
     },
-    "profile": {
-        "editNickname": "Edit Profile",
-        "defaultBioDesc": "Share your learning motto here...",
-        "editProfile": "Edit Profile",
-        "nickname": "Nickname",
-        "bio": "Bio"
-    },
+
     "credits": {
         "insufficient": "Insufficient Credits",
         "recharge": "Recharge",

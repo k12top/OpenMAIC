@@ -3,7 +3,8 @@
     "you": "あなた",
     "confirm": "確認",
     "cancel": "キャンセル",
-    "loading": "読み込み中..."
+    "loading": "読み込み中...",
+    "save": "保存"
   },
   "home": {
     "slogan": "インタラクティブ授業とドキュメント生成",
@@ -363,7 +364,39 @@
     "webSearchFailed": "ウェブ検索に失敗しました",
     "insufficientCreditsTitle": "クレジット不足",
     "insufficientCreditsDesc": "クレジットがなくなりました。チャージしてから続行してください。",
-    "goToRecharge": "チャージへ"
+    "goToRecharge": "チャージへ",
+    "processHalted": "生成が中断されました",
+    "processHaltedDesc": "生成中にエラーが発生しました。詳細はサイドバーを確認してください。",
+    "readyToLaunch": "開始準備完了",
+    "readyToLaunchDesc": "インタラクティブな教室の準備が整いました。間もなくエディターにリダイレクトされます。",
+    "visualizer": {
+      "webSearchTitle": "ライブWeb検索",
+      "webSearchDesc": "信頼できるソースから最新情報を収集しています",
+      "sourcesFound": "{{count}} 個のソースが見つかりました",
+      "outlineTitle": "コース構成の生成",
+      "outlineDesc": "知識ポイントを論理的な流れに構成しています",
+      "streaming": "ストリーミング中...",
+      "agentGenTitle": "AIエージェントの生成",
+      "agentGenDesc": "教室での役割、ペルソナ、教育戦略を構成しています",
+      "pageContentTitle": "ページコンテンツの生成",
+      "buildingUi": "UIを構築中",
+      "slideLayout": "スライドレイアウト",
+      "slideLayoutDesc": "リッチテキストと構造化リストを生成しています",
+      "quizInterface": "クイズインターフェース",
+      "quizInterfaceDesc": "インタラクティブな多肢選択問題を構築しています",
+      "pblScenario": "PBLシナリオ",
+      "pblScenarioDesc": "問題解決型学習ケースを設計しています",
+      "webContent": "ウェブコンテンツ",
+      "webContentDesc": "インタラクティブなiframeコンポーネントを埋め込んでいます",
+      "actionsGenTitle": "教育アクションの生成",
+      "actionsGenDesc": "TTS、カメラワーク、UIインタラクションを調整しています",
+      "processingTimeline": "タイムラインを処理中",
+      "tutorSpeech": "講師の音声を合成中",
+      "cameraSpotlight": "カメラのスポットライトを構成中",
+      "studentQuery": "学生の質問を合成中",
+      "interactiveEvents": "インタラクティブイベントをバインド中",
+      "sceneTimeline": "シーンのタイムラインを確定中"
+    }
   },
   "settings": {
     "title": "設定",
@@ -902,6 +935,12 @@
   },
   "profile": {
     "title": "プロフィール",
+    "editProfile": "プロフィールを編集",
+    "nickname": "ニックネーム",
+    "nicknamePlaceholder": "ニックネームを入力...",
+    "editNickname": "プロフィールを編集",
+    "bio": "自己紹介",
+    "defaultBioDesc": "ここに学習目標を共有してください...",
     "defaultNickname": "学習者",
     "chooseAvatar": "アバターを選択",
     "uploadAvatar": "アップロード",

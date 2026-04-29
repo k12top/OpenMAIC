@@ -3,7 +3,8 @@
     "you": "Anda",
     "confirm": "Konfirmasi",
     "cancel": "Batal",
-    "loading": "Memuat..."
+    "loading": "Memuat...",
+    "save": "Simpan"
   },
   "home": {
     "slogan": "Ruang kelas interaktif & pembuatan dokumen AI",
@@ -902,6 +903,12 @@
   },
   "profile": {
     "title": "Profil",
+    "editProfile": "Ubah Profil",
+    "nickname": "Nama Panggilan",
+    "nicknamePlaceholder": "Masukkan nama panggilan...",
+    "editNickname": "Ubah Profil",
+    "bio": "Bio",
+    "defaultBioDesc": "Bagikan moto belajar Anda di sini...",
     "defaultNickname": "Pelajar",
     "chooseAvatar": "Pilih Avatar",
     "uploadAvatar": "Unggah",

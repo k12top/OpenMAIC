@@ -3,7 +3,8 @@
     "you": "Vous",
     "confirm": "Confirmer",
     "cancel": "Annuler",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "save": "Enregistrer"
   },
   "home": {
     "slogan": "Salle de classe interactive et création de documents par l'IA",
@@ -363,7 +364,39 @@
     "webSearchFailed": "La recherche web a échoué",
     "insufficientCreditsTitle": "Crédits insuffisants",
     "insufficientCreditsDesc": "Vos crédits sont épuisés. Rechargez pour continuer la génération.",
-    "goToRecharge": "Aller à la recharge"
+    "goToRecharge": "Aller à la recharge",
+    "processHalted": "Processus interrompu",
+    "processHaltedDesc": "Une erreur s'est produite lors de la génération. Consultez la barre latérale pour plus de détails.",
+    "readyToLaunch": "Prêt à lancer",
+    "readyToLaunchDesc": "Votre salle de classe interactive est prête. Vous serez redirigé vers l'éditeur sous peu.",
+    "visualizer": {
+      "webSearchTitle": "Recherche Web en direct",
+      "webSearchDesc": "Collecte des dernières informations auprès de sources faisant autorité",
+      "sourcesFound": "{{count}} sources trouvées",
+      "outlineTitle": "Génération du plan de cours",
+      "outlineDesc": "Structuration des points de connaissance dans un flux logique",
+      "streaming": "Streaming...",
+      "agentGenTitle": "Instanciation des agents IA",
+      "agentGenDesc": "Configuration des rôles, personas et stratégies pédagogiques",
+      "pageContentTitle": "Génération du contenu de la page",
+      "buildingUi": "CONSTRUCTION DE L'UI",
+      "slideLayout": "MISE EN PAGE DES DIAPOSITIVES",
+      "slideLayoutDesc": "Génération de texte enrichi et de listes structurées",
+      "quizInterface": "INTERFACE DE QUIZ",
+      "quizInterfaceDesc": "Construction de questions interactives à choix multiples",
+      "pblScenario": "SCÉNARIO PBL",
+      "pblScenarioDesc": "Conception de cas d'apprentissage par problèmes",
+      "webContent": "CONTENU WEB",
+      "webContentDesc": "Intégration de composants iframe interactifs",
+      "actionsGenTitle": "Génération d'actions pédagogiques",
+      "actionsGenDesc": "Orchestration de la synthèse vocale, des mouvements de caméra et des interactions UI",
+      "processingTimeline": "Traitement de la chronologie",
+      "tutorSpeech": "Synthèse de la parole du tuteur",
+      "cameraSpotlight": "Configuration du projecteur de caméra",
+      "studentQuery": "Synthèse de la requête de l'étudiant",
+      "interactiveEvents": "Liaison d'événements interactifs",
+      "sceneTimeline": "Finalisation de la chronologie de la scène"
+    }
   },
   "settings": {
     "title": "Paramètres",
@@ -902,6 +935,12 @@
   },
   "profile": {
     "title": "Profil",
+    "editProfile": "Modifier le profil",
+    "nickname": "Pseudonyme",
+    "nicknamePlaceholder": "Entrez votre pseudonyme...",
+    "editNickname": "Modifier le profil",
+    "bio": "Bio",
+    "defaultBioDesc": "Partagez votre devise d'apprentissage ici...",
     "defaultNickname": "Apprenant",
     "chooseAvatar": "Choisir un avatar",
     "uploadAvatar": "Télécharger",

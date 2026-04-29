@@ -18,6 +18,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/lib/hooks/use-i18n';
 import type { SceneOutline } from '@/lib/types/generation';
 
 // Step-specific visualizers
@@ -103,6 +104,7 @@ function PdfScanVisualizer() {
 
 // Web Search: Full width list of actual search results
 function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url: string }> }) {
+  const { t } = useI18n();
   // Skeleton placeholders
   const skeletonResults = [
     { titleW: 70, urlW: 45, snippetW: [90, 60, 80] },
@@ -120,8 +122,8 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
             <Search className="size-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Live Web Search</h3>
-            <p className="text-sm text-muted-foreground">Gathering latest information from authoritative sources</p>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('generation.visualizer.webSearchTitle')}</h3>
+            <p className="text-sm text-muted-foreground">{t('generation.visualizer.webSearchDesc')}</p>
           </div>
         </div>
         {sources.length > 0 && (
@@ -131,7 +133,7 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
             className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-full font-bold shadow-lg shadow-teal-500/20"
           >
             <Globe className="size-4" />
-            <span>{sources.length} Sources Found</span>
+            <span>{t('generation.visualizer.sourcesFound', { count: sources.length })}</span>
           </motion.div>
         )}
       </div>
@@ -188,6 +190,7 @@ function WebSearchVisualizer({ sources }: { sources: Array<{ title: string; url:
 
 // Outline: Streams real outline data as it arrives from SSE
 function StreamingOutlineVisualizer({ outlines }: { outlines: SceneOutline[] }) {
+  const { t } = useI18n();
   // Build display lines from outlines
   const allLines: Array<{ text: string; isTitle: boolean }> = [];
   outlines.forEach((outline, i) => {
@@ -206,8 +209,8 @@ function StreamingOutlineVisualizer({ outlines }: { outlines: SceneOutline[] }) 
             <FileText className="size-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Course Outline Generation</h3>
-            <p className="text-sm text-muted-foreground">Structuring knowledge points into a logical flow</p>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('generation.visualizer.outlineTitle')}</h3>
+            <p className="text-sm text-muted-foreground">{t('generation.visualizer.outlineDesc')}</p>
           </div>
         </div>
         {outlines.length > 0 && (
@@ -217,7 +220,7 @@ function StreamingOutlineVisualizer({ outlines }: { outlines: SceneOutline[] }) 
             className="flex items-center gap-2"
           >
             <div className="size-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Streaming...</span>
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('generation.visualizer.streaming')}</span>
           </motion.div>
         )}
       </div>
@@ -289,6 +292,7 @@ function StreamingOutlineVisualizer({ outlines }: { outlines: SceneOutline[] }) 
 
 // Agent Generation: Show cards representing characters being configured
 function AgentGenerationVisualizer() {
+  const { t } = useI18n();
   return (
     <div className="w-full h-full flex flex-col p-4">
       {/* Header */}
@@ -298,8 +302,8 @@ function AgentGenerationVisualizer() {
             <Bot className="size-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Instantiating AI Agents</h3>
-            <p className="text-sm text-muted-foreground">Configuring classroom roles, personas, and pedagogical strategies</p>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('generation.visualizer.agentGenTitle')}</h3>
+            <p className="text-sm text-muted-foreground">{t('generation.visualizer.agentGenDesc')}</p>
           </div>
         </div>
       </div>
@@ -344,6 +348,7 @@ function AgentGenerationVisualizer() {
 
 // Content: Large preview cards showing different page layouts being constructed
 function ContentVisualizer() {
+  const { t } = useI18n();
   const [index, setIndex] = useState(0);
   const totalTypes = 4;
 
@@ -359,8 +364,8 @@ function ContentVisualizer() {
       case 0:
         return {
           color: 'blue',
-          label: 'SLIDE LAYOUT',
-          desc: 'Generating rich text and structured lists',
+          label: t('generation.visualizer.slideLayout'),
+          desc: t('generation.visualizer.slideLayoutDesc'),
           icon: BarChart3,
           bg: 'bg-blue-500/10',
           text: 'text-blue-600 dark:text-blue-400',
@@ -369,8 +374,8 @@ function ContentVisualizer() {
       case 1:
         return {
           color: 'purple',
-          label: 'QUIZ INTERFACE',
-          desc: 'Constructing interactive multiple-choice questions',
+          label: t('generation.visualizer.quizInterface'),
+          desc: t('generation.visualizer.quizInterfaceDesc'),
           icon: Focus,
           bg: 'bg-purple-500/10',
           text: 'text-purple-600 dark:text-purple-400',
@@ -379,8 +384,8 @@ function ContentVisualizer() {
       case 2:
         return {
           color: 'amber',
-          label: 'PBL SCENARIO',
-          desc: 'Designing problem-based learning cases',
+          label: t('generation.visualizer.pblScenario'),
+          desc: t('generation.visualizer.pblScenarioDesc'),
           icon: Puzzle,
           bg: 'bg-amber-500/10',
           text: 'text-amber-600 dark:text-amber-400',
@@ -389,8 +394,8 @@ function ContentVisualizer() {
       case 3:
         return {
           color: 'emerald',
-          label: 'WEB CONTENT',
-          desc: 'Embedding interactive iframe components',
+          label: t('generation.visualizer.webContent'),
+          desc: t('generation.visualizer.webContentDesc'),
           icon: Globe,
           bg: 'bg-emerald-500/10',
           text: 'text-emerald-600 dark:text-emerald-400',
@@ -424,7 +429,7 @@ function ContentVisualizer() {
             <Icon className="size-6" />
           </motion.div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Page Content Generation</h3>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('generation.visualizer.pageContentTitle')}</h3>
             <motion.p 
               key={`desc-${index}`}
               initial={{ opacity: 0, y: 5 }}
@@ -437,7 +442,7 @@ function ContentVisualizer() {
         </div>
         
         <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-sm font-semibold tracking-wider text-slate-500">
-          BUILDING UI
+          {t('generation.visualizer.buildingUi')}
         </div>
       </div>
 
@@ -546,40 +551,41 @@ function ContentVisualizer() {
 
 // Actions: Large Timeline of speech, spotlight, and interactions being orchestrated
 function ActionsVisualizer() {
+  const { t } = useI18n();
   const [activeIdx, setActiveIdx] = useState(0);
 
   const actionItems = [
     {
       icon: MessageSquare,
-      label: 'Synthesizing Tutor Speech',
+      label: t('generation.visualizer.tutorSpeech'),
       color: 'text-violet-500',
       bg: 'bg-violet-500/10',
       border: 'border-violet-200 dark:border-violet-800',
     },
     {
       icon: Focus,
-      label: 'Configuring Camera Spotlight',
+      label: t('generation.visualizer.cameraSpotlight'),
       color: 'text-amber-500',
       bg: 'bg-amber-500/10',
       border: 'border-amber-200 dark:border-amber-800',
     },
     {
       icon: MessageSquare,
-      label: 'Synthesizing Student Query',
+      label: t('generation.visualizer.studentQuery'),
       color: 'text-purple-500',
       bg: 'bg-purple-500/10',
       border: 'border-purple-200 dark:border-purple-800',
     },
     {
       icon: Play,
-      label: 'Binding Interactive Events',
+      label: t('generation.visualizer.interactiveEvents'),
       color: 'text-emerald-500',
       bg: 'bg-emerald-500/10',
       border: 'border-emerald-200 dark:border-emerald-800',
     },
     {
       icon: Clapperboard,
-      label: 'Finalizing Scene Timeline',
+      label: t('generation.visualizer.sceneTimeline'),
       color: 'text-blue-500',
       bg: 'bg-blue-500/10',
       border: 'border-blue-200 dark:border-blue-800',
@@ -602,13 +608,13 @@ function ActionsVisualizer() {
             <Clapperboard className="size-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Generating Instructional Actions</h3>
-            <p className="text-sm text-muted-foreground">Orchestrating TTS, camera movements, and UI interactions</p>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{t('generation.visualizer.actionsGenTitle')}</h3>
+            <p className="text-sm text-muted-foreground">{t('generation.visualizer.actionsGenDesc')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="size-2 rounded-full bg-violet-500 animate-pulse" />
-          <span className="text-sm font-medium text-violet-600 dark:text-violet-400">Processing Timeline</span>
+          <span className="text-sm font-medium text-violet-600 dark:text-violet-400">{t('generation.visualizer.processingTimeline')}</span>
         </div>
       </div>
 

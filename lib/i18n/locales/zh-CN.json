@@ -3,7 +3,8 @@
         "you": "你",
         "confirm": "确定",
         "cancel": "取消",
-        "loading": "加载中..."
+        "loading": "加载中...",
+        "save": "保存"
     },
     "home": {
         "slogan": "智能互动课堂与文书生成",
@@ -390,7 +391,35 @@
         "processHalted": "生成中断",
         "processHaltedDesc": "生成过程中出现错误，请检查侧边栏了解详情。",
         "readyToLaunch": "生成完成",
-        "readyToLaunchDesc": "您的互动课堂已准备就绪，即将为您跳转到编辑器。"
+        "readyToLaunchDesc": "您的互动课堂已准备就绪，即将为您跳转到编辑器。",
+        "visualizer": {
+            "webSearchTitle": "实时网络搜索",
+            "webSearchDesc": "正在从权威来源获取最新资料",
+            "sourcesFound": "找到 {{count}} 个来源",
+            "outlineTitle": "课程大纲生成",
+            "outlineDesc": "将知识点组织成逻辑流程",
+            "streaming": "生成中...",
+            "agentGenTitle": "实例化 AI 智能体",
+            "agentGenDesc": "配置课堂角色、性格和教学策略",
+            "pageContentTitle": "页面内容生成",
+            "buildingUi": "构建 UI 中",
+            "slideLayout": "幻灯片布局",
+            "slideLayoutDesc": "生成富文本和结构化列表",
+            "quizInterface": "测验界面",
+            "quizInterfaceDesc": "构建互动多选题",
+            "pblScenario": "PBL 场景",
+            "pblScenarioDesc": "设计以问题为中心的学习案例",
+            "webContent": "网络内容",
+            "webContentDesc": "嵌入互动 iframe 组件",
+            "actionsGenTitle": "生成教学动作",
+            "actionsGenDesc": "编排语音合成、镜头移动和 UI 交互",
+            "processingTimeline": "处理时间线中",
+            "tutorSpeech": "合成教师语音",
+            "cameraSpotlight": "配置镜头聚焦",
+            "studentQuery": "合成学生提问",
+            "interactiveEvents": "绑定互动事件",
+            "sceneTimeline": "定稿场景时间线"
+        }
     },
     "settings": {
         "title": "设置",
@@ -1048,13 +1077,7 @@
             "delete": "删除"
         }
     },
-    "profile": {
-        "editNickname": "修改资料",
-        "defaultBioDesc": "在这里分享你的学习格言...",
-        "editProfile": "编辑个人资料",
-        "nickname": "昵称",
-        "bio": "个人简介"
-    },
+
     "credits": {
         "insufficient": "积分不足",
         "recharge": "充值",
