@@ -123,15 +123,15 @@ export function SpotlightOverlay() {
               </defs>
 
               {/* Dimmed Background */}
+              {/* Removed backdrop-blur-[1.5px] to prevent blurring the mask cutout */}
               <rect
                 width="100"
                 height="100"
                 fill={`rgba(0,0,0,${dimness})`}
                 mask={`url(#mask-${spotlightElementId})`}
-                className="backdrop-blur-[1.5px]"
               />
 
-              {/* THE ONE BORDER - white border */}
+              {/* THE ONE BORDER - white border with subtle bright fill */}
               <motion.rect
                 initial={{
                   x: rect.x - 4,
@@ -149,7 +149,7 @@ export function SpotlightOverlay() {
                   opacity: 1,
                   rx: 1,
                 }}
-                fill="none"
+                fill="rgba(255,255,255,0.1)"
                 stroke="rgba(255,255,255,0.7)"
                 strokeWidth="1.2"
                 style={{ vectorEffect: 'non-scaling-stroke' } as React.CSSProperties}
