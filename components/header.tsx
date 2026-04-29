@@ -11,6 +11,7 @@ import {
   Package,
   Coins,
   Share2,
+  CloudUpload,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useTheme } from '@/lib/hooks/use-theme';
@@ -23,6 +24,8 @@ import { useStageStore } from '@/lib/store/stage';
 import { useMediaGenerationStore } from '@/lib/store/media-generation';
 import { useExportPPTX } from '@/lib/export/use-export-pptx';
 import { Can } from '@/components/auth/can';
+import { forceSyncClassroomToServer } from '@/lib/sync/classroom-sync';
+import { toast } from 'sonner';
 
 interface HeaderProps {
   readonly currentSceneTitle: string;
@@ -37,6 +40,23 @@ export function Header({ currentSceneTitle }: HeaderProps) {
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [creditsUnlimited, setCreditsUnlimited] = useState(false);
   const isSharedView = useStageStore((s) => s.isSharedView);
+  const isOwner = useStageStore((s) => s.isOwner);
+  const stage = useStageStore((s) => s.stage);
+  const currentSceneId = useStageStore((s) => s.currentSceneId);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncToCloud = async () => {
+    if (!stage || isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await forceSyncClassroomToServer(stage.id, stage, scenes, currentSceneId);
+      toast.success(t('stage.syncSuccess') || 'Successfully synced to cloud');
+    } catch (err) {
+      toast.error(t('stage.syncFailed') || 'Failed to sync to cloud');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     // Credits only belong to the authenticated owner's own classroom pages —
@@ -223,6 +243,22 @@ export function Header({ currentSceneTitle }: HeaderProps) {
             <Share2 className="w-4 h-4" />
           </button>
         </Can>
+
+        {/* Sync to Cloud Button - owners only */}
+        {!isSharedView && isOwner && (
+          <button
+            onClick={handleSyncToCloud}
+            disabled={isSyncing}
+            className="shrink-0 p-2 rounded-full text-gray-400 dark:text-gray-500 hover:bg-white dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 hover:shadow-sm transition-all disabled:opacity-50"
+            title="Sync to Cloud"
+          >
+            {isSyncing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CloudUpload className="w-4 h-4" />
+            )}
+          </button>
+        )}
 
         {/* Export Dropdown */}
         <div className="relative" ref={exportRef}>

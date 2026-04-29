@@ -63,6 +63,13 @@ export default function ClassroomDetailPage() {
 
       const owns = !!serverData?.isOwner;
       useStageStore.getState().setIsOwner(owns);
+
+      if (serverData && !owns) {
+        log.warn(`[Classroom] Access denied for non-owner. Redirecting to home.`);
+        window.location.href = '/';
+        return; // Halt loading to prevent rendering
+      }
+
       log.info(
         `[Classroom] isOwner=${owns} (serverResponse=${serverData ? 'ok' : 'missing'}) — regenerate button will be ${owns ? 'visible on hover' : 'hidden'}`,
       );

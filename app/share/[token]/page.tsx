@@ -71,9 +71,7 @@ function DirectClassroomView({
     const hydrateAgents = async () => {
       const configs = classroom.stage.generatedAgentConfigs;
       if (configs && configs.length > 0) {
-        const { saveGeneratedAgents } = await import(
-          '@/lib/orchestration/registry/store'
-        );
+        const { saveGeneratedAgents } = await import('@/lib/orchestration/registry/store');
         const { useSettingsStore } = await import('@/lib/store/settings');
         const agentIds = await saveGeneratedAgents(classroom.stage.id, configs);
         useSettingsStore.getState().setSelectedAgentIds(agentIds);
@@ -105,30 +103,14 @@ function DirectClassroomView({
           : 'bg-indigo-700 dark:bg-indigo-800';
 
   const BannerIcon =
-    mode === 'public'
-      ? Globe
-      : mode === 'readonly'
-        ? Eye
-        : mode === 'editable'
-          ? Copy
-          : Lock;
+    mode === 'public' ? Globe : mode === 'readonly' ? Eye : mode === 'editable' ? Copy : Lock;
 
   return (
     <ThemeProvider>
       <MediaStageProvider value={classroom.id}>
         <div className="h-screen flex flex-col overflow-hidden">
           {/* Mode banner */}
-          <div
-            className={cn(
-              'shrink-0 flex items-center justify-between px-4 py-1.5 text-white text-xs',
-              bannerClass,
-            )}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <BannerIcon className="size-3.5 shrink-0" />
-              <span className="font-medium truncate">{classroom.title}</span>
-            </div>
-
+          <div>
             <div className="flex items-center gap-2 shrink-0">
               {mode === 'editable' ? (
                 <button

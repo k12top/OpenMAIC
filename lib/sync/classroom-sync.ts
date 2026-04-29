@@ -92,6 +92,50 @@ export function flushClassroomSync() {
   if (pending) void pending();
 }
 
+/**
+ * Force an immediate, blocking sync of the classroom stage to the server.
+ * This bypasses the debounce timer and returns a Promise, allowing the UI
+ * to show a loading state while saving.
+ */
+export async function forceSyncClassroomToServer(
+  classroomId: string,
+  stage: Stage,
+  scenes: Scene[],
+  currentSceneId: string | null,
+): Promise<void> {
+  if (!_syncEnabled) return;
+  if (_stageSyncTimer) {
+    clearTimeout(_stageSyncTimer);
+    _stageSyncTimer = null;
+  }
+  _pendingStageSync = null;
+
+  try {
+    const body = JSON.stringify({
+      classroomId,
+      stage,
+      scenes,
+      currentSceneId,
+    });
+    const res = await fetch('/api/classroom/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+
+    if (res.ok) {
+      log.info(`Force synced classroom ${classroomId} to server`);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      log.warn(`Force classroom sync returned ${res.status}:`, data);
+      throw new Error(`Force sync failed: ${res.status}`);
+    }
+  } catch (err) {
+    log.error('Force classroom sync failed:', err);
+    throw err;
+  }
+}
+
 // ─── Chat session sync ──────────────────────────────────────────────────────
 
 export function syncChatSessionsToServer(classroomId: string, sessions: ChatSession[]) {
