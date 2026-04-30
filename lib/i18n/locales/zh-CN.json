@@ -16,7 +16,7 @@
     "landing": {
         "badge": "AI 驱动的课件平台",
         "subtitle": "将任意主题变为沉浸式、多智能体互动学习体验。上传 PDF 或描述内容，其余交给 AI。",
-        "getStarted": "免费开始",
+        "getStarted": "开始",
         "learnMore": "了解功能",
         "featuresTitle": "为深度互动而设计",
         "featuresSubtitle": "基于最新 AI 模型，为互动教学原生打造。",
@@ -42,7 +42,7 @@
     "toolbar": {
         "languageHint": "课程将以此语言生成",
         "pdfParser": "解析器",
-        "pdfUpload": "上传 PDF",
+        "pdfUpload": "上传文件",
         "removePdf": "移除文件",
         "webSearchOn": "已开启",
         "webSearchOff": "点击开启",

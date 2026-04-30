@@ -13,7 +13,7 @@
     "landing": {
         "badge": "AI-Powered Courseware Platform",
         "subtitle": "Transform any topic into an immersive, multi-agent interactive learning experience. Upload a PDF or describe your content — AI does the rest.",
-        "getStarted": "Get Started Free",
+        "getStarted": "Get Started",
         "learnMore": "Explore Features",
         "featuresTitle": "Designed for maximum engagement",
         "featuresSubtitle": "Powered by the latest AI models, built natively for interactive education.",
@@ -39,7 +39,7 @@
     "toolbar": {
         "languageHint": "Course will be generated in this language",
         "pdfParser": "Parser",
-        "pdfUpload": "Upload PDF",
+        "pdfUpload": "Upload File",
         "removePdf": "Remove file",
         "webSearchOn": "Enabled",
         "webSearchOff": "Click to enable",

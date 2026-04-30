@@ -794,9 +794,7 @@ function GreetingBar({ isSidebar = false }: { isSidebar?: boolean } = {}) {
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent className="sm:max-w-[425px] rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black">
-              {t('profile.editProfile')}
-            </DialogTitle>
+            <DialogTitle className="text-xl font-black">{t('profile.editProfile')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             {/* Avatar Selection */}

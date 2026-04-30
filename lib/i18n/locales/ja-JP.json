@@ -13,7 +13,7 @@
   "landing": {
     "badge": "AI 授業コンテンツプラットフォーム",
     "subtitle": "あらゆるテーマを没入型マルチエージェント学習へ。PDF をアップロードするか内容を説明するだけで、AI がサポートします。",
-    "getStarted": "無料で始める",
+    "getStarted": "始める",
     "learnMore": "機能を見る",
     "featuresTitle": "高いエンゲージメントのために設計",
     "featuresSubtitle": "最新の AI モデルを活用し、インタラクティブ教育のためにネイティブに構築。",
@@ -39,7 +39,7 @@
   "toolbar": {
     "languageHint": "コースはこの言語で生成されます",
     "pdfParser": "パーサー",
-    "pdfUpload": "PDFをアップロード",
+    "pdfUpload": "ファイルをアップロード",
     "removePdf": "ファイルを削除",
     "webSearchOn": "有効",
     "webSearchOff": "クリックして有効化",

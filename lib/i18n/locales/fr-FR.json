@@ -13,7 +13,7 @@
   "landing": {
     "badge": "Plateforme de cours assistée par l'IA",
     "subtitle": "Transformez n'importe quel sujet en apprentissage immersif multi-agents. Téléchargez un PDF ou décrivez votre contenu — l'IA fait le reste.",
-    "getStarted": "Commencer gratuitement",
+    "getStarted": "Commencer",
     "learnMore": "Découvrir les fonctionnalités",
     "featuresTitle": "Conçu pour l'engagement maximal",
     "featuresSubtitle": "Propulsé par les derniers modèles d'IA, pensé nativement pour l'éducation interactive.",
@@ -39,7 +39,7 @@
   "toolbar": {
     "languageHint": "Le cours sera généré dans cette langue",
     "pdfParser": "Analyseur",
-    "pdfUpload": "Télécharger PDF",
+    "pdfUpload": "Transférer un fichier",
     "removePdf": "Supprimer le fichier",
     "webSearchOn": "Activé",
     "webSearchOff": "Cliquer pour activer",

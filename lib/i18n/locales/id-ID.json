@@ -13,7 +13,7 @@
   "landing": {
     "badge": "Platform kursus bertenaga AI",
     "subtitle": "Ubah topik apa pun menjadi pengalaman belajar multi-agen yang imersif. Unggah PDF atau jelaskan konten Anda — sisanya diurus AI.",
-    "getStarted": "Mulai gratis",
+    "getStarted": "Mulai",
     "learnMore": "Jelajahi fitur",
     "featuresTitle": "Dirancang untuk keterlibatan maksimal",
     "featuresSubtitle": "Didukung model AI terbaru, dibuat khusus untuk pendidikan interaktif.",
@@ -39,7 +39,7 @@
   "toolbar": {
     "languageHint": "Kursus akan dibuat dalam bahasa ini",
     "pdfParser": "Parser",
-    "pdfUpload": "Unggah PDF",
+    "pdfUpload": "Unggah File",
     "removePdf": "Hapus berkas",
     "webSearchOn": "Aktif",
     "webSearchOff": "Klik untuk mengaktifkan",
