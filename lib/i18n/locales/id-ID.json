@@ -1059,5 +1059,46 @@
     "preview": "Pratinjau",
     "speech": "Naskah suara",
     "speechEmpty": "Halaman ini belum punya aksi suara"
+  },
+  "menu": {
+    "noPermission": "Anda tidak memiliki izin untuk fitur ini",
+    "route": {
+      "home": "Beranda",
+      "classroom": "Kelas",
+      "share": "Kelas dibagikan",
+      "credits": "Kredit",
+      "recharge": "Isi ulang",
+      "generation": "Pratinjau pembuatan"
+    },
+    "home": {
+      "generate": "Buat kelas",
+      "deleteClassroom": "Hapus kelas",
+      "renameClassroom": "Ganti nama kelas"
+    },
+    "header": {
+      "share": "Bagikan",
+      "sync": "Sinkronkan ke cloud",
+      "export": "Ekspor"
+    },
+    "sidebar": {
+      "addScene": "Tambah halaman",
+      "reorderScenes": "Atur ulang halaman",
+      "deleteScene": "Hapus halaman"
+    },
+    "toolbar": {
+      "regenerate": "Buat ulang halaman",
+      "editSource": "Edit sumber",
+      "lectureMode": "Mode presentasi"
+    },
+    "settings": {
+      "providers": "Penyedia model",
+      "image": "Pembuatan gambar",
+      "video": "Pembuatan video",
+      "tts": "Sintesis suara",
+      "asr": "Pengenalan suara",
+      "pdf": "Pemrosesan PDF",
+      "webSearch": "Pencarian web",
+      "general": "Pengaturan umum"
+    }
   }
 }

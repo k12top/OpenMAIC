@@ -6,7 +6,7 @@
  * Does NOT generate actions — use /api/generate/scene-actions for that.
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { callLLM } from '@/lib/ai/llm';
 import {
   applyOutlineFallbacks,
@@ -19,6 +19,9 @@ import { createLogger } from '@/lib/logger';
 import { apiError, apiSuccess } from '@/lib/server/api-response';
 import { resolveModelFromHeaders } from '@/lib/server/resolve-model';
 import { withAuthAndCredits, recordUsage } from '@/lib/server/api-auth-credits';
+import { assertMenuPerm, ForbiddenError } from '@/lib/server/menu-guard';
+import { isDbConfigured, getDb, schema } from '@/lib/db';
+import { eq } from 'drizzle-orm';
 
 const log = createLogger('Scene Content API');
 
@@ -68,6 +71,36 @@ export async function POST(req: NextRequest) {
     }
     if (!stageId) {
       return apiError('MISSING_REQUIRED_FIELD', 400, 'stageId is required');
+    }
+
+    // RBAC: if the stageId points to an existing classroom in the DB,
+    // the caller is in the "add scene to existing classroom" flow. Gate
+    // it on `sidebar.addScene` operable so non-owner viewers can't push
+    // new scenes to a classroom they don't own. Initial classroom-
+    // creation flows (no DB row yet) bypass this check entirely so that
+    // the original generation pipeline keeps working unchanged.
+    if (isDbConfigured()) {
+      try {
+        const db = getDb();
+        const classroom = await db.query.classrooms.findFirst({
+          where: eq(schema.classrooms.id, stageId),
+          columns: { id: true, userId: true },
+        });
+        if (classroom) {
+          await assertMenuPerm(auth.user, 'sidebar.addScene', 'operable', {
+            isResourceOwner: classroom.userId === auth.user.id,
+            resourceId: stageId,
+          });
+        }
+      } catch (err) {
+        if (err instanceof ForbiddenError) {
+          return NextResponse.json(
+            { error: 'Forbidden', detail: err.message },
+            { status: 403 },
+          );
+        }
+        throw err;
+      }
     }
 
     // Ensure outline has language from stageInfo (fallback for older outlines)

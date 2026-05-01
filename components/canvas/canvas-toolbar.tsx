@@ -26,6 +26,7 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditSceneSourceDialog } from '@/components/stage/edit-scene-source-dialog';
 import { useCan } from '@/components/auth/can';
+import { MenuGate } from '@/components/auth/menu-gate';
 
 export interface CanvasToolbarProps {
   readonly currentSceneIndex: number;
@@ -385,41 +386,43 @@ export function CanvasToolbar({
 
           <CtrlDivider />
 
-          {/* Lecture / Auto mode toggle (owner only) */}
+          {/* Lecture / Auto mode toggle (owner only, RBAC-gated) */}
           {showLectureToggle && (
-            <TooltipProvider delayDuration={0}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => {
-                      if (lectureToggleDisabled) return;
-                      const next = !lectureMode;
-                      setLectureMode(next);
-                      toast.success(
-                        next
-                          ? t('toolbar.lectureModeOn')
-                          : t('toolbar.lectureModeOff'),
-                      );
-                    }}
-                    disabled={lectureToggleDisabled}
-                    className={cn(
-                      ctrlBtn,
-                      'w-8 h-6',
-                      lectureToggleDisabled && 'opacity-40 cursor-not-allowed',
-                      lectureMode
-                        ? 'text-purple-600 dark:text-purple-400'
-                        : 'text-gray-500 dark:text-gray-400',
-                    )}
-                    aria-label={t('toolbar.lectureModeTooltip')}
-                  >
-                    <Presentation className="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  {lectureMode ? t('toolbar.lectureModeOn') : t('toolbar.lectureModeOff')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <MenuGate menu="toolbar.lectureMode" op="operable">
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => {
+                        if (lectureToggleDisabled) return;
+                        const next = !lectureMode;
+                        setLectureMode(next);
+                        toast.success(
+                          next
+                            ? t('toolbar.lectureModeOn')
+                            : t('toolbar.lectureModeOff'),
+                        );
+                      }}
+                      disabled={lectureToggleDisabled}
+                      className={cn(
+                        ctrlBtn,
+                        'w-8 h-6',
+                        lectureToggleDisabled && 'opacity-40 cursor-not-allowed',
+                        lectureMode
+                          ? 'text-purple-600 dark:text-purple-400'
+                          : 'text-gray-500 dark:text-gray-400',
+                      )}
+                      aria-label={t('toolbar.lectureModeTooltip')}
+                    >
+                      <Presentation className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    {lectureMode ? t('toolbar.lectureModeOn') : t('toolbar.lectureModeOff')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </MenuGate>
           )}
 
           {/* Auto-play (hidden in lecture mode — auto-advance is irrelevant

@@ -1091,5 +1091,46 @@
     "preview": "プレビュー",
     "speech": "音声脚本",
     "speechEmpty": "このページに音声アクションはありません"
+  },
+  "menu": {
+    "noPermission": "この機能を使用する権限がありません",
+    "route": {
+      "home": "ホーム",
+      "classroom": "教室",
+      "share": "共有教室",
+      "credits": "クレジット",
+      "recharge": "チャージ",
+      "generation": "生成プレビュー"
+    },
+    "home": {
+      "generate": "教室を生成",
+      "deleteClassroom": "教室を削除",
+      "renameClassroom": "教室の名前を変更"
+    },
+    "header": {
+      "share": "共有",
+      "sync": "クラウドに同期",
+      "export": "エクスポート"
+    },
+    "sidebar": {
+      "addScene": "ページを追加",
+      "reorderScenes": "ページの並べ替え",
+      "deleteScene": "ページを削除"
+    },
+    "toolbar": {
+      "regenerate": "このページを再生成",
+      "editSource": "ソースを編集",
+      "lectureMode": "講義モード切替"
+    },
+    "settings": {
+      "providers": "モデルプロバイダー",
+      "image": "画像生成",
+      "video": "動画生成",
+      "tts": "音声合成",
+      "asr": "音声認識",
+      "pdf": "PDF 処理",
+      "webSearch": "Web 検索",
+      "general": "一般設定"
+    }
   }
 }

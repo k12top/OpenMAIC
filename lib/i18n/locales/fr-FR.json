@@ -1091,5 +1091,46 @@
     "preview": "Aperçu",
     "speech": "Script vocal",
     "speechEmpty": "Aucune action vocale sur cette page"
+  },
+  "menu": {
+    "noPermission": "Vous n'avez pas l'autorisation d'utiliser cette fonctionnalité",
+    "route": {
+      "home": "Accueil",
+      "classroom": "Salle de classe",
+      "share": "Salle partagée",
+      "credits": "Crédits",
+      "recharge": "Recharger",
+      "generation": "Aperçu de la génération"
+    },
+    "home": {
+      "generate": "Générer une salle",
+      "deleteClassroom": "Supprimer la salle",
+      "renameClassroom": "Renommer la salle"
+    },
+    "header": {
+      "share": "Partager",
+      "sync": "Synchroniser sur le cloud",
+      "export": "Exporter"
+    },
+    "sidebar": {
+      "addScene": "Ajouter une page",
+      "reorderScenes": "Réorganiser les pages",
+      "deleteScene": "Supprimer la page"
+    },
+    "toolbar": {
+      "regenerate": "Régénérer cette page",
+      "editSource": "Modifier la source",
+      "lectureMode": "Mode présentation"
+    },
+    "settings": {
+      "providers": "Fournisseurs de modèles",
+      "image": "Génération d'images",
+      "video": "Génération de vidéos",
+      "tts": "Synthèse vocale",
+      "asr": "Reconnaissance vocale",
+      "pdf": "Traitement PDF",
+      "webSearch": "Recherche web",
+      "general": "Paramètres généraux"
+    }
   }
 }

@@ -58,6 +58,7 @@ import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
 import { LandingPage } from '@/components/landing/landing-page';
 import { Can } from '@/components/auth/can';
+import { MenuGate } from '@/components/auth/menu-gate';
 import { BRAND_NAME } from '@/lib/constants/brand';
 
 const log = createLogger('Home');
@@ -449,24 +450,26 @@ function HomePage() {
           )}
         </div>
         {creditBalance !== null && (
-          <>
-            <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
-            <button
-              onClick={() => router.push('/credits')}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
-                creditsUnlimited
-                  ? 'text-green-700 dark:text-green-300 bg-green-50/80 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
-                  : creditBalance <= 10
-                    ? 'text-red-700 dark:text-red-300 bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
-                    : 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
-              )}
-              title="Credits"
-            >
-              <Coins className="size-3" />
-              <span className="tabular-nums">{creditsUnlimited ? '∞' : creditBalance}</span>
-            </button>
-          </>
+          <MenuGate menu="route.credits" op="visible">
+            <>
+              <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={() => router.push('/credits')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
+                  creditsUnlimited
+                    ? 'text-green-700 dark:text-green-300 bg-green-50/80 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
+                    : creditBalance <= 10
+                      ? 'text-red-700 dark:text-red-300 bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
+                      : 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
+                )}
+                title="Credits"
+              >
+                <Coins className="size-3" />
+                <span className="tabular-nums">{creditsUnlimited ? '∞' : creditBalance}</span>
+              </button>
+            </>
+          </MenuGate>
         )}
       </div>
       <SettingsDialog
@@ -598,19 +601,21 @@ function HomePage() {
                   />
                 </div>
 
-                <button
-                  onClick={handleGenerate}
-                  disabled={!canGenerate}
-                  className={cn(
-                    'h-11 rounded-xl flex items-center justify-center gap-2 transition-all px-8 select-none',
-                    canGenerate
-                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0 text-sm font-bold tracking-wide'
-                      : 'bg-muted text-muted-foreground/40 cursor-not-allowed text-sm font-bold',
-                  )}
-                >
-                  <span>{t('toolbar.enterClassroom')}</span>
-                  <ArrowUp className="size-4" />
-                </button>
+                <MenuGate menu="home.generate" op="operable" mode="disable">
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!canGenerate}
+                    className={cn(
+                      'h-11 rounded-xl flex items-center justify-center gap-2 transition-all px-8 select-none',
+                      canGenerate
+                        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0 text-sm font-bold tracking-wide'
+                        : 'bg-muted text-muted-foreground/40 cursor-not-allowed text-sm font-bold',
+                    )}
+                  >
+                    <span>{t('toolbar.enterClassroom')}</span>
+                    <ArrowUp className="size-4" />
+                  </button>
+                </MenuGate>
               </div>
             </div>
 

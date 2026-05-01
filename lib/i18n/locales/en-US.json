@@ -1231,5 +1231,46 @@
         "preview": "Preview",
         "speech": "Speech",
         "speechEmpty": "This page has no speech actions"
+    },
+    "menu": {
+        "noPermission": "You don't have permission to use this feature",
+        "route": {
+            "home": "Home",
+            "classroom": "Classroom",
+            "share": "Shared classroom",
+            "credits": "Credits",
+            "recharge": "Recharge",
+            "generation": "Generation preview"
+        },
+        "home": {
+            "generate": "Generate classroom",
+            "deleteClassroom": "Delete classroom",
+            "renameClassroom": "Rename classroom"
+        },
+        "header": {
+            "share": "Share",
+            "sync": "Sync to cloud",
+            "export": "Export"
+        },
+        "sidebar": {
+            "addScene": "Add scene",
+            "reorderScenes": "Reorder scenes",
+            "deleteScene": "Delete scene"
+        },
+        "toolbar": {
+            "regenerate": "Regenerate scene",
+            "editSource": "Edit source",
+            "lectureMode": "Lecture mode toggle"
+        },
+        "settings": {
+            "providers": "Model providers",
+            "image": "Image generation",
+            "video": "Video generation",
+            "tts": "Text-to-speech",
+            "asr": "Speech-to-text",
+            "pdf": "PDF processing",
+            "webSearch": "Web search",
+            "general": "General settings"
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
+import { assertMenuPerm, ForbiddenError } from '@/lib/server/menu-guard';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { readClassroom } from '@/lib/server/classroom-storage';
 import type { Scene } from '@/lib/types/stage';
@@ -40,6 +41,13 @@ export async function POST(req: NextRequest) {
     if (classroom.userId !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Republish is the "push latest" half of the share feature; gate it
+    // on the same `header.share` operable permission.
+    await assertMenuPerm(user, 'header.share', 'operable', {
+      isResourceOwner: true,
+      resourceId: classroomId,
+    });
 
     // Re-read after potential filesystem fallback to make sure we have the
     // freshest stage/scene snapshot the server knows about.
@@ -81,6 +89,9 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof UnauthenticatedError) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (err instanceof ForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden', detail: err.message }, { status: 403 });
     }
     console.error('[Share/Republish] error:', err);
     const message = err instanceof Error ? err.message : String(err);

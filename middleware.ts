@@ -15,6 +15,27 @@ const PUBLIC_PATH_PREFIXES = [
 
 const PUBLIC_EXACT_PATHS = new Set(['/', '/api/health']);
 
+/**
+ * Route prefixes that require an additional menu-level `visible` check
+ * beyond mere authentication. Each prefix maps to a menu_id from
+ * `lib/auth/menu-registry.ts`.
+ *
+ * IMPORTANT: Resolving the menu snapshot here requires a fetch to
+ * Casdoor and Drizzle DB access, both of which are unavailable in the
+ * default Edge runtime middleware ships in. We therefore return a
+ * `x-rbac-menu` header so a downstream Node-runtime layout can perform
+ * the actual deny decision (or use API routes / page server components).
+ *
+ * The first wave of menu_id route guarding lives entirely in the API
+ * handlers (see `lib/server/menu-guard.ts > requireMenuPerm`). This
+ * stub exists so future `/admin/...` routes can opt in by adding a
+ * Node-runtime entry under `app/admin/...` and a layout that reads
+ * `x-rbac-menu` plus the cached snapshot.
+ */
+const MENU_ROUTE_PREFIXES: Array<{ prefix: string; menuId: string }> = [
+  // { prefix: '/admin', menuId: 'route.admin' },  // example placeholder
+];
+
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT_PATHS.has(pathname)) return true;
 
@@ -75,6 +96,16 @@ export function middleware(request: NextRequest) {
     url.pathname = '/';
     url.searchParams.set('login', 'required');
     return NextResponse.redirect(url);
+  }
+
+  // Tag the request with the matching menu_id (if any) so a downstream
+  // Node-runtime page/layout can perform the actual snapshot check.
+  // (Edge runtime in middleware can't talk to Casdoor or Drizzle.)
+  const matched = MENU_ROUTE_PREFIXES.find((m) => pathname.startsWith(m.prefix));
+  if (matched) {
+    const res = NextResponse.next();
+    res.headers.set('x-rbac-menu', matched.menuId);
+    return res;
   }
 
   return NextResponse.next();

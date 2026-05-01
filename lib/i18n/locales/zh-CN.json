@@ -1237,5 +1237,46 @@
         "preview": "预览",
         "speech": "语音脚本",
         "speechEmpty": "本页没有语音动作"
+    },
+    "menu": {
+        "noPermission": "你没有权限使用该功能",
+        "route": {
+            "home": "首页",
+            "classroom": "课堂",
+            "share": "共享课堂",
+            "credits": "积分",
+            "recharge": "充值",
+            "generation": "生成预览"
+        },
+        "home": {
+            "generate": "生成课堂",
+            "deleteClassroom": "删除课堂",
+            "renameClassroom": "重命名课堂"
+        },
+        "header": {
+            "share": "分享",
+            "sync": "同步到云端",
+            "export": "导出"
+        },
+        "sidebar": {
+            "addScene": "新增页面",
+            "reorderScenes": "调整页面顺序",
+            "deleteScene": "删除页面"
+        },
+        "toolbar": {
+            "regenerate": "重新生成本页",
+            "editSource": "编辑源代码",
+            "lectureMode": "讲解模式切换"
+        },
+        "settings": {
+            "providers": "模型供应商",
+            "image": "图像生成",
+            "video": "视频生成",
+            "tts": "语音合成",
+            "asr": "语音识别",
+            "pdf": "PDF 处理",
+            "webSearch": "联网搜索",
+            "general": "通用设置"
+        }
     }
 }
