@@ -2,20 +2,39 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, Save, X, Code2, Columns, MonitorPlay } from 'lucide-react';
+import {
+  Loader2,
+  Save,
+  X,
+  Code2,
+  Columns,
+  MonitorPlay,
+  Mic,
+  RefreshCw,
+  Play,
+  AlertTriangle,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useStageStore } from '@/lib/store';
 import type { Scene } from '@/lib/types/stage';
+import type { SpeechAction } from '@/lib/types/action';
 import { flushClassroomSync } from '@/lib/sync/classroom-sync';
-import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
 import { SceneProvider } from '@/lib/contexts/scene-context';
 import { SceneRenderer } from './scene-renderer';
 import { cn } from '@/lib/utils';
+import { isSpeechAudioStale } from '@/lib/audio/tts-utils';
+import { regenerateSingleSpeechAudio } from '@/lib/audio/regenerate-single-speech';
+import { AudioPlayer } from '@/lib/utils/audio-player';
 
 interface EditSceneSourceDialogProps {
   /** The scene currently being edited; null/absent = dialog closed. */
   sceneId: string | null;
   onClose: () => void;
+  /** Optional: open a specific tab on mount. */
+  initialTab?: 'split' | 'code' | 'preview' | 'speech';
+  /** Optional: when on the speech tab, scroll to and highlight this audioId. */
+  focusAudioId?: string | null;
 }
 
 /**
@@ -31,10 +50,16 @@ interface EditSceneSourceDialogProps {
  * - On Cancel / Escape / backdrop click: just close (no rollback needed,
  *   because nothing in stage store was changed before Save).
  */
-export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialogProps) {
+export function EditSceneSourceDialog({
+  sceneId,
+  onClose,
+  initialTab,
+  focusAudioId,
+}: EditSceneSourceDialogProps) {
   const { t } = useI18n();
   const scenes = useStageStore.use.scenes();
   const updateScene = useStageStore.use.updateScene();
+  const updateSpeechActionText = useStageStore.use.updateSpeechActionText();
 
   const currentScene = useMemo(
     () => (sceneId ? scenes.find((s) => s.id === sceneId) || null : null),
@@ -50,7 +75,14 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
   const [text, setText] = useState<string>('');
   const [parseError, setParseError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [viewMode, setViewMode] = useState<'split' | 'code' | 'preview'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'code' | 'preview' | 'speech'>(
+    initialTab || 'split',
+  );
+
+  // Honor focusAudioId / initialTab when reopening for a different scene.
+  useEffect(() => {
+    if (initialTab) setViewMode(initialTab);
+  }, [sceneId, initialTab]);
 
   // Open-time setup: snapshot + seed the textarea.
   // We intentionally depend only on `sceneId` (not on the scene object) so
@@ -120,6 +152,15 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
     if (!sceneId || parseError) return;
     setSaving(true);
     try {
+      // Speech tab edits are committed live via `updateSpeechActionText`,
+      // so re-applying the (stale) JSON `text` snapshot would clobber them.
+      // In speech mode just flush + close.
+      if (viewMode === 'speech') {
+        flushClassroomSync();
+        snapshotRef.current = null;
+        onClose();
+        return;
+      }
       // Ensure the latest parsed value is committed (in case the user typed
       // but onChange fired with an invalid intermediate state, the state
       // might already be correct — parse once more defensively).
@@ -140,7 +181,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
     } finally {
       setSaving(false);
     }
-  }, [sceneId, parseError, text, updateScene, onClose, t]);
+  }, [sceneId, parseError, text, updateScene, onClose, t, viewMode]);
 
   // Click-to-locate: find ID from clicked preview element and highlight in JSON
   const handlePreviewClick = useCallback(
@@ -225,10 +266,18 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
           </button>
         </div>
 
-        {/* Body: split pane */}
+        {/* Body: split pane (or speech editor when in speech mode) */}
         <div className="flex-1 flex min-h-0">
+          {viewMode === 'speech' ? (
+            <SpeechEditorPane
+              scene={localPreviewScene}
+              onTextChange={(audioId, newText) => updateSpeechActionText(audioId, newText)}
+              focusAudioId={focusAudioId}
+              t={t}
+            />
+          ) : null}
           {/* Left: JSON editor */}
-          {viewMode !== 'preview' && (
+          {viewMode !== 'preview' && viewMode !== 'speech' && (
             <div
               className={cn(
                 'flex flex-col border-r border-gray-100 dark:border-gray-800 transition-all duration-300',
@@ -258,7 +307,7 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
           )}
 
           {/* Right: isolated preview (does not mutate current classroom view) */}
-          {viewMode !== 'code' && (
+          {viewMode !== 'code' && viewMode !== 'speech' && (
             <div
               className={cn(
                 'flex flex-col bg-gray-100 dark:bg-gray-950 min-w-0 transition-all duration-300',
@@ -330,6 +379,19 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
                 <MonitorPlay className="w-3.5 h-3.5" />
                 {t('editSource.preview')}
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('speech')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all',
+                  viewMode === 'speech'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
+                )}
+              >
+                <Mic className="w-3.5 h-3.5" />
+                {t('editSource.speech')}
+              </button>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -361,5 +423,175 @@ export function EditSceneSourceDialog({ sceneId, onClose }: EditSceneSourceDialo
       </div>
     </div>,
     document.body,
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Speech editor pane — list of speech actions with edit / regen / preview.
+// Lives in this file because it is exclusively rendered by this dialog and
+// shares the same scene-context wiring.
+// ────────────────────────────────────────────────────────────────────────
+
+interface SpeechEditorPaneProps {
+  scene: Scene;
+  onTextChange: (audioId: string, newText: string) => void;
+  focusAudioId?: string | null;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function SpeechEditorPane({ scene, onTextChange, focusAudioId, t }: SpeechEditorPaneProps) {
+  const speechActions = useMemo(
+    () =>
+      (scene.actions || []).filter(
+        (a): a is SpeechAction => a.type === 'speech' && !!a.audioId,
+      ),
+    [scene],
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the requested action into view on mount / focusAudioId change.
+  useEffect(() => {
+    if (!focusAudioId || !containerRef.current) return;
+    const el = containerRef.current.querySelector(
+      `[data-audio-id="${focusAudioId}"]`,
+    ) as HTMLElement | null;
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusAudioId]);
+
+  if (speechActions.length === 0) {
+    return (
+      <div className="w-full flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+        {t('editSource.speechEmpty')}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="w-full overflow-y-auto p-4 space-y-3">
+      {speechActions.map((action) => (
+        <SpeechActionRow
+          key={action.audioId}
+          action={action}
+          highlighted={action.audioId === focusAudioId}
+          onTextChange={(text) => onTextChange(action.audioId!, text)}
+          t={t}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface SpeechActionRowProps {
+  action: SpeechAction;
+  highlighted: boolean;
+  onTextChange: (text: string) => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function SpeechActionRow({ action, highlighted, onTextChange, t }: SpeechActionRowProps) {
+  const [busy, setBusy] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const playerRef = useRef<AudioPlayer | null>(null);
+  const stale = isSpeechAudioStale(action);
+
+  const handleRegen = useCallback(async () => {
+    if (!action.audioId || !action.text.trim()) return;
+    setBusy(true);
+    try {
+      const result = await regenerateSingleSpeechAudio(action.audioId, action.text);
+      if (result.success) {
+        toast.success(t('speech.regenSuccess'));
+      } else {
+        toast.error(result.error || t('speech.regenFailed'));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [action, t]);
+
+  const handlePlay = useCallback(async () => {
+    if (!action.audioId) return;
+    if (!playerRef.current) playerRef.current = new AudioPlayer();
+    if (playing) {
+      playerRef.current.stop();
+      setPlaying(false);
+      return;
+    }
+    setPlaying(true);
+    playerRef.current.onEnded(() => setPlaying(false));
+    const ok = await playerRef.current.play(action.audioId, action.audioUrl);
+    if (!ok) {
+      setPlaying(false);
+      toast.error(t('speech.previewMissing'));
+    }
+  }, [action.audioId, action.audioUrl, playing, t]);
+
+  // Stop preview audio when the row unmounts to avoid lingering playback.
+  useEffect(() => {
+    return () => {
+      playerRef.current?.stop();
+    };
+  }, []);
+
+  return (
+    <div
+      data-audio-id={action.audioId}
+      className={cn(
+        'rounded-lg border p-3 bg-white dark:bg-gray-900 transition-colors',
+        highlighted
+          ? 'border-purple-300 dark:border-purple-700 ring-2 ring-purple-200 dark:ring-purple-800'
+          : 'border-gray-200 dark:border-gray-800',
+      )}
+    >
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-mono text-gray-400 truncate">
+            {action.audioId}
+          </span>
+          {stale && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="size-3" />
+              {t('speech.staleBadge')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={handlePlay}
+            disabled={busy || (!action.audioId && !action.audioUrl)}
+            className="p-1.5 rounded-md text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+            title={playing ? t('speech.previewStop') : t('speech.preview')}
+          >
+            <Play className={cn('size-3.5', playing && 'fill-purple-500 text-purple-500')} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRegen}
+            disabled={busy || !action.text.trim()}
+            className={cn(
+              'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors',
+              stale
+                ? 'bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50'
+                : 'text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40',
+            )}
+            title={t('speech.regenerateOne')}
+          >
+            {busy ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3" />
+            )}
+            {busy ? t('speech.regenerating') : t('speech.regenerateOne')}
+          </button>
+        </div>
+      </div>
+      <textarea
+        value={action.text}
+        onChange={(e) => onTextChange(e.target.value)}
+        rows={3}
+        className="w-full px-2 py-1.5 rounded-md border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 text-xs text-gray-800 dark:text-gray-200 resize-y focus:outline-none focus:ring-1 focus:ring-purple-400"
+      />
+    </div>
   );
 }

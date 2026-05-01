@@ -62,6 +62,7 @@ export function Stage({
   const { mode, getCurrentScene, scenes, currentSceneId, setCurrentSceneId, generatingOutlines } =
     useStageStore();
   const failedOutlines = useStageStore.use.failedOutlines();
+  const lectureModeActive = useStageStore((s) => !!s.stage?.lectureMode);
 
   // Target scene for the regenerate dialog (owner-only). `null` means closed.
   const [regenTargetSceneId, setRegenTargetSceneId] = useState<string | null>(null);
@@ -836,14 +837,26 @@ export function Stage({
       }
 
       switch (event.key) {
+        case 'PageDown':
+          // PageDown — universal "next slide" hotkey for presenters
+          // regardless of fullscreen state.
+          event.preventDefault();
+          handleNextScene();
+          break;
+        case 'PageUp':
+          event.preventDefault();
+          handlePreviousScene();
+          break;
         case 'ArrowLeft':
-          if (!isPresenting) return;
+          // In lecture mode the teacher always advances by hand, so the
+          // arrow keys behave as prev/next regardless of fullscreen.
+          if (!isPresenting && !lectureModeActive) return;
           event.preventDefault();
           handlePreviousScene();
           resetPresentationIdleTimer();
           break;
         case 'ArrowRight':
-          if (!isPresenting) return;
+          if (!isPresenting && !lectureModeActive) return;
           event.preventDefault();
           handleNextScene();
           resetPresentationIdleTimer();
@@ -854,7 +867,13 @@ export function Stage({
           // buffer-level pause/resume — don't also fire engine play/pause.
           if (chatSessionType === 'qa' || chatSessionType === 'discussion') break;
           event.preventDefault();
-          handlePlayPause();
+          // Lecture mode: Space advances to the next slide instead of
+          // toggling play/pause (no central play button to toggle anyway).
+          if (lectureModeActive) {
+            handleNextScene();
+          } else {
+            handlePlayPause();
+          }
           break;
         case 'Escape':
           // With keyboard.lock(), Escape no longer auto-exits fullscreen.
@@ -904,6 +923,7 @@ export function Stage({
     isPresenting,
     isPresentationInteractionActive,
     isPresentationShortcutTarget,
+    lectureModeActive,
     resetPresentationIdleTimer,
     setChatAreaCollapsed,
     setSidebarCollapsed,

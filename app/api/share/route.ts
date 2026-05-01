@@ -94,18 +94,50 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
     }
 
-    const shareToken = nanoid(16);
-    await db.insert(schema.shares).values({
-      classroomId,
-      userId: user.id,
-      shareToken,
-      mode: mode as 'public' | 'readonly' | 'editable' | 'sso',
+    // Persistent-link model: at most one share row per (classroom, user).
+    // Reuse the existing token if the user already shared this classroom;
+    // only the mode may change. Avoids breaking older links handed to
+    // students when the owner re-clicks "Share".
+    const existing = await db.query.shares.findFirst({
+      where: and(
+        eq(schema.shares.classroomId, classroomId),
+        eq(schema.shares.userId, user.id),
+      ),
     });
 
+    if (existing) {
+      if (existing.mode !== mode) {
+        await db
+          .update(schema.shares)
+          .set({ mode: mode as 'public' | 'readonly' | 'editable' | 'sso' })
+          .where(eq(schema.shares.id, existing.id));
+      }
+      return NextResponse.json({
+        id: existing.id,
+        shareToken: existing.shareToken,
+        mode,
+        url: `/share/${existing.shareToken}`,
+        reused: true,
+      });
+    }
+
+    const shareToken = nanoid(16);
+    const inserted = await db
+      .insert(schema.shares)
+      .values({
+        classroomId,
+        userId: user.id,
+        shareToken,
+        mode: mode as 'public' | 'readonly' | 'editable' | 'sso',
+      })
+      .returning({ id: schema.shares.id });
+
     return NextResponse.json({
+      id: inserted[0]?.id,
       shareToken,
       mode,
       url: `/share/${shareToken}`,
+      reused: false,
     });
   } catch (err) {
     if (err instanceof UnauthenticatedError) {

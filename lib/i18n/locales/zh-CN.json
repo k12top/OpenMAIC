@@ -62,7 +62,10 @@
         "ttsPreviewing": "播放中...",
         "toggleChat": "切换聊天面板",
         "openChatPanel": "打开聊天面板",
-        "voiceSettings": "音色设置"
+        "voiceSettings": "音色设置",
+        "lectureModeOn": "讲解模式",
+        "lectureModeOff": "自动模式",
+        "lectureModeTooltip": "讲解/自动模式：讲解模式适合教师亲自授课，去除中央播放按钮、静音 AI 朗读"
     },
     "export": {
         "pptx": "导出 PPTX",
@@ -322,7 +325,77 @@
         }
     },
     "share": {
-        "notReady": "生成完成后可分享"
+        "notReady": "生成完成后可分享",
+        "title": "分享与协作",
+        "createLink": "创建分享链接",
+        "applyModeChange": "更新分享模式",
+        "loading": "加载中…",
+        "linkCopied": "链接已复制",
+        "linkCreated": "分享链接已创建",
+        "modeUpdated": "分享模式已更新",
+        "createFailed": "创建分享链接失败",
+        "revoke": "撤销链接",
+        "revoked": "已撤销",
+        "revokeFailed": "撤销失败",
+        "modePublic": "公开",
+        "modePublicDesc": "任何人通过链接即可查看",
+        "modeReadonly": "登录可看",
+        "modeReadonlyDesc": "需要登录账号才能查看",
+        "modeEditable": "可复制",
+        "modeEditableDesc": "登录后可复制到自己的课堂",
+        "modeSso": "组织内可见",
+        "modeSsoDesc": "仅限你所在组织的成员可见",
+        "persistentBadge": "持久链接",
+        "persistentHint": "每个课堂为每位作者保留一条持久链接，更新后用「立即推送最新」即可同步给所有访客。",
+        "pushLatest": "立即推送最新",
+        "pushing": "推送中…",
+        "pushFailed": "推送失败",
+        "pushSuccessClean": "分享内容已更新，所有媒体均已就绪",
+        "pushSuccessSummary": "分享内容已更新（补传 {{uploaded}} / {{total}} 个媒体，跳过 {{skipped}}）",
+        "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。"
+    },
+    "sidebar": {
+        "addScene": "新增页面"
+    },
+    "addScene": {
+        "title": "新增课堂页面",
+        "typeLabel": "选择页面类型",
+        "typeSlide": "讲解页",
+        "typeSlideDesc": "AI 老师讲解一个主题",
+        "typeQuiz": "测验",
+        "typeQuizDesc": "出几道题检验掌握情况",
+        "typeInteractive": "动画演示",
+        "typeInteractiveDesc": "可交互的动画或 demo",
+        "titleField": "标题",
+        "titlePlaceholder": "例如：神经元的工作机制",
+        "descriptionField": "简介",
+        "descriptionPlaceholder": "用一两句话描述这页的目的",
+        "keyPointsField": "关键要点",
+        "keyPointPlaceholder": "本页要讲的一个核心点",
+        "addKeyPoint": "添加要点",
+        "quizQuestionCount": "题目数量",
+        "quizDifficulty": "难度",
+        "difficultyEasy": "简单",
+        "difficultyMedium": "中等",
+        "difficultyHard": "困难",
+        "interactiveDesignIdea": "互动设计建议（可选）",
+        "interactiveDesignIdeaPlaceholder": "想要的演示形式或交互思路（可空，AI 自由发挥）",
+        "aiHint": "提交后 AI 会先生成内容，再生成动作脚本与语音，过程中可以继续编辑其它页面。",
+        "generate": "生成",
+        "generating": "生成中…",
+        "success": "新页面已加入课堂",
+        "failed": "生成失败"
+    },
+    "speech": {
+        "staleBadge": "音频与文本不一致",
+        "staleHint": "点击查看并重生本句语音",
+        "preview": "试听",
+        "previewStop": "停止试听",
+        "previewMissing": "尚未生成语音，无法试听",
+        "regenerateOne": "重生本句",
+        "regenerating": "重生中…",
+        "regenSuccess": "语音已重新生成",
+        "regenFailed": "语音重生失败"
     },
     "classroom": {
         "recentClassrooms": "最近学习",
@@ -1161,6 +1234,8 @@
     "editSource": {
         "code": "代码",
         "split": "双栏",
-        "preview": "预览"
+        "preview": "预览",
+        "speech": "语音脚本",
+        "speechEmpty": "本页没有语音动作"
     }
 }

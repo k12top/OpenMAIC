@@ -58,7 +58,11 @@
     "ttsPreview": "Pratinjau",
     "ttsPreviewing": "Memutar...",
     "toggleChat": "Alihkan panel obrolan",
-    "openChatPanel": "Buka panel obrolan"
+    "openChatPanel": "Buka panel obrolan",
+    "voiceSettings": "Pengaturan suara",
+    "lectureModeOn": "Mode kuliah",
+    "lectureModeOff": "Mode otomatis",
+    "lectureModeTooltip": "Beralih kuliah/otomatis: mode kuliah menyembunyikan tombol play utama dan membisukan narasi AI agar pengajar bisa membawakan sendiri"
   },
   "export": {
     "pptx": "Ekspor PPTX",
@@ -301,7 +305,77 @@
     }
   },
   "share": {
-    "notReady": "Tersedia setelah pembuatan selesai"
+    "notReady": "Tersedia setelah pembuatan selesai",
+    "title": "Bagikan & Kolaborasi",
+    "createLink": "Buat tautan bagikan",
+    "applyModeChange": "Perbarui mode bagikan",
+    "loading": "Memuat…",
+    "linkCopied": "Tautan disalin",
+    "linkCreated": "Tautan dibuat",
+    "modeUpdated": "Mode bagikan diperbarui",
+    "createFailed": "Gagal membuat tautan",
+    "revoke": "Cabut tautan",
+    "revoked": "Dicabut",
+    "revokeFailed": "Gagal mencabut",
+    "modePublic": "Publik",
+    "modePublicDesc": "Siapa pun yang punya tautan bisa melihat",
+    "modeReadonly": "Perlu masuk",
+    "modeReadonlyDesc": "Pengunjung harus masuk untuk melihat",
+    "modeEditable": "Bisa disalin",
+    "modeEditableDesc": "Pengunjung yang masuk bisa menyalin ke kelas mereka",
+    "modeSso": "Hanya organisasi",
+    "modeSsoDesc": "Hanya anggota organisasi Anda yang bisa melihat",
+    "persistentBadge": "Tautan permanen",
+    "persistentHint": "Setiap kelas menyimpan satu tautan permanen per penulis. Setelah edit, klik \"Kirim sekarang\" untuk menyinkronkan ke semua pengunjung.",
+    "pushLatest": "Kirim sekarang",
+    "pushing": "Mengirim…",
+    "pushFailed": "Gagal mengirim",
+    "pushSuccessClean": "Bagikan sudah terbaru — semua media tersinkron",
+    "pushSuccessSummary": "Bagikan diperbarui ({{uploaded}}/{{total}} media diunggah ulang, {{skipped}} dilewati)",
+    "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang."
+  },
+  "sidebar": {
+    "addScene": "Tambah halaman"
+  },
+  "addScene": {
+    "title": "Tambah halaman baru",
+    "typeLabel": "Pilih tipe halaman",
+    "typeSlide": "Slide",
+    "typeSlideDesc": "Guru AI menjelaskan satu topik",
+    "typeQuiz": "Kuis",
+    "typeQuizDesc": "Beberapa soal untuk mengecek pemahaman",
+    "typeInteractive": "Interaktif",
+    "typeInteractiveDesc": "Demo animasi atau widget interaktif",
+    "titleField": "Judul",
+    "titlePlaceholder": "mis. Bagaimana neuron bekerja",
+    "descriptionField": "Deskripsi",
+    "descriptionPlaceholder": "Jelaskan tujuan halaman dalam satu-dua kalimat",
+    "keyPointsField": "Poin penting",
+    "keyPointPlaceholder": "Ide inti yang harus dibahas",
+    "addKeyPoint": "Tambah poin",
+    "quizQuestionCount": "Jumlah soal",
+    "quizDifficulty": "Tingkat kesulitan",
+    "difficultyEasy": "Mudah",
+    "difficultyMedium": "Sedang",
+    "difficultyHard": "Sulit",
+    "interactiveDesignIdea": "Ide desain (opsional)",
+    "interactiveDesignIdeaPlaceholder": "Ide visual atau interaksi (kosongkan agar AI yang menentukan)",
+    "aiHint": "Setelah dikirim, AI akan membuat konten dulu, lalu aksi dan suara. Anda bisa terus mengedit halaman lain selama proses berjalan.",
+    "generate": "Buat",
+    "generating": "Membuat…",
+    "success": "Halaman baru ditambahkan ke kelas",
+    "failed": "Pembuatan gagal"
+  },
+  "speech": {
+    "staleBadge": "Audio tidak sinkron",
+    "staleHint": "Klik untuk memeriksa dan membuat ulang",
+    "preview": "Pratinjau",
+    "previewStop": "Berhenti",
+    "previewMissing": "Belum ada audio — buat dulu untuk diputar",
+    "regenerateOne": "Buat ulang baris ini",
+    "regenerating": "Membuat ulang…",
+    "regenSuccess": "Audio dibuat ulang",
+    "regenFailed": "Gagal membuat ulang"
   },
   "classroom": {
     "recentClassrooms": "Terbaru",
@@ -978,5 +1052,12 @@
     "voice": "Suara",
     "speed": "Kecepatan",
     "language": "Bahasa"
+  },
+  "editSource": {
+    "code": "Kode",
+    "split": "Tampilan terbagi",
+    "preview": "Pratinjau",
+    "speech": "Naskah suara",
+    "speechEmpty": "Halaman ini belum punya aksi suara"
   }
 }

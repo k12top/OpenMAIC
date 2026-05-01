@@ -58,7 +58,11 @@
     "ttsPreview": "プレビュー",
     "ttsPreviewing": "再生中...",
     "toggleChat": "チャットパネルの表示を切り替え",
-    "openChatPanel": "チャットパネルを開く"
+    "openChatPanel": "チャットパネルを開く",
+    "voiceSettings": "ボイス設定",
+    "lectureModeOn": "講義モード",
+    "lectureModeOff": "自動モード",
+    "lectureModeTooltip": "講義/自動モードを切り替え：講義モードでは中央の再生ボタンを非表示にし、AIナレーションをミュートします"
   },
   "export": {
     "pptx": "PPTXエクスポート",
@@ -301,7 +305,77 @@
     }
   },
   "share": {
-    "notReady": "生成完了後に利用できます"
+    "notReady": "生成完了後に利用できます",
+    "title": "共有とコラボレーション",
+    "createLink": "共有リンクを作成",
+    "applyModeChange": "共有モードを更新",
+    "loading": "読み込み中…",
+    "linkCopied": "リンクをコピーしました",
+    "linkCreated": "共有リンクを作成しました",
+    "modeUpdated": "共有モードを更新しました",
+    "createFailed": "共有リンクの作成に失敗しました",
+    "revoke": "リンクを取り消す",
+    "revoked": "取り消しました",
+    "revokeFailed": "取り消しに失敗しました",
+    "modePublic": "公開",
+    "modePublicDesc": "リンクを知っている人なら誰でも閲覧可能",
+    "modeReadonly": "サインインで閲覧",
+    "modeReadonlyDesc": "閲覧にはサインインが必要",
+    "modeEditable": "コピー可能",
+    "modeEditableDesc": "サインイン後に自分のクラスへコピー可能",
+    "modeSso": "組織内のみ",
+    "modeSsoDesc": "あなたの組織のメンバーのみ閲覧可能",
+    "persistentBadge": "永続リンク",
+    "persistentHint": "クラスごとに作成者あたり1本の永続リンクが保たれます。編集後は「最新を今すぐ送信」で全員に同期できます。",
+    "pushLatest": "最新を今すぐ送信",
+    "pushing": "送信中…",
+    "pushFailed": "送信に失敗",
+    "pushSuccessClean": "共有が最新です。すべてのメディアが同期されています",
+    "pushSuccessSummary": "共有を更新しました（{{uploaded}}/{{total}}件のメディアを再アップロード、{{skipped}}件をスキップ）",
+    "pushExplanation": "「最新を今すぐ送信」は現在の編集をクラウドへ同期し、足りない音声や画像を補ってアップロードします。"
+  },
+  "sidebar": {
+    "addScene": "ページを追加"
+  },
+  "addScene": {
+    "title": "新しいページを追加",
+    "typeLabel": "ページタイプを選択",
+    "typeSlide": "スライド",
+    "typeSlideDesc": "AI教師がトピックを説明",
+    "typeQuiz": "クイズ",
+    "typeQuizDesc": "理解度を確認するための質問",
+    "typeInteractive": "インタラクティブ",
+    "typeInteractiveDesc": "アニメーションやインタラクティブなデモ",
+    "titleField": "タイトル",
+    "titlePlaceholder": "例：ニューロンの発火の仕組み",
+    "descriptionField": "説明",
+    "descriptionPlaceholder": "このページで教えたい内容を1～2文で",
+    "keyPointsField": "キーポイント",
+    "keyPointPlaceholder": "このページで扱う中心的な内容",
+    "addKeyPoint": "キーポイントを追加",
+    "quizQuestionCount": "問題数",
+    "quizDifficulty": "難易度",
+    "difficultyEasy": "やさしい",
+    "difficultyMedium": "ふつう",
+    "difficultyHard": "むずかしい",
+    "interactiveDesignIdea": "デザインのヒント（任意）",
+    "interactiveDesignIdeaPlaceholder": "見せ方や演出のアイデア（空欄可、AIにお任せ）",
+    "aiHint": "送信後、AIがまず内容を生成し、続けてアクションと音声を生成します。その間も他のページを編集できます。",
+    "generate": "生成",
+    "generating": "生成中…",
+    "success": "新しいページを追加しました",
+    "failed": "生成に失敗しました"
+  },
+  "speech": {
+    "staleBadge": "音声が本文と不一致",
+    "staleHint": "クリックして確認・再生成します",
+    "preview": "試聴",
+    "previewStop": "試聴を停止",
+    "previewMissing": "音声が未生成のため試聴できません",
+    "regenerateOne": "この一文を再生成",
+    "regenerating": "再生成中…",
+    "regenSuccess": "音声を再生成しました",
+    "regenFailed": "再生成に失敗しました"
   },
   "classroom": {
     "recentClassrooms": "最近の教室",
@@ -1010,5 +1084,12 @@
     "voice": "ボイス",
     "speed": "速度",
     "language": "言語"
+  },
+  "editSource": {
+    "code": "コード",
+    "split": "分割表示",
+    "preview": "プレビュー",
+    "speech": "音声脚本",
+    "speechEmpty": "このページに音声アクションはありません"
   }
 }

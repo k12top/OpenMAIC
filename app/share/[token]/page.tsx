@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, Copy, LogIn, Globe, Loader2, Lock, Play } from 'lucide-react';
+import { Eye, Copy, LogIn, Globe, Loader2, Lock, Play, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Stage } from '@/components/stage';
@@ -48,6 +48,17 @@ function DirectClassroomView({
   const [ready, setReady] = useState(false);
   const stageContainerRef = useRef<HTMLDivElement>(null);
 
+  // Author's saved lectureMode (true = teacher-led). Guests can temporarily
+  // flip it back to auto without writing to the cloud.
+  const authorLectureMode = !!classroom.stage.lectureMode;
+  // `null` = honor author's setting; otherwise the viewer's local override.
+  const [viewerLectureOverride, setViewerLectureOverride] = useState<boolean | null>(null);
+  const effectiveLectureMode =
+    viewerLectureOverride === null ? authorLectureMode : viewerLectureOverride;
+  // Show the toggle only when the author actually saved lectureMode = true.
+  // (If the author already shared in auto mode there's nothing to "switch back" to.)
+  const showLectureOverrideToggle = authorLectureMode && !isOwnerOfSource;
+
   useEffect(() => {
     useStageStore.getState().setStage(classroom.stage);
     useStageStore.setState({
@@ -84,6 +95,19 @@ function DirectClassroomView({
       useStageStore.getState().clearStore();
     };
   }, [classroom, isOwnerOfSource]);
+
+  // Apply the viewer's local lectureMode override directly to the store
+  // *without* invoking `setLectureMode` — that path would trigger a
+  // debounced cloud save which guests must not be able to do. This keeps
+  // the override entirely ephemeral (lost on refresh / navigation).
+  useEffect(() => {
+    if (!ready) return;
+    useStageStore.setState((state) => {
+      if (!state.stage) return state;
+      if (state.stage.lectureMode === effectiveLectureMode) return state;
+      return { stage: { ...state.stage, lectureMode: effectiveLectureMode } };
+    });
+  }, [ready, effectiveLectureMode]);
 
   if (!ready) {
     return (
@@ -135,6 +159,38 @@ function DirectClassroomView({
                     Sign In
                   </a>
                 )
+              )}
+              {showLectureOverrideToggle && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setViewerLectureOverride((prev) => {
+                      const next = prev === null ? !authorLectureMode : !prev;
+                      // If the new value matches the author's setting, drop
+                      // the override so a future refresh re-honors the
+                      // author's intent without an extra UI click.
+                      return next === authorLectureMode ? null : next;
+                    })
+                  }
+                  title={
+                    effectiveLectureMode
+                      ? 'Switch to auto-play view (your device only)'
+                      : 'Switch back to lecture view (your device only)'
+                  }
+                  className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors font-medium text-white text-xs"
+                >
+                  {effectiveLectureMode ? (
+                    <>
+                      <Play className="size-3" />
+                      View as auto-play
+                    </>
+                  ) : (
+                    <>
+                      <GraduationCap className="size-3" />
+                      View as lecture
+                    </>
+                  )}
+                </button>
               )}
             </div>
           </div>

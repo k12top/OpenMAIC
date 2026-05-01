@@ -11,7 +11,7 @@ import type { AgentInfo } from '@/lib/generation/generation-pipeline';
 import type { Scene } from '@/lib/types/stage';
 import type { Action, SpeechAction } from '@/lib/types/action';
 import type { TTSProviderId } from '@/lib/audio/types';
-import { splitLongSpeechActions } from '@/lib/audio/tts-utils';
+import { splitLongSpeechActions, hashSpeechText } from '@/lib/audio/tts-utils';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
 import { createLogger } from '@/lib/logger';
 
@@ -199,8 +199,16 @@ export async function generateAndStoreTTS(
     id: audioId,
     blob,
     format: data.format,
+    text,
     createdAt: Date.now(),
   });
+
+  // Tag the speech action with a hash of the text we just synthesized so
+  // the UI can detect later text edits as "audio out of sync". Done before
+  // the cloud upload so a slow MinIO doesn't delay the freshness signal.
+  useStageStore
+    .getState()
+    .updateSpeechAction(audioId, { audioTextHash: hashSpeechText(text) });
 
   // Upload to cloud storage and write back the MinIO URL into the speech action
   const stageId = useStageStore.getState().stage?.id;

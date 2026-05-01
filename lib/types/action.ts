@@ -43,6 +43,15 @@ export interface SpeechAction extends ActionBase {
   audioUrl?: string; // Server-generated TTS audio URL
   voice?: string;
   speed?: number; // default 1.0
+  /**
+   * Hash of the `text` value at the time the audio was generated. When this
+   * differs from `hashSpeechText(text)` (or is missing on a non-empty audio),
+   * the audio is considered stale relative to the current text and the UI
+   * surfaces a "regenerate audio" hint. Optional for backward compatibility
+   * with audio generated before this field existed — old data without a
+   * hash is treated as fresh until the user explicitly regenerates.
+   */
+  audioTextHash?: string;
 }
 
 /** Open whiteboard (wait for animation) */

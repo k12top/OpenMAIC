@@ -22,6 +22,7 @@ export const ACTIONS = [
   'edit-source',
   'reorder',
   'delete-scene',
+  'add-scene',
   'share',
   'delete-classroom',
 ] as const;
@@ -34,6 +35,7 @@ export const OWNER_IMPLICIT_ACTIONS: readonly Action[] = [
   'edit-source',
   'reorder',
   'delete-scene',
+  'add-scene',
   'share',
 ];
 

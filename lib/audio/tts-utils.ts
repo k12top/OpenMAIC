@@ -104,3 +104,40 @@ export function splitLongSpeechActions(actions: Action[], providerId: TTSProvide
   });
   return didSplit ? nextActions : actions;
 }
+
+// ─── Stale-audio detection ───────────────────────────────────────────────
+
+/**
+ * Compute a fast, deterministic hash of the speech text. Used to mark
+ * generated audio as "fresh" so the UI can detect when text was edited
+ * after the audio was synthesized. Not crypto — fnv1a-32 is plenty.
+ *
+ * Returns a hex string. Case-sensitive on purpose; punctuation and
+ * whitespace are normalized so trivially-equivalent edits don't trigger
+ * a false stale flag.
+ */
+export function hashSpeechText(text: string): string {
+  const normalized = (text || '').replace(/\s+/g, ' ').trim();
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < normalized.length; i++) {
+    hash ^= normalized.charCodeAt(i);
+    // Multiply by FNV prime (mod 2^32 via Math.imul tricks)
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+/**
+ * Whether a speech action's audio is stale relative to its current text.
+ * Returns false when no audio has been generated (nothing to be stale)
+ * or when the action has no `audioTextHash` (legacy data — treated as
+ * fresh until the user explicitly regenerates).
+ */
+export function isSpeechAudioStale(action: SpeechAction): boolean {
+  if (!action.text) return false;
+  const hasAudio = !!action.audioId || !!action.audioUrl;
+  if (!hasAudio) return false;
+  if (!action.audioTextHash) return false;
+  return action.audioTextHash !== hashSpeechText(action.text);
+}
+

@@ -58,7 +58,11 @@
     "ttsPreview": "Aperçu",
     "ttsPreviewing": "Lecture en cours...",
     "toggleChat": "Afficher ou masquer le chat",
-    "openChatPanel": "Ouvrir le panneau de chat"
+    "openChatPanel": "Ouvrir le panneau de chat",
+    "voiceSettings": "Paramètres de voix",
+    "lectureModeOn": "Mode cours",
+    "lectureModeOff": "Mode auto",
+    "lectureModeTooltip": "Mode cours/auto : le mode cours masque le bouton lecture central et coupe la narration IA pour laisser l'enseignant présenter"
   },
   "export": {
     "pptx": "Exporter en PPTX",
@@ -301,7 +305,77 @@
     }
   },
   "share": {
-    "notReady": "Disponible une fois la génération terminée"
+    "notReady": "Disponible une fois la génération terminée",
+    "title": "Partage et collaboration",
+    "createLink": "Créer un lien de partage",
+    "applyModeChange": "Mettre à jour le mode de partage",
+    "loading": "Chargement…",
+    "linkCopied": "Lien copié",
+    "linkCreated": "Lien de partage créé",
+    "modeUpdated": "Mode de partage mis à jour",
+    "createFailed": "Échec de création du lien",
+    "revoke": "Révoquer le lien",
+    "revoked": "Révoqué",
+    "revokeFailed": "Échec de la révocation",
+    "modePublic": "Public",
+    "modePublicDesc": "Toute personne disposant du lien peut consulter",
+    "modeReadonly": "Connexion requise",
+    "modeReadonlyDesc": "Les visiteurs doivent se connecter pour voir",
+    "modeEditable": "Copiable",
+    "modeEditableDesc": "Les visiteurs connectés peuvent copier dans leur classe",
+    "modeSso": "Organisation seule",
+    "modeSsoDesc": "Seuls les membres de votre organisation peuvent voir",
+    "persistentBadge": "Lien permanent",
+    "persistentHint": "Chaque classe conserve un lien permanent unique par auteur. Après modification, cliquez sur « Pousser maintenant » pour synchroniser tous les visiteurs.",
+    "pushLatest": "Pousser maintenant",
+    "pushing": "Envoi…",
+    "pushFailed": "Échec de l'envoi",
+    "pushSuccessClean": "Partage à jour — tous les médias sont synchronisés",
+    "pushSuccessSummary": "Partage mis à jour ({{uploaded}}/{{total}} médias renvoyés, {{skipped}} ignorés)",
+    "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants."
+  },
+  "sidebar": {
+    "addScene": "Ajouter une page"
+  },
+  "addScene": {
+    "title": "Ajouter une nouvelle page",
+    "typeLabel": "Choisir le type de page",
+    "typeSlide": "Diapositive",
+    "typeSlideDesc": "L'IA enseigne un sujet",
+    "typeQuiz": "Quiz",
+    "typeQuizDesc": "Quelques questions pour vérifier la compréhension",
+    "typeInteractive": "Interactif",
+    "typeInteractiveDesc": "Démo animée ou widget interactif",
+    "titleField": "Titre",
+    "titlePlaceholder": "ex. Comment fonctionne un neurone",
+    "descriptionField": "Description",
+    "descriptionPlaceholder": "Décrivez le but de cette page en une phrase ou deux",
+    "keyPointsField": "Points clés",
+    "keyPointPlaceholder": "Une idée clé que cette page doit aborder",
+    "addKeyPoint": "Ajouter un point clé",
+    "quizQuestionCount": "Nombre de questions",
+    "quizDifficulty": "Difficulté",
+    "difficultyEasy": "Facile",
+    "difficultyMedium": "Moyenne",
+    "difficultyHard": "Difficile",
+    "interactiveDesignIdea": "Idée de design (optionnel)",
+    "interactiveDesignIdeaPlaceholder": "Idée de mise en scène ou d'interaction (laisser vide pour laisser faire l'IA)",
+    "aiHint": "Après envoi, l'IA génère d'abord le contenu, puis les actions et l'audio. Vous pouvez continuer à éditer d'autres pages pendant ce temps.",
+    "generate": "Générer",
+    "generating": "Génération…",
+    "success": "Nouvelle page ajoutée à la classe",
+    "failed": "Échec de la génération"
+  },
+  "speech": {
+    "staleBadge": "Audio désynchronisé",
+    "staleHint": "Cliquez pour vérifier et régénérer cette ligne",
+    "preview": "Aperçu",
+    "previewStop": "Arrêter l'aperçu",
+    "previewMissing": "Aucun audio — générez-le d'abord pour l'écouter",
+    "regenerateOne": "Régénérer cette ligne",
+    "regenerating": "Régénération…",
+    "regenSuccess": "Audio régénéré",
+    "regenFailed": "Échec de la régénération"
   },
   "classroom": {
     "recentClassrooms": "Récents",
@@ -1010,5 +1084,12 @@
     "voice": "Voix",
     "speed": "Vitesse",
     "language": "Langue"
+  },
+  "editSource": {
+    "code": "Code",
+    "split": "Vue scindée",
+    "preview": "Aperçu",
+    "speech": "Script vocal",
+    "speechEmpty": "Aucune action vocale sur cette page"
   }
 }

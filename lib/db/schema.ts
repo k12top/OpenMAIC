@@ -8,6 +8,7 @@ import {
   uuid,
   bigint,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 export const creditTransactionTypeEnum = pgEnum('credit_transaction_type', [
@@ -133,7 +134,12 @@ export const shares = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('idx_share_token').on(table.shareToken)],
+  (table) => [
+    index('idx_share_token').on(table.shareToken),
+    // Persistent share-link model: each (classroom, user) pair has at most
+    // one share row; subsequent share API calls upsert the existing token.
+    uniqueIndex('uniq_share_classroom_user').on(table.classroomId, table.userId),
+  ],
 );
 
 // ─── Chat Sessions ──────────────────────────────────────────────────────────

@@ -24,8 +24,10 @@ import { toast } from 'sonner';
 import { useSettingsStore, PLAYBACK_SPEEDS } from '@/lib/store/settings';
 import { ProactiveCard } from '@/components/chat/proactive-card';
 import { PresentationSpeechOverlay } from '@/components/roundtable/presentation-speech-overlay';
+import { EditSceneSourceDialog } from '@/components/stage/edit-scene-source-dialog';
 import { AvatarDisplay } from '@/components/ui/avatar-display';
 import { useAgentRegistry } from '@/lib/orchestration/registry/store';
+import { useStageStore } from '@/lib/store/stage';
 import { DEFAULT_TEACHER_AVATAR, DEFAULT_USER_AVATAR } from '@/components/roundtable/constants';
 import type { DiscussionAction } from '@/lib/types/action';
 import type { EngineMode, PlaybackView } from '@/lib/playback';
@@ -188,6 +190,35 @@ export function Roundtable({
   const setAutoPlayLecture = useSettingsStore((s) => s.setAutoPlayLecture);
   const playbackSpeed = useSettingsStore((s) => s.playbackSpeed);
   const setPlaybackSpeed = useSettingsStore((s) => s.setPlaybackSpeed);
+
+  // Lecture mode is owned by the stage (per-classroom). When entering, mute
+  // TTS so the AI doesn't drone over the teacher; when leaving we don't
+  // force-unmute (avoid clobbering the user's own mute preference).
+  const lectureMode = useStageStore((s) => !!s.stage?.lectureMode);
+  const isOwner = useStageStore((s) => s.isOwner);
+  const lectureModeEntryGuard = useRef(false);
+  useEffect(() => {
+    if (lectureMode && !lectureModeEntryGuard.current) {
+      lectureModeEntryGuard.current = true;
+      if (!ttsMuted) setTTSMuted(true);
+    } else if (!lectureMode) {
+      lectureModeEntryGuard.current = false;
+    }
+  }, [lectureMode, ttsMuted, setTTSMuted]);
+
+  // Stale-speech "edit now" deep-link from the bubble badge → opens Edit
+  // Source dialog directly on the Speech tab and scrolls to that audioId.
+  const [editStaleRequest, setEditStaleRequest] = useState<
+    { sceneId: string; audioId: string } | null
+  >(null);
+  const currentSceneIdForStale = useStageStore((s) => s.currentSceneId);
+  const handleEditStaleSpeech = useCallback(
+    (audioId: string) => {
+      if (!currentSceneIdForStale) return;
+      setEditStaleRequest({ sceneId: currentSceneIdForStale, audioId });
+    },
+    [currentSceneIdForStale],
+  );
   const [isInputOpen, setIsInputOpen] = useState(false);
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -629,16 +660,28 @@ export function Roundtable({
   return (
     <div className="h-0 w-full relative z-10 overflow-visible">
         {/* Speech overlay — fills the full stage area via absolute positioning */}
-        <PresentationSpeechOverlay
-          playbackView={enrichedPlaybackView}
-          participants={initialParticipants}
-          speakingAgentId={speakingAgentId ?? null}
-          isTopicPending={!!isTopicPending}
-          side="left"
-          onBubbleClick={handlePresentationBubbleClick}
-          audioIndicatorState={audioIndicatorState ?? 'idle'}
-          buttonState={enrichedPlaybackView?.buttonState}
-          isPaused={isDiscussionPaused || engineMode === 'paused'}
+        {!lectureMode && (
+          <PresentationSpeechOverlay
+            playbackView={enrichedPlaybackView}
+            participants={initialParticipants}
+            speakingAgentId={speakingAgentId ?? null}
+            isTopicPending={!!isTopicPending}
+            side="left"
+            onBubbleClick={handlePresentationBubbleClick}
+            audioIndicatorState={audioIndicatorState ?? 'idle'}
+            buttonState={enrichedPlaybackView?.buttonState}
+            isPaused={isDiscussionPaused || engineMode === 'paused'}
+            onEditStaleSpeech={isOwner ? handleEditStaleSpeech : undefined}
+          />
+        )}
+
+        {/* Stale-speech deep-link Edit Source dialog (owned here so the
+            overlay's badge can open it without prop drilling). */}
+        <EditSceneSourceDialog
+          sceneId={editStaleRequest?.sceneId || null}
+          onClose={() => setEditStaleRequest(null)}
+          initialTab="speech"
+          focusAudioId={editStaleRequest?.audioId || null}
         />
 
         {/* Click-outside backdrop to dismiss input/voice */}
@@ -811,7 +854,7 @@ export function Roundtable({
 
           {/* Director thinking indicator */}
           <AnimatePresence>
-            {thinkingState?.stage === 'director' && !currentSpeech && !userMessage && (
+            {!lectureMode && thinkingState?.stage === 'director' && !currentSpeech && !userMessage && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -842,18 +885,21 @@ export function Roundtable({
           style={{ right: chatCollapsed ? 20 : 20 + (chatAreaWidth ?? 320) }}
         >
           {/* Right-side speech bubble (flows above dock via flex) */}
-          <PresentationSpeechOverlay
-            playbackView={enrichedPlaybackView}
-            participants={initialParticipants}
-            speakingAgentId={speakingAgentId ?? null}
-            isTopicPending={!!isTopicPending}
-            userAvatar={userAvatar}
-            side="right"
-            onBubbleClick={handlePresentationBubbleClick}
-            audioIndicatorState={audioIndicatorState ?? 'idle'}
-            buttonState={enrichedPlaybackView?.buttonState}
-            isPaused={isDiscussionPaused || engineMode === 'paused'}
-          />
+          {!lectureMode && (
+            <PresentationSpeechOverlay
+              playbackView={enrichedPlaybackView}
+              participants={initialParticipants}
+              speakingAgentId={speakingAgentId ?? null}
+              isTopicPending={!!isTopicPending}
+              userAvatar={userAvatar}
+              side="right"
+              onBubbleClick={handlePresentationBubbleClick}
+              audioIndicatorState={audioIndicatorState ?? 'idle'}
+              buttonState={enrichedPlaybackView?.buttonState}
+              isPaused={isDiscussionPaused || engineMode === 'paused'}
+              onEditStaleSpeech={isOwner ? handleEditStaleSpeech : undefined}
+            />
+          )}
 
           {/* Dock */}
           <AnimatePresence>
@@ -996,7 +1042,7 @@ export function Roundtable({
                 </div>
 
                 <AnimatePresence>
-                  {discussionRequest && (
+                  {discussionRequest && !lectureMode && (
                     <ProactiveCard
                       action={discussionRequest}
                       mode={engineMode === 'paused' ? 'paused' : 'playback'}

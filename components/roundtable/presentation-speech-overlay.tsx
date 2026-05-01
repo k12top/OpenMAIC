@@ -1,15 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Play, Pause, Repeat, Loader2, Volume2, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  Repeat,
+  Loader2,
+  Volume2,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+} from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { AvatarDisplay } from '@/components/ui/avatar-display';
 import type { AudioIndicatorState } from '@/components/roundtable/audio-indicator';
 import type { PlaybackView } from '@/lib/playback';
 import type { Participant } from '@/lib/types/roundtable';
+import type { SpeechAction } from '@/lib/types/action';
 import { cn } from '@/lib/utils';
 import { DEFAULT_TEACHER_AVATAR, DEFAULT_STUDENT_AVATAR } from '@/components/roundtable/constants';
+import { useStageStore } from '@/lib/store/stage';
+import { isSpeechAudioStale } from '@/lib/audio/tts-utils';
 
 const PRESENTATION_BUBBLE_WIDTH = 'w-[min(420px,calc(100vw-3rem))]';
 
@@ -25,6 +37,13 @@ interface PresentationSpeechOverlayProps {
   readonly audioIndicatorState?: AudioIndicatorState;
   readonly buttonState?: 'play' | 'bars' | 'restart' | 'none';
   readonly isPaused?: boolean;
+  /**
+   * Owner-only callback fired when the user clicks the "edit speech" badge
+   * on a bubble that has stale audio. Receives the offending audioId so the
+   * parent can open the Edit Source dialog directly on the Speech tab and
+   * scroll to that action.
+   */
+  readonly onEditStaleSpeech?: (audioId: string) => void;
 }
 
 export interface PresentationBubbleModel {
@@ -195,6 +214,8 @@ export function PresentationBubbleCard({
   audioIndicatorState,
   buttonState,
   isPaused,
+  staleAudioId,
+  onEditStaleSpeech,
 }: {
   readonly bubble: PresentationBubbleModel;
   readonly onClick?: () => void;
@@ -202,6 +223,8 @@ export function PresentationBubbleCard({
   readonly audioIndicatorState?: AudioIndicatorState;
   readonly buttonState?: 'play' | 'bars' | 'restart' | 'none';
   readonly isPaused?: boolean;
+  readonly staleAudioId?: string | null;
+  readonly onEditStaleSpeech?: (audioId: string) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -257,6 +280,20 @@ export function PresentationBubbleCard({
             )}
             {audioIndicatorState === 'playing' && (
               <Volume2 className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+            )}
+            {staleAudioId && onEditStaleSpeech && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditStaleSpeech(staleAudioId);
+                }}
+                title={t('speech.staleHint')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60 transition-colors"
+              >
+                <AlertTriangle className="w-3 h-3" />
+                {t('speech.staleBadge')}
+              </button>
             )}
           </div>
         </div>
@@ -396,6 +433,7 @@ export function PresentationSpeechOverlay({
   audioIndicatorState,
   buttonState,
   isPaused,
+  onEditStaleSpeech,
 }: PresentationSpeechOverlayProps) {
   const { t } = useI18n();
 
@@ -409,6 +447,29 @@ export function PresentationSpeechOverlay({
     fallbackUserName: t('roundtable.you'),
     userAvatar,
   });
+
+  // ── Detect stale audio for the currently-displayed teacher bubble ──
+  // We can't get the SpeechAction id from playbackView, but we can find
+  // the unique speech action whose `text` matches the bubble text within
+  // the current scene. When exactly one matches AND its hash differs from
+  // the current text hash, we surface a stale badge on the bubble.
+  const scenes = useStageStore.use.scenes();
+  const currentSceneId = useStageStore.use.currentSceneId();
+  const isOwner = useStageStore.use.isOwner();
+
+  const staleAudioId = useMemo<string | null>(() => {
+    if (!isOwner || !onEditStaleSpeech) return null;
+    if (!bubble || bubble.role !== 'teacher' || !bubble.text) return null;
+    const scene = scenes.find((s) => s.id === currentSceneId);
+    if (!scene?.actions) return null;
+    const matches = (scene.actions || []).filter(
+      (a): a is SpeechAction =>
+        a.type === 'speech' && !!a.audioId && a.text === bubble.text,
+    );
+    if (matches.length !== 1) return null;
+    const action = matches[0];
+    return isSpeechAudioStale(action) ? action.audioId! : null;
+  }, [bubble, scenes, currentSceneId, isOwner, onEditStaleSpeech]);
 
   // Persistent collapse: once collapsed, stay collapsed until user explicitly expands.
   // Left/right sides are separate component instances so they track independently.
@@ -450,6 +511,8 @@ export function PresentationSpeechOverlay({
             audioIndicatorState={audioIndicatorState}
             buttonState={buttonState}
             isPaused={isPaused}
+            staleAudioId={staleAudioId}
+            onEditStaleSpeech={onEditStaleSpeech}
           />
         </motion.div>
       )}

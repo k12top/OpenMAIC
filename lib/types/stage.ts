@@ -40,6 +40,15 @@ export interface Stage {
     color: string;
     priority: number;
   }>;
+  /**
+   * "Lecture mode" — when true the classroom hides the central play
+   * overlay, mutes auto-TTS, hides thinking/proactive bubbles, and
+   * lets the teacher drive the slides manually with hotkeys / clicks.
+   * Persisted with the stage so the setting follows the courseware
+   * across refresh and into shared viewers (with a non-persistent
+   * override available for visitors).
+   */
+  lectureMode?: boolean;
 }
 
 /**

@@ -58,7 +58,11 @@
         "ttsPreview": "Preview",
         "ttsPreviewing": "Playing...",
         "toggleChat": "Toggle chat panel",
-        "openChatPanel": "Open chat panel"
+        "openChatPanel": "Open chat panel",
+        "voiceSettings": "Voice settings",
+        "lectureModeOn": "Lecture mode",
+        "lectureModeOff": "Auto mode",
+        "lectureModeTooltip": "Lecture/auto mode: lecture mode hides the central play button and mutes AI narration so the teacher can present"
     },
     "export": {
         "pptx": "Export PPTX",
@@ -318,7 +322,77 @@
         }
     },
     "share": {
-        "notReady": "Available after generation completes"
+        "notReady": "Available after generation completes",
+        "title": "Share & Collaborate",
+        "createLink": "Create share link",
+        "applyModeChange": "Update share mode",
+        "loading": "Loading…",
+        "linkCopied": "Link copied",
+        "linkCreated": "Share link created",
+        "modeUpdated": "Share mode updated",
+        "createFailed": "Failed to create share link",
+        "revoke": "Revoke link",
+        "revoked": "Revoked",
+        "revokeFailed": "Failed to revoke",
+        "modePublic": "Public",
+        "modePublicDesc": "Anyone with the link can view",
+        "modeReadonly": "Sign-in required",
+        "modeReadonlyDesc": "Viewers must sign in to access",
+        "modeEditable": "Copy-able",
+        "modeEditableDesc": "Signed-in viewers can copy to their own classroom",
+        "modeSso": "Organization only",
+        "modeSsoDesc": "Only members of your organization can view",
+        "persistentBadge": "Persistent link",
+        "persistentHint": "Each classroom keeps a single persistent link per author. After editing, click \"Push latest now\" to sync changes to all viewers.",
+        "pushLatest": "Push latest now",
+        "pushing": "Pushing…",
+        "pushFailed": "Push failed",
+        "pushSuccessClean": "Share is up to date — all media in sync",
+        "pushSuccessSummary": "Share updated ({{uploaded}}/{{total}} media re-uploaded, {{skipped}} skipped)",
+        "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images."
+    },
+    "sidebar": {
+        "addScene": "Add page"
+    },
+    "addScene": {
+        "title": "Add a new page",
+        "typeLabel": "Choose page type",
+        "typeSlide": "Slide",
+        "typeSlideDesc": "AI teacher walks through a topic",
+        "typeQuiz": "Quiz",
+        "typeQuizDesc": "A few questions to check understanding",
+        "typeInteractive": "Interactive",
+        "typeInteractiveDesc": "Animated demo or interactive widget",
+        "titleField": "Title",
+        "titlePlaceholder": "e.g. How a neuron fires",
+        "descriptionField": "Description",
+        "descriptionPlaceholder": "Describe what this page should teach in a sentence or two",
+        "keyPointsField": "Key points",
+        "keyPointPlaceholder": "A core idea this page should cover",
+        "addKeyPoint": "Add key point",
+        "quizQuestionCount": "Question count",
+        "quizDifficulty": "Difficulty",
+        "difficultyEasy": "Easy",
+        "difficultyMedium": "Medium",
+        "difficultyHard": "Hard",
+        "interactiveDesignIdea": "Design hint (optional)",
+        "interactiveDesignIdeaPlaceholder": "Any UX or visualisation idea (leave blank to let AI decide)",
+        "aiHint": "After submit, AI will draft the content first, then generate actions and speech. You can keep editing other pages while it runs.",
+        "generate": "Generate",
+        "generating": "Generating…",
+        "success": "New page added to the classroom",
+        "failed": "Generation failed"
+    },
+    "speech": {
+        "staleBadge": "Audio out of sync",
+        "staleHint": "Click to review and regenerate this line",
+        "preview": "Preview",
+        "previewStop": "Stop preview",
+        "previewMissing": "No audio yet — generate it first to preview",
+        "regenerateOne": "Regenerate this line",
+        "regenerating": "Regenerating…",
+        "regenSuccess": "Speech regenerated",
+        "regenFailed": "Regeneration failed"
     },
     "classroom": {
         "recentClassrooms": "Recent",
@@ -1154,6 +1228,8 @@
     "editSource": {
         "code": "Code",
         "split": "Split",
-        "preview": "Preview"
+        "preview": "Preview",
+        "speech": "Speech",
+        "speechEmpty": "This page has no speech actions"
     }
 }

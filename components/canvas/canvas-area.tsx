@@ -11,6 +11,7 @@ import { CanvasToolbar } from '@/components/canvas/canvas-toolbar';
 import type { CanvasToolbarProps } from '@/components/canvas/canvas-toolbar';
 import type { Scene, StageMode } from '@/lib/types/stage';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { useStageStore } from '@/lib/store/stage';
 
 interface CanvasAreaProps extends CanvasToolbarProps {
   readonly currentScene: Scene | null;
@@ -48,13 +49,17 @@ export function CanvasArea({
   onRegenerateScene,
 }: CanvasAreaProps) {
   const { t } = useI18n();
+  const lectureMode = useStageStore((s) => !!s.stage?.lectureMode);
   const showControls = mode === 'playback' && !whiteboardOpen;
+  // In lecture mode the teacher drives the slides themselves — no auto-play
+  // affordance, no central play button, slide click advances to next slide.
   const showPlayHint =
     showControls &&
     engineState !== 'playing' &&
     currentScene?.type === 'slide' &&
     !isLiveSession &&
-    !isPendingScene;
+    !isPendingScene &&
+    !lectureMode;
 
   const handleSlideClick = useCallback(
     (e: React.MouseEvent) => {
@@ -75,9 +80,14 @@ export function CanvasArea({
           return;
         }
       }
+      // Lecture mode: clicking the slide acts as "next" rather than play/pause.
+      if (lectureMode) {
+        onNextSlide();
+        return;
+      }
       onPlayPause();
     },
-    [showControls, isLiveSession, onPlayPause, currentScene?.type],
+    [showControls, isLiveSession, onPlayPause, onNextSlide, lectureMode, currentScene?.type],
   );
 
   return (

@@ -14,6 +14,7 @@ import {
   Coins,
   GripVertical,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import {
   DndContext,
@@ -40,6 +41,7 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import type { Scene, SceneType, SlideContent } from '@/lib/types/stage';
 import { PENDING_SCENE_ID } from '@/lib/store/stage';
 import { useCan } from '@/components/auth/can';
+import { AddSceneDialog } from '@/components/stage/add-scene-dialog';
 
 interface SceneSidebarProps {
   readonly collapsed: boolean;
@@ -77,7 +79,11 @@ export function SceneSidebar({
   // belong to them. `useCan` respects classroom ownership AND RBAC.
   const canReorder = useCan('reorder');
   const canDeleteScene = useCan('delete-scene');
+  const canAddScene = useCan('add-scene');
   const showOwnerControls = (canReorder || canDeleteScene) && !isSharedView;
+  const showAddSceneButton = canAddScene && !isSharedView;
+  const [addSceneOpen, setAddSceneOpen] = useState(false);
+  const currentScene = scenes.find((s) => s.id === currentSceneId);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -281,6 +287,20 @@ export function SceneSidebar({
             </SortableContext>
           </DndContext>
 
+          {/* Owner-only "+ Add scene" button — sits between the existing
+              scene list and the generating placeholder so newly added pages
+              naturally appear at the end of the list. */}
+          {showAddSceneButton && generatingOutlines.length === 0 && (
+            <button
+              type="button"
+              onClick={() => setAddSceneOpen(true)}
+              className="w-full mt-1 px-2 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/40 dark:hover:bg-purple-900/10 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t('sidebar.addScene')}
+            </button>
+          )}
+
           {/* Single placeholder for the next generating page (clickable) */}
           {generatingOutlines.length > 0 &&
             (() => {
@@ -421,6 +441,15 @@ export function SceneSidebar({
         {/* Spacer to push toggle button area */}
         <div className="mt-auto" />
       </div>
+
+      {/* Owner-only AI-assisted add-scene dialog */}
+      {showAddSceneButton && (
+        <AddSceneDialog
+          open={addSceneOpen}
+          onOpenChange={setAddSceneOpen}
+          insertAfterOrder={currentScene?.order}
+        />
+      )}
     </div>
   );
 }

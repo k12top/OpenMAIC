@@ -1,22 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X,
   Link2,
   Copy,
   Check,
-  Eye,
   Pencil,
   Trash2,
   Loader2,
   Globe,
   Lock,
   ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useStageStore } from '@/lib/store/stage';
+import { useI18n } from '@/lib/hooks/use-i18n';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  flushClassroomSync,
+  uploadMediaToServer,
+} from '@/lib/sync/classroom-sync';
+import { db } from '@/lib/utils/database';
 
 interface ShareDialogProps {
   open: boolean;
@@ -34,25 +40,39 @@ interface ShareItem {
 }
 
 export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
-  const [mode, setMode] = useState<ShareMode>('public');
-  const [shares, setShares] = useState<ShareItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { t } = useI18n();
   const stageId = useStageStore((s) => s.stage?.id);
 
+  const [mode, setMode] = useState<ShareMode>('public');
+  const [share, setShare] = useState<ShareItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
-    if (open && stageId) {
-      setLoading(true);
-      fetch(`/api/share?classroomId=${stageId}`)
-        .then((r) => r.json())
-        .then((data) => setShares(data.shares || []))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
+    if (!open || !stageId) return;
+    setLoading(true);
+    fetch(`/api/share?classroomId=${stageId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const items = (data.shares || []) as ShareItem[];
+        // Persistent-link model: at most one row per (classroom, user). The
+        // GET endpoint may still return multiple legacy rows; pick the
+        // earliest as the canonical one and surface that mode in the UI.
+        const sorted = [...items].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
+        const canonical = sorted[0] || null;
+        setShare(canonical);
+        if (canonical) setMode(canonical.mode);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [open, stageId]);
 
-  const createShare = async () => {
+  const createOrUpdate = useCallback(async () => {
     if (!stageId) return;
     setCreating(true);
     try {
@@ -62,43 +82,128 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         body: JSON.stringify({ classroomId: stageId, mode }),
       });
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create share');
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('share.createFailed'));
       }
       const data = await res.json();
-      setShares((prev) => [
-        { id: data.shareToken, shareToken: data.shareToken, mode: data.mode, url: data.url, createdAt: new Date().toISOString() },
-        ...prev,
-      ]);
-      toast.success('Share link created');
+      setShare({
+        id: data.id || data.shareToken,
+        shareToken: data.shareToken,
+        mode: data.mode,
+        url: data.url,
+        createdAt: new Date().toISOString(),
+      });
+      toast.success(data.reused ? t('share.modeUpdated') : t('share.linkCreated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to create share');
+      toast.error(err instanceof Error ? err.message : t('share.createFailed'));
     } finally {
       setCreating(false);
     }
-  };
+  }, [stageId, mode, t]);
 
-  const deleteShare = async (shareId: string) => {
+  const revokeShare = useCallback(async () => {
+    if (!share?.id) return;
+    setRevoking(true);
     try {
-      await fetch('/api/share', {
+      const res = await fetch('/api/share', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shareId }),
+        body: JSON.stringify({ shareId: share.id }),
       });
-      setShares((prev) => prev.filter((s) => s.id !== shareId));
-      toast.success('Share revoked');
-    } catch {
-      toast.error('Failed to revoke share');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('share.revokeFailed'));
+      }
+      setShare(null);
+      toast.success(t('share.revoked'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('share.revokeFailed'));
+    } finally {
+      setRevoking(false);
     }
-  };
+  }, [share?.id, t]);
 
-  const copyLink = (url: string, id: string) => {
-    const fullUrl = `${window.location.origin}${url}`;
+  const copyLink = useCallback(() => {
+    if (!share) return;
+    const fullUrl = `${window.location.origin}${share.url}`;
     navigator.clipboard.writeText(fullUrl);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-    toast.success('Link copied to clipboard');
-  };
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success(t('share.linkCopied'));
+  }, [share, t]);
+
+  const pushLatest = useCallback(async () => {
+    if (!stageId || !share) return;
+    setPushing(true);
+    try {
+      // 1. Flush any pending stage/scenes sync so the server-side reconcile
+      //    sees the latest text/structure before we ask which audio is missing.
+      flushClassroomSync();
+      // Give the keepalive POST a brief moment to land before we query the DB.
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // 2. Ask the server which TTS audio rows are missing for this stage.
+      const res = await fetch('/api/share/republish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classroomId: stageId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('share.pushFailed'));
+      }
+      const data = (await res.json()) as { missingAudioIds: string[]; totalAudioIds: number };
+
+      // 3. Re-upload missing TTS blobs from IndexedDB and patch audioUrl in
+      //    the store so subsequent share viewers resolve the new audio.
+      let uploaded = 0;
+      let skipped = 0;
+      for (const audioId of data.missingAudioIds) {
+        try {
+          const record = await db.audioFiles.get(audioId);
+          if (!record?.blob) {
+            skipped += 1;
+            continue;
+          }
+          const result = await uploadMediaToServer(
+            stageId,
+            'tts',
+            record.blob,
+            `${audioId}.${record.format || 'mp3'}`,
+            audioId,
+          );
+          if (result?.url) {
+            useStageStore.getState().updateSpeechActionAudioUrl(audioId, result.url);
+            uploaded += 1;
+          } else {
+            skipped += 1;
+          }
+        } catch {
+          skipped += 1;
+        }
+      }
+
+      // After patching audioUrls, re-flush so the new URLs land in the
+      // server's stage_json snapshot too.
+      flushClassroomSync();
+
+      if (data.missingAudioIds.length === 0) {
+        toast.success(t('share.pushSuccessClean'));
+      } else {
+        toast.success(
+          t('share.pushSuccessSummary', {
+            uploaded,
+            skipped,
+            total: data.missingAudioIds.length,
+          }),
+        );
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('share.pushFailed'));
+    } finally {
+      setPushing(false);
+    }
+  }, [stageId, share, t]);
 
   if (!open) return null;
 
@@ -109,7 +214,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         <div className="px-5 py-4 flex items-center justify-between border-b border-border/30">
           <div className="flex items-center gap-2">
             <Link2 className="size-4 text-violet-500" />
-            <h2 className="text-sm font-semibold text-foreground">Share Classroom</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('share.title')}</h2>
           </div>
           <button
             onClick={() => onOpenChange(false)}
@@ -119,135 +224,187 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           </button>
         </div>
 
-        {/* Create new share */}
+        {/* Mode selector — always visible; doubles as initial creator */}
         <div className="px-5 py-4 border-b border-border/20">
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
+            <ModeButton
+              active={mode === 'public'}
               onClick={() => setMode('public')}
-              className={cn(
-                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
-                mode === 'public'
-                  ? 'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300'
-                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
-              )}
-            >
-              <Globe className="size-3" />
-              Public
-            </button>
-            <button
+              icon={<Globe className="size-3" />}
+              label={t('share.modePublic')}
+              colorClass="violet"
+            />
+            <ModeButton
+              active={mode === 'readonly'}
               onClick={() => setMode('readonly')}
-              className={cn(
-                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
-                mode === 'readonly'
-                  ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
-                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
-              )}
-            >
-              <Lock className="size-3" />
-              Read Only
-            </button>
-            <button
+              icon={<Lock className="size-3" />}
+              label={t('share.modeReadonly')}
+              colorClass="blue"
+            />
+            <ModeButton
+              active={mode === 'editable'}
               onClick={() => setMode('editable')}
-              className={cn(
-                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
-                mode === 'editable'
-                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
-              )}
-            >
-              <Pencil className="size-3" />
-              Editable
-            </button>
-            <button
+              icon={<Pencil className="size-3" />}
+              label={t('share.modeEditable')}
+              colorClass="green"
+            />
+            <ModeButton
+              active={mode === 'sso'}
               onClick={() => setMode('sso')}
-              className={cn(
-                'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
-                mode === 'sso'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300'
-                  : 'border-border/40 text-muted-foreground hover:bg-muted/30',
-              )}
-            >
-              <ShieldCheck className="size-3" />
-              SSO
-            </button>
+              icon={<ShieldCheck className="size-3" />}
+              label={t('share.modeSso')}
+              colorClass="indigo"
+            />
           </div>
           <p className="text-[11px] text-muted-foreground/60 mb-3">
             {mode === 'public'
-              ? 'Anyone can view this link without logging in.'
+              ? t('share.modePublicDesc')
               : mode === 'readonly'
-                ? 'Anyone with the link can view in read-only mode. Sign-in not required.'
+                ? t('share.modeReadonlyDesc')
                 : mode === 'editable'
-                  ? 'Anyone with the link can view; signed-in viewers can copy this courseware to their account and edit it.'
-                  : 'Requires organization sign-in. Unauthenticated visitors are redirected to SSO login before they can view.'}
+                  ? t('share.modeEditableDesc')
+                  : t('share.modeSsoDesc')}
           </p>
-          <button
-            onClick={createShare}
-            disabled={creating}
-            className="w-full px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
-            Create Share Link
-          </button>
+          {!share && (
+            <button
+              onClick={createOrUpdate}
+              disabled={creating || loading}
+              className="w-full px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+              {t('share.createLink')}
+            </button>
+          )}
+          {share && share.mode !== mode && (
+            <button
+              onClick={createOrUpdate}
+              disabled={creating}
+              className="w-full px-4 py-2 rounded-xl bg-amber-500/90 text-white text-xs font-medium hover:bg-amber-500 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}
+              {t('share.applyModeChange')}
+            </button>
+          )}
         </div>
 
-        {/* Existing shares */}
-        <div className="max-h-60 overflow-y-auto">
+        {/* Existing share — single persistent link card */}
+        <div className="px-5 py-4">
           {loading ? (
-            <div className="p-6 text-center text-muted-foreground/50 text-sm">
+            <div className="py-4 text-center text-muted-foreground/50 text-sm">
               <Loader2 className="size-4 animate-spin mx-auto mb-1" />
-              Loading...
+              {t('share.loading')}
             </div>
-          ) : shares.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground/50 text-sm">
-              No active share links
-            </div>
+          ) : !share ? (
+            <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+              {t('share.persistentHint')}
+            </p>
           ) : (
-            <div className="divide-y divide-border/20">
-              {shares.map((share) => (
-                <div key={share.id || share.shareToken} className="px-5 py-3 flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={cn(
-                          'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium',
-                          share.mode === 'public'
-                            ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
-                            : share.mode === 'readonly'
-                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                              : share.mode === 'editable'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-                                : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
-                        )}
-                      >
-                        {share.mode}
-                      </span>
-                      <span className="text-xs text-muted-foreground/60 truncate">
-                        {share.url}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => copyLink(share.url, share.id || share.shareToken)}
-                    className="shrink-0 p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground transition-colors"
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={cn(
+                      'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium',
+                      share.mode === 'public'
+                        ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400'
+                        : share.mode === 'readonly'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          : share.mode === 'editable'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                            : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400',
+                    )}
                   >
-                    {copiedId === (share.id || share.shareToken) ? (
+                    {share.mode}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/60">
+                    {t('share.persistentBadge')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground truncate flex-1 font-mono">
+                    {share.url}
+                  </span>
+                  <button
+                    onClick={copyLink}
+                    className="shrink-0 p-1.5 rounded-lg hover:bg-background text-muted-foreground transition-colors"
+                  >
+                    {copied ? (
                       <Check className="size-3.5 text-green-500" />
                     ) : (
                       <Copy className="size-3.5" />
                     )}
                   </button>
-                  <button
-                    onClick={() => deleteShare(share.id)}
-                    className="shrink-0 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-muted-foreground hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
                 </div>
-              ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={pushLatest}
+                  disabled={pushing}
+                  className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {pushing ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3.5" />
+                  )}
+                  {pushing ? t('share.pushing') : t('share.pushLatest')}
+                </button>
+                <button
+                  onClick={revokeShare}
+                  disabled={revoking}
+                  className="px-3 py-2 rounded-xl border border-border/40 text-muted-foreground text-xs font-medium hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500 hover:border-red-200 dark:hover:border-red-800 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {revoking ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                  {t('share.revoke')}
+                </button>
+              </div>
+
+              <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+                {t('share.pushExplanation')}
+              </p>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+interface ModeButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  colorClass: 'violet' | 'blue' | 'green' | 'indigo';
+}
+
+function ModeButton({ active, onClick, icon, label, colorClass }: ModeButtonProps) {
+  const activeMap: Record<ModeButtonProps['colorClass'], string> = {
+    violet:
+      'bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300',
+    blue:
+      'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300',
+    green:
+      'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300',
+    indigo:
+      'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300',
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-colors border',
+        active ? activeMap[colorClass] : 'border-border/40 text-muted-foreground hover:bg-muted/30',
+      )}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }

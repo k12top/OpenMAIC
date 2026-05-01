@@ -17,7 +17,9 @@ import {
   Minimize2,
   RefreshCw,
   Code2,
+  Presentation,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store';
 import { useI18n } from '@/lib/hooks/use-i18n';
@@ -138,6 +140,12 @@ export function CanvasToolbar({
   const canEditSource = useCan('edit-source');
   const showRegenerate = !!onRegenerateScene && canRegenerate;
   const showEditSource = canEditSource && !isSharedView;
+  // Lecture-mode toggle is owner-only (gated on edit-source) and disabled
+  // during a live discussion to avoid mid-flow state-machine confusion.
+  const lectureMode = useStageStore((s) => !!s.stage?.lectureMode);
+  const setLectureMode = useStageStore((s) => s.setLectureMode);
+  const showLectureToggle = canEditSource && !isSharedView;
+  const lectureToggleDisabled = !!isLiveSession;
   // Is the currently visible scene being regenerated? When true, swap the
   // icon for a spinner and disable clicks to prevent double-submits.
   const currentSceneId = useStageStore((s) => s.currentSceneId);
@@ -340,7 +348,7 @@ export function CanvasToolbar({
               </span>
               {t('roundtable.stopDiscussion')}
             </button>
-          ) : showPlayPause ? (
+          ) : showPlayPause && !lectureMode ? (
             <button
               onClick={onPlayPause}
               className={cn(
@@ -377,8 +385,46 @@ export function CanvasToolbar({
 
           <CtrlDivider />
 
-          {/* Auto-play */}
-          {onToggleAutoPlay && (
+          {/* Lecture / Auto mode toggle (owner only) */}
+          {showLectureToggle && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (lectureToggleDisabled) return;
+                      const next = !lectureMode;
+                      setLectureMode(next);
+                      toast.success(
+                        next
+                          ? t('toolbar.lectureModeOn')
+                          : t('toolbar.lectureModeOff'),
+                      );
+                    }}
+                    disabled={lectureToggleDisabled}
+                    className={cn(
+                      ctrlBtn,
+                      'w-8 h-6',
+                      lectureToggleDisabled && 'opacity-40 cursor-not-allowed',
+                      lectureMode
+                        ? 'text-purple-600 dark:text-purple-400'
+                        : 'text-gray-500 dark:text-gray-400',
+                    )}
+                    aria-label={t('toolbar.lectureModeTooltip')}
+                  >
+                    <Presentation className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {lectureMode ? t('toolbar.lectureModeOn') : t('toolbar.lectureModeOff')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Auto-play (hidden in lecture mode — auto-advance is irrelevant
+              when the teacher drives advance manually) */}
+          {onToggleAutoPlay && !lectureMode && (
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
