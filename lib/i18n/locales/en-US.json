@@ -45,6 +45,8 @@
         "webSearchOff": "Click to enable",
         "outlineConfirmOn": "Pause for me to review the outline",
         "outlineConfirmOff": "Click to pause after outline generation for review",
+        "parallelOnTooltip": "Parallel generation ON: scenes generate concurrently in batches for ~3× speedup. Pros: real speech continuity preserved across batches. Cons: scenes 2-3 within the same batch don't reference each other's lines; upstream LLM/TTS pressure increases ~K× and rate-limited scenes will land in the failed list for one-click retry. Click to restore sequential generation.",
+        "parallelOffTooltip": "Sequential generation (default): scenes are generated one by one with fully continuous speech context. Click to enable parallel mode for ~2-3× speedup at the cost of some intra-batch continuity.",
         "webSearchDesc": "Search the web for up-to-date information before generation",
         "webSearchProvider": "Search engine",
         "webSearchNoProvider": "Configure search API key in Settings",
@@ -354,7 +356,8 @@
         "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images."
     },
     "sidebar": {
-        "addScene": "Add page"
+        "addScene": "Add page",
+        "insertHere": "Insert a new page here"
     },
     "addScene": {
         "title": "Add a new page",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useMemo } from 'react';
-import { Bot, Check, ChevronLeft, ChevronDown, Globe, ListChecks, Paperclip, FileText, X, Globe2 } from 'lucide-react';
+import { Bot, Check, ChevronLeft, ChevronDown, Globe, ListChecks, Paperclip, FileText, X, Globe2, Zap } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -48,6 +48,13 @@ export interface GenerationToolbarProps {
   onWebSearchChange: (v: boolean) => void;
   outlineConfirm: boolean;
   onOutlineConfirmChange: (v: boolean) => void;
+  /**
+   * Continuity-preserving parallel scene generation. Optional: toolbar
+   * hides the toggle when handlers are not provided so embedders that
+   * don't surface this knob keep their original layout.
+   */
+  parallelGeneration?: boolean;
+  onParallelGenerationChange?: (v: boolean) => void;
   onSettingsOpen: (section?: SettingsSection) => void;
   // PDF
   pdfFile: File | null;
@@ -65,6 +72,8 @@ export function GenerationToolbar({
   onWebSearchChange,
   outlineConfirm,
   onOutlineConfirmChange,
+  parallelGeneration,
+  onParallelGenerationChange,
   onSettingsOpen,
   pdfFile,
   onPdfFileChange,
@@ -340,6 +349,31 @@ export function GenerationToolbar({
           </TooltipContent>
         </Tooltip>
       )}
+
+      {/* Parallel generation toggle (Bottom / All) — shown only when
+          the embedder wired the optional handlers. The on-state pulses
+          to make the speedup affordance discoverable. */}
+      {(layoutMode === 'all' || layoutMode === 'bottom') &&
+        onParallelGenerationChange && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={parallelGeneration ? pillActive : pillMuted}
+                onClick={() => onParallelGenerationChange(!parallelGeneration)}
+                aria-pressed={!!parallelGeneration}
+              >
+                <Zap
+                  className={cn('size-3.5', parallelGeneration && 'animate-pulse')}
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-xs leading-snug">
+              {parallelGeneration
+                ? t('toolbar.parallelOnTooltip')
+                : t('toolbar.parallelOffTooltip')}
+            </TooltipContent>
+          </Tooltip>
+        )}
     </div>
   );
 }

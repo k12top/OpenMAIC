@@ -59,6 +59,7 @@ const log = createLogger('Home');
 
 const WEB_SEARCH_STORAGE_KEY = 'webSearchEnabled';
 const OUTLINE_CONFIRM_STORAGE_KEY = 'outlineConfirmEnabled';
+const PARALLEL_GEN_STORAGE_KEY = 'parallelGenerationEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
 
@@ -68,6 +69,7 @@ interface FormState {
   language: string;
   webSearch: boolean;
   outlineConfirm: boolean;
+  parallelGeneration: boolean;
 }
 
 const initialFormState: FormState = {
@@ -76,6 +78,7 @@ const initialFormState: FormState = {
   language: 'zh-CN',
   webSearch: false,
   outlineConfirm: true,
+  parallelGeneration: false,
 };
 
 function HomePage() {
@@ -131,6 +134,7 @@ function HomePage() {
     try {
       const savedWebSearch = localStorage.getItem(WEB_SEARCH_STORAGE_KEY);
       const savedOutlineConfirm = localStorage.getItem(OUTLINE_CONFIRM_STORAGE_KEY);
+      const savedParallelGen = localStorage.getItem(PARALLEL_GEN_STORAGE_KEY);
       const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       const updates: Partial<FormState> = {};
       if (savedWebSearch === 'true') updates.webSearch = true;
@@ -139,6 +143,13 @@ function HomePage() {
         updates.outlineConfirm = savedOutlineConfirm !== 'false';
       } else {
         updates.outlineConfirm = useSettingsStore.getState().outlineConfirmEnabled ?? true;
+      }
+      // Parallel generation: per-task override falls back to global persisted setting (default false).
+      if (savedParallelGen !== null) {
+        updates.parallelGeneration = savedParallelGen === 'true';
+      } else {
+        updates.parallelGeneration =
+          useSettingsStore.getState().parallelGenerationEnabled ?? false;
       }
       if (savedLanguage) {
         updates.language = savedLanguage;
@@ -242,6 +253,13 @@ function HomePage() {
       if (field === 'webSearch') localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(value));
       if (field === 'outlineConfirm')
         localStorage.setItem(OUTLINE_CONFIRM_STORAGE_KEY, String(value));
+      if (field === 'parallelGeneration') {
+        localStorage.setItem(PARALLEL_GEN_STORAGE_KEY, String(value));
+        // Mirror the per-task choice into the persisted global setting so the
+        // generator hook (which reads from the store, not this form) honors it
+        // when generation kicks off after navigation to /classroom/[id].
+        useSettingsStore.getState().setParallelGenerationEnabled(Boolean(value));
+      }
       if (field === 'language') localStorage.setItem(LANGUAGE_STORAGE_KEY, String(value));
       if (field === 'requirement') updateRequirementCache(value as string);
     } catch {
@@ -510,6 +528,8 @@ function HomePage() {
                 onWebSearchChange={(v) => updateForm('webSearch', v)}
                 outlineConfirm={form.outlineConfirm}
                 onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
+                parallelGeneration={form.parallelGeneration}
+                onParallelGenerationChange={(v) => updateForm('parallelGeneration', v)}
                 onSettingsOpen={(section) => {
                   setSettingsSection(section);
                   setSettingsOpen(true);
@@ -585,6 +605,8 @@ function HomePage() {
                     onWebSearchChange={(v) => updateForm('webSearch', v)}
                     outlineConfirm={form.outlineConfirm}
                     onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
+                    parallelGeneration={form.parallelGeneration}
+                    onParallelGenerationChange={(v) => updateForm('parallelGeneration', v)}
                     onSettingsOpen={(section) => {
                       setSettingsSection(section);
                       setSettingsOpen(true);

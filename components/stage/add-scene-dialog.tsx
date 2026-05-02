@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   BookOpen,
@@ -69,6 +70,15 @@ const SCENE_TYPES: SceneTypeMeta[] = [
 
 export function AddSceneDialog({ open, onOpenChange, insertAfterOrder }: AddSceneDialogProps) {
   const { t } = useI18n();
+
+  // Portal target. Resolved on the client only so the dialog can mount
+  // at <body> level — escaping any ancestor stacking context (e.g. the
+  // sidebar's sized container) and rendering as a true page-level modal
+  // regardless of where AddSceneDialog is instantiated in the React tree.
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (typeof document !== 'undefined') setPortalTarget(document.body);
+  }, []);
 
   const [type, setType] = useState<AddSceneType>('slide');
   const [title, setTitle] = useState('');
@@ -300,10 +310,22 @@ export function AddSceneDialog({ open, onOpenChange, insertAfterOrder }: AddScen
   ]);
 
   if (!open) return null;
+  // SSR / pre-mount: skip rendering until the portal target resolves on
+  // the client so we never inject a `fixed` overlay into a parent that
+  // could mis-anchor it.
+  if (!portalTarget) return null;
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-lg mx-4 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-border/40 overflow-hidden flex flex-col max-h-[90vh]">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+    >
+      <div
+        className="w-full max-w-lg mx-4 rounded-2xl bg-white dark:bg-slate-900 shadow-xl border border-border/40 overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 py-4 flex items-center justify-between border-b border-border/30 shrink-0">
           <div className="flex items-center gap-2">
@@ -502,7 +524,8 @@ export function AddSceneDialog({ open, onOpenChange, insertAfterOrder }: AddScen
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { Fragment, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PanelLeftClose,
@@ -82,8 +82,11 @@ export function SceneSidebar({
   const canAddScene = useCan('add-scene');
   const showOwnerControls = (canReorder || canDeleteScene) && !isSharedView;
   const showAddSceneButton = canAddScene && !isSharedView;
-  const [addSceneOpen, setAddSceneOpen] = useState(false);
-  const currentScene = scenes.find((s) => s.id === currentSceneId);
+  // `addSceneAt` carries the `insertAfterOrder` prop AddSceneDialog expects.
+  // null = closed; -1 = append at end; otherwise insert after that order.
+  // We use a sentinel rather than `undefined` so the open state can be
+  // round-tripped via `addSceneAt !== null`.
+  const [addSceneAt, setAddSceneAt] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -260,40 +263,54 @@ export function SceneSidebar({
                 const slideContent = isSlide ? (scene.content as SlideContent) : null;
                 const isRegenerating = regeneratingSceneIds.includes(scene.id);
                 return (
-                  <SortableSceneCard
-                    key={scene.id}
-                    scene={scene}
-                    index={index}
-                    isActive={isActive}
-                    isRegenerating={isRegenerating}
-                    slideContent={slideContent}
-                    getSceneTypeIcon={getSceneTypeIcon}
-                    onSelect={() => {
-                      if (onSceneSelect) onSceneSelect(scene.id);
-                      else setCurrentSceneId(scene.id);
-                    }}
-                    showOwnerControls={showOwnerControls}
-                    canReorder={canReorder && !isSharedView}
-                    canDelete={canDeleteScene && !isSharedView}
-                    sidebarWidth={sidebarWidth}
-                    viewportSize={viewportSize}
-                    viewportRatio={viewportRatio}
-                    regeneratingLabel={t('stage.regenerating')}
-                    onDeleteClick={(id, title) => handleDeleteScene(id, title)}
-                    dragDisabled={isRegenerating || !(canReorder && !isSharedView)}
-                  />
+                  <Fragment key={scene.id}>
+                    <SortableSceneCard
+                      scene={scene}
+                      index={index}
+                      isActive={isActive}
+                      isRegenerating={isRegenerating}
+                      slideContent={slideContent}
+                      getSceneTypeIcon={getSceneTypeIcon}
+                      onSelect={() => {
+                        if (onSceneSelect) onSceneSelect(scene.id);
+                        else setCurrentSceneId(scene.id);
+                      }}
+                      showOwnerControls={showOwnerControls}
+                      canReorder={canReorder && !isSharedView}
+                      canDelete={canDeleteScene && !isSharedView}
+                      sidebarWidth={sidebarWidth}
+                      viewportSize={viewportSize}
+                      viewportRatio={viewportRatio}
+                      regeneratingLabel={t('stage.regenerating')}
+                      onDeleteClick={(id, title) => handleDeleteScene(id, title)}
+                      dragDisabled={isRegenerating || !(canReorder && !isSharedView)}
+                    />
+                    {/* Per-row hover-reveal "+" insert affordance. Lives
+                        in the natural flow so it doesn't shift surrounding
+                        scenes; the row only swells from h-1 → h-6 on hover. */}
+                    {showAddSceneButton && (
+                      <SceneInsertButton
+                        label={t('sidebar.insertHere')}
+                        onClick={() => setAddSceneAt(scene.order)}
+                      />
+                    )}
+                  </Fragment>
                 );
               })}
             </SortableContext>
           </DndContext>
 
-          {/* Owner-only "+ Add scene" button — sits between the existing
-              scene list and the generating placeholder so newly added pages
-              naturally appear at the end of the list. */}
-          {showAddSceneButton && generatingOutlines.length === 0 && (
+          {/* Owner-only fallback "+ Add scene" button — used when there
+              are no existing scenes (empty sidebar) and as the explicit
+              "append at end" affordance. Always visible during generation
+              so users can queue extra pages while the pipeline is running;
+              `AddSceneDialog` runs its own independent fetch path. */}
+          {showAddSceneButton && (
             <button
               type="button"
-              onClick={() => setAddSceneOpen(true)}
+              onClick={() =>
+                setAddSceneAt(scenes[scenes.length - 1]?.order ?? 0)
+              }
               className="w-full mt-1 px-2 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/40 dark:hover:bg-purple-900/10 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -442,15 +459,54 @@ export function SceneSidebar({
         <div className="mt-auto" />
       </div>
 
-      {/* Owner-only AI-assisted add-scene dialog */}
+      {/* Owner-only AI-assisted add-scene dialog. Open state and the
+          insertion target are coupled in `addSceneAt` so each per-row "+"
+          button feeds its own scene order in. */}
       {showAddSceneButton && (
         <AddSceneDialog
-          open={addSceneOpen}
-          onOpenChange={setAddSceneOpen}
-          insertAfterOrder={currentScene?.order}
+          open={addSceneAt !== null}
+          onOpenChange={(open) => {
+            if (!open) setAddSceneAt(null);
+          }}
+          insertAfterOrder={addSceneAt ?? undefined}
         />
       )}
     </div>
+  );
+}
+
+interface SceneInsertButtonProps {
+  readonly label: string;
+  readonly onClick: () => void;
+}
+
+/**
+ * Thin "+ insert here" affordance rendered between every pair of scenes.
+ * Collapses to a 2px line in its resting state so the sidebar layout stays
+ * unchanged, swells to a clickable strip on hover with a centered Plus
+ * icon. Modeled after the per-row insert UX in Notion / Figma.
+ */
+function SceneInsertButton({ label, onClick }: SceneInsertButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        'group/insert relative w-full flex items-center justify-center overflow-hidden',
+        'h-1.5 hover:h-6 transition-[height] duration-150 ease-out',
+        'text-purple-500/0 hover:text-purple-600 dark:hover:text-purple-400',
+      )}
+    >
+      <span className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-px bg-transparent group-hover/insert:bg-purple-300/70 dark:group-hover/insert:bg-purple-600/40 transition-colors" />
+      <span className="relative inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/40 ring-1 ring-purple-200 dark:ring-purple-700/40 opacity-0 group-hover/insert:opacity-100 transition-opacity duration-150">
+        <Plus className="w-3 h-3" />
+      </span>
+    </button>
   );
 }
 

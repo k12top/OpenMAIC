@@ -45,6 +45,8 @@
     "webSearchOff": "Cliquer pour activer",
     "outlineConfirmOn": "Attendre ma confirmation du plan",
     "outlineConfirmOff": "Cliquer : pause après la génération du plan pour relecture",
+    "parallelOnTooltip": "Génération parallèle activée : les scènes sont générées en lots concurrents pour un gain ~3×. Avantages : continuité réelle des dialogues entre lots préservée. Inconvénients : au sein d'un même lot, les scènes 2-3 ne se référencent pas mutuellement ; pression instantanée sur le LLM/TTS multipliée par K, les scènes en limite de débit iront dans la liste d'échecs pour un re-essai en un clic. Cliquer pour revenir au mode séquentiel.",
+    "parallelOffTooltip": "Génération séquentielle (par défaut) : scènes générées une par une avec une continuité parfaite du contexte. Cliquer pour activer le mode parallèle (~2-3× plus rapide) au prix d'une légère perte de continuité intra-lot.",
     "webSearchDesc": "Rechercher sur le web pour des informations à jour avant la génération",
     "webSearchProvider": "Moteur de recherche",
     "webSearchNoProvider": "Configurer la clé API de recherche dans les paramètres",
@@ -337,7 +339,8 @@
     "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants."
   },
   "sidebar": {
-    "addScene": "Ajouter une page"
+    "addScene": "Ajouter une page",
+    "insertHere": "Insérer une nouvelle page ici"
   },
   "addScene": {
     "title": "Ajouter une nouvelle page",

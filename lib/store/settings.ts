@@ -163,6 +163,31 @@ export interface SettingsState {
   // Outline confirmation (pause generation after outlines stream so user can review/edit)
   outlineConfirmEnabled: boolean;
 
+  /**
+   * Continuity-Preserving Parallel scene generation. When enabled,
+   * `useSceneGenerator.generateRemaining` switches from the existing
+   * pipelined-sequential loop to a batched-parallel loop:
+   *  - First pending scene runs solo (real `previousSpeeches` from the
+   *    most recently completed scene), seeding tone for the rest.
+   *  - Remaining scenes are processed in batches of `parallelGenerationBatchSize`,
+   *    sharing the same `previousSpeeches` (taken from the last scene
+   *    completed by the previous batch) so cross-batch narrative
+   *    continuity is preserved.
+   *  - Within a batch, scenes 2..K do not see each other's speeches —
+   *    they share the upstream context only. This trades a small amount
+   *    of intra-batch continuity for ~K× speedup.
+   * Default `false` so existing users see no behavior change. Toggleable
+   * from the generation toolbar (lightning icon next to outlineConfirm).
+   */
+  parallelGenerationEnabled: boolean;
+  /**
+   * Number of scenes to run in parallel within each batch. Range 2-5;
+   * default 3. Higher values give bigger speedup but multiply upstream
+   * LLM/TTS pressure (rate-limit timeouts will appear as failed scenes
+   * eligible for `retrySingleOutline`).
+   */
+  parallelGenerationBatchSize: number;
+
   // Layout preferences (persisted via localStorage)
   sidebarCollapsed: boolean;
   chatAreaCollapsed: boolean;
@@ -187,6 +212,10 @@ export interface SettingsState {
    */
   setAgentNamePreset: (agentId: string, name: string | null) => void;
   setOutlineConfirmEnabled: (enabled: boolean) => void;
+  /** Toggle the continuity-preserving parallel scene-generation mode. */
+  setParallelGenerationEnabled: (enabled: boolean) => void;
+  /** Adjust the parallel batch size; clamped to the supported 2-5 range. */
+  setParallelGenerationBatchSize: (size: number) => void;
 
   // Layout actions
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -565,6 +594,8 @@ export const useSettingsStore = create<SettingsState>()(
         autoAgentCount: 3,
         agentNamePresets: {},
         outlineConfirmEnabled: true,
+        parallelGenerationEnabled: false,
+        parallelGenerationBatchSize: 3,
 
         // Playback controls
         ttsMuted: false,
@@ -646,6 +677,12 @@ export const useSettingsStore = create<SettingsState>()(
             return { agentNamePresets: next };
           }),
         setOutlineConfirmEnabled: (enabled) => set({ outlineConfirmEnabled: enabled }),
+        setParallelGenerationEnabled: (enabled) =>
+          set({ parallelGenerationEnabled: enabled }),
+        setParallelGenerationBatchSize: (size) =>
+          set({
+            parallelGenerationBatchSize: Math.max(2, Math.min(5, Math.floor(size) || 3)),
+          }),
 
         // Layout actions
         setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -1425,6 +1462,20 @@ export const useSettingsStore = create<SettingsState>()(
         }
         if ((state as Record<string, unknown>).outlineConfirmEnabled === undefined) {
           (state as Record<string, unknown>).outlineConfirmEnabled = true;
+        }
+        if (
+          (state as Record<string, unknown>).parallelGenerationEnabled === undefined
+        ) {
+          (state as Record<string, unknown>).parallelGenerationEnabled = false;
+        }
+        const pgbsRaw = (state as Record<string, unknown>).parallelGenerationBatchSize;
+        if (typeof pgbsRaw !== 'number' || !Number.isFinite(pgbsRaw)) {
+          (state as Record<string, unknown>).parallelGenerationBatchSize = 3;
+        } else {
+          (state as Record<string, unknown>).parallelGenerationBatchSize = Math.max(
+            2,
+            Math.min(5, Math.floor(pgbsRaw)),
+          );
         }
 
         // Migrate Web Search: old flat fields → new provider-based config

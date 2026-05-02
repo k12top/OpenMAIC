@@ -48,6 +48,8 @@
         "webSearchOff": "点击开启",
         "outlineConfirmOn": "大纲生成后等待我确认",
         "outlineConfirmOff": "点击开启：生成大纲后先暂停让我审阅",
+        "parallelOnTooltip": "并行生成已开启：每页同时生成 ~3×加速。优点：批与批之间真实台词衔接；缺点：同批 2-3 页之间台词不互相引用，对模型/语音上游瞬时压力更大，触发限速的页会进入失败列表可单条重试。点击关闭恢复串行生成。",
+        "parallelOffTooltip": "串行生成（默认）：按顺序逐页生成，台词上下文完全连贯。点击开启并行模式可获得 ~2-3× 提速，但会牺牲少量同批内的连贯性。",
         "webSearchDesc": "生成前搜索网络获取最新资料，让内容更丰富准确",
         "webSearchProvider": "搜索引擎",
         "webSearchNoProvider": "请在设置中配置搜索引擎 API Key",
@@ -357,7 +359,8 @@
         "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。"
     },
     "sidebar": {
-        "addScene": "新增页面"
+        "addScene": "新增页面",
+        "insertHere": "在此处插入新页面"
     },
     "addScene": {
         "title": "新增课堂页面",

@@ -45,6 +45,8 @@
     "webSearchOff": "Klik untuk mengaktifkan",
     "outlineConfirmOn": "Tunggu konfirmasi kerangka",
     "outlineConfirmOff": "Klik: jeda setelah pembuatan kerangka untuk ditinjau",
+    "parallelOnTooltip": "Generasi paralel AKTIF: scene dibuat secara berkelompok bersamaan untuk percepatan ~3×. Kelebihan: kontinuitas dialog antar batch tetap nyata. Kekurangan: scene 2-3 dalam batch yang sama tidak saling merujuk dialog; tekanan ke LLM/TTS naik ~K×, scene yang kena rate-limit akan masuk daftar gagal untuk dicoba ulang per item. Klik untuk kembali ke generasi berurutan.",
+    "parallelOffTooltip": "Generasi berurutan (default): scene dibuat satu per satu dengan konteks dialog sepenuhnya berkelanjutan. Klik untuk mengaktifkan mode paralel demi percepatan ~2-3× dengan sedikit kompromi kontinuitas dalam batch.",
     "webSearchDesc": "Cari di web untuk informasi terbaru sebelum pembuatan",
     "webSearchProvider": "Mesin pencari",
     "webSearchNoProvider": "Konfigurasi kunci API pencarian di Pengaturan",
@@ -337,7 +339,8 @@
     "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang."
   },
   "sidebar": {
-    "addScene": "Tambah halaman"
+    "addScene": "Tambah halaman",
+    "insertHere": "Sisipkan halaman baru di sini"
   },
   "addScene": {
     "title": "Tambah halaman baru",
