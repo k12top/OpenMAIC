@@ -99,10 +99,33 @@ export async function assertMenuPerm(
     return;
   }
 
+  // Build a high-signal log line: who they are, what they asked for, why
+  // we said no, AND what they DO have — most denial diagnoses are
+  // "policy doesn't grant this menu_id at all" vs "wrong op for the
+  // menu_id" and the existing-grants list answers that in one glance.
+  const bits = snapshot?.byMenu[menuId];
+  const reason = !bits
+    ? 'menu_id absent from snapshot (no policy line matched)'
+    : `policy returned ${op}=false (visible=${bits.visible}, operable=${bits.operable})`;
+
+  const granted: string[] = [];
+  if (snapshot) {
+    for (const [id, b] of Object.entries(snapshot.byMenu)) {
+      if (b.visible || b.operable) {
+        granted.push(`${id}(${b.visible ? 'V' : '-'}${b.operable ? 'O' : '-'})`);
+      }
+    }
+  }
+
   log.info(
-    `Forbidden: user=${user.id} roles=[${user.roles.join(',')}] ` +
-      `menu=${menuId} op=${op}` +
-      (ctx.resourceId ? ` resource=${ctx.resourceId}` : ''),
+    `Forbidden: user=${user.id} email=${user.email || '-'} ` +
+      `roles=[${user.roles.join(',') || '-'}] ` +
+      `menu=${menuId} op=${op} ` +
+      `source=${snapshot?.source ?? 'no-snapshot'} ` +
+      `ownerBypass=${bypassAllowed ? (ctx.isResourceOwner ? 'eligible-but-not-applicable' : 'not-owner') : 'disabled-on-menu'}` +
+      (ctx.resourceId ? ` resource=${ctx.resourceId}` : '') +
+      ` | reason=${reason}` +
+      ` | granted=[${granted.join(',') || 'none'}]`,
   );
   throw new ForbiddenError(`Menu '${menuId}' op='${op}' denied`);
 }

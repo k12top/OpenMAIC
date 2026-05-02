@@ -23,7 +23,7 @@ export interface AuthMeResponse {
     permissions?: Action[];
     /** New: per-menu permission map keyed by menu_id. */
     menus?: MenuPermMap;
-    menuSource?: 'casdoor' | 'env-fallback' | 'permissive' | 'unavailable';
+    menuSource?: 'casdoor' | 'env-fallback' | 'permissive' | 'guest-fallback' | 'unavailable';
   };
 }
 
@@ -35,12 +35,16 @@ export interface AuthState {
   permissions: Action[];
   menus: MenuPermMap;
   /**
-   * Where the menu map came from. Useful for the admin UI / debug overlay
-   * — `permissive` means RBAC is not configured at all and every menu is
-   * allowed; `unavailable` means we couldn't reach Casdoor and the snapshot
-   * is empty (UI should treat as deny-by-default until refresh succeeds).
+   * Where the menu map came from. Useful for the admin UI / debug overlay:
+   *   - `casdoor`        — live policy lookup succeeded.
+   *   - `env-fallback`   — `OPENMAIC_ROLE_PERMISSIONS` env mapping (legacy
+   *                        / Casdoor not enabled).
+   *   - `permissive`     — RBAC not configured at all; every menu allowed.
+   *   - `guest-fallback` — Casdoor RBAC enabled but unreachable; only a
+   *                        few read-only routes exposed (fail-closed).
+   *   - `unavailable`    — client couldn't fetch at all (network error).
    */
-  menuSource: 'casdoor' | 'env-fallback' | 'permissive' | 'unavailable';
+  menuSource: 'casdoor' | 'env-fallback' | 'permissive' | 'guest-fallback' | 'unavailable';
 }
 
 const INITIAL_STATE: AuthState = {

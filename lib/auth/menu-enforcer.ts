@@ -58,8 +58,21 @@ export type MenuMap = Record<string, MenuPermBits>;
 export interface MenuSnapshot {
   byMenu: MenuMap;
   generatedAt: number;
-  source: 'casdoor' | 'env-fallback' | 'permissive';
+  source: 'casdoor' | 'env-fallback' | 'permissive' | 'guest-fallback';
 }
+
+/**
+ * Read-only routes a logged-in but un-policed user should always be able
+ * to *see* (no operability). Used by {@link buildGuestFallback} when
+ * Casdoor is enabled but unreachable — fail-closed default rather than
+ * permissively granting every menu.
+ */
+const GUEST_VISIBLE_MENU_IDS: readonly string[] = [
+  'route.home',
+  'route.classroom',
+  'route.share',
+  'route.credits',
+];
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
@@ -75,8 +88,19 @@ function rbacEnabled(): boolean {
   return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on';
 }
 
-function permissionDomain(): string {
-  return process.env.CASDOOR_PERMISSION_DOMAIN || process.env.CASDOOR_ORG_NAME || 'built-in';
+/**
+ * If set (and non-empty), we send 4-element `[sub, dom, obj, act]` requests
+ * — the casbin "RBAC with domains" model. Leave it unset/empty to default
+ * to Casdoor-friendly 3-element `[sub, obj, act]` (Casdoor's Permission UI
+ * hard-codes a 3-element `[policy_definition]` validator and refuses to
+ * save Permissions whose model has 4 elements).
+ *
+ * Single-tenant deploys should leave it OFF. Multi-tenant deploys that
+ * manage policies entirely outside the Casdoor UI may opt in.
+ */
+function permissionDomain(): string | null {
+  const raw = (process.env.CASDOOR_PERMISSION_DOMAIN ?? '').trim();
+  return raw.length > 0 ? raw : null;
 }
 
 // ─── Cache ──────────────────────────────────────────────────────────────
@@ -84,6 +108,29 @@ function permissionDomain(): string {
 interface CacheEntry {
   snapshot: MenuSnapshot;
   expiresAt: number;
+  /**
+   * Snapshot of the env knobs that influence which source we use, captured
+   * at build time. If any of these change, the cached entry is treated as
+   * stale and rebuilt — so toggling `CASDOOR_RBAC_ENABLED` in `.env`
+   * doesn't leave users stuck on the old snapshot for the full TTL.
+   */
+  configFingerprint: string;
+}
+
+/**
+ * Compose a fingerprint of every env var that meaningfully changes how
+ * `buildMenuSnapshot` would produce its output. Cheap to recompute on
+ * every cache read — just a few env lookups + string concat.
+ */
+function currentConfigFingerprint(): string {
+  return [
+    `rbac=${rbacEnabled() ? '1' : '0'}`,
+    `dom=${permissionDomain() ?? ''}`,
+    `enforcerName=${process.env.CASDOOR_ENFORCER_NAME ?? ''}`,
+    `permName=${process.env.CASDOOR_PERMISSION_NAME ?? ''}`,
+    `org=${process.env.CASDOOR_ORG_NAME ?? ''}`,
+    `roleEnv=${process.env.OPENMAIC_ROLE_PERMISSIONS ?? ''}`,
+  ].join('|');
 }
 
 /**
@@ -114,14 +161,22 @@ export function clearMenuSnapshotCache(): void {
 export async function getMenuSnapshot(user: AuthUser): Promise<MenuSnapshot> {
   const cached = cache.get(user.id);
   const now = Date.now();
-  if (cached && cached.expiresAt > now) {
+  const fp = currentConfigFingerprint();
+  if (cached && cached.expiresAt > now && cached.configFingerprint === fp) {
     return cached.snapshot;
+  }
+  if (cached && cached.configFingerprint !== fp) {
+    log.info(
+      `Config fingerprint changed for user=${user.id} — invalidating cached snapshot ` +
+        `(was: ${cached.configFingerprint} | now: ${fp})`,
+    );
   }
 
   const fresh = await buildMenuSnapshot(user, cached?.snapshot);
   cache.set(user.id, {
     snapshot: fresh,
     expiresAt: now + ttlMs(),
+    configFingerprint: fp,
   });
   return fresh;
 }
@@ -132,52 +187,117 @@ async function buildMenuSnapshot(
   staleFallback?: MenuSnapshot,
 ): Promise<MenuSnapshot> {
   if (rbacEnabled()) {
+    log.info(
+      `Building snapshot for user=${user.id} via casdoor (RBAC enabled, dom=${permissionDomain() ?? '(none/3-element)'})`,
+    );
     try {
-      return await buildFromCasdoor(user);
+      const snap = await buildFromCasdoor(user);
+      const grantCount = Object.values(snap.byMenu).filter(
+        (b) => b.visible || b.operable,
+      ).length;
+      log.info(
+        `Snapshot built for user=${user.id} source=casdoor grants=${grantCount}/${Object.keys(snap.byMenu).length}`,
+      );
+      return snap;
     } catch (err) {
       if (err instanceof EnforcerUnavailableError) {
         log.warn(
           'Casdoor enforce unavailable; falling back to ' +
-            (staleFallback ? 'stale snapshot' : 'env mapping'),
+            (staleFallback ? 'stale snapshot' : 'guest minimum'),
           err,
         );
       } else {
         log.warn('Casdoor enforce failed unexpectedly', err);
       }
-      // Prefer a stale-but-real snapshot over reverting to env entirely.
+      // Prefer a stale-but-real snapshot over the guest minimum — the
+      // user's previously-fetched policy is still the closest thing to
+      // the operator's intent, even if it's a few minutes old.
       if (staleFallback) {
         return { ...staleFallback, generatedAt: Date.now() };
       }
-      return buildFromEnvFallback(user);
+      // FAIL-CLOSED: when RBAC is the configured authority, we MUST NOT
+      // silently grant everything just because the policy server is
+      // unreachable. Drop to the guest minimum (read-only on a few
+      // public routes). Operators see WARN logs and can fix Casdoor /
+      // re-fetch via /api/auth/refresh-permissions once it's back up.
+      const fb = buildGuestFallback(user);
+      log.info(
+        `Snapshot built for user=${user.id} source=guest-fallback (Casdoor failed; ` +
+          `${GUEST_VISIBLE_MENU_IDS.length} read-only menus exposed)`,
+      );
+      return fb;
     }
   }
-  return buildFromEnvFallback(user);
+  log.info(
+    `Building snapshot for user=${user.id} via env-fallback ` +
+      `(CASDOOR_RBAC_ENABLED=${process.env.CASDOOR_RBAC_ENABLED ?? '<unset>'})`,
+  );
+  const fb = buildFromEnvFallback(user);
+  log.info(`Snapshot built for user=${user.id} source=${fb.source}`);
+  return fb;
 }
 
 // ─── Casdoor source ────────────────────────────────────────────────────
 
+/**
+ * Compose the list of "subject" strings we'll try for a given user. We
+ * fan out to every plausible identifier so policies can be written
+ * against the user's UUID OR any of their roles, with or without the
+ * `role:` prefix Casbin docs sometimes use. Casdoor decides which one
+ * matches; we OR the results.
+ *
+ * Why fan out instead of relying on `g(user, role)` rules?
+ *  - Casdoor admins commonly write `p, role:teacher, ...` policies but
+ *    forget the matching `g, <user-uuid>, role:teacher` binding (which
+ *    only exists if the user was added via the Roles UI). With this
+ *    fan-out, the policy matches directly even without the g rule.
+ *  - The cost is `(1 + roleCount) ×` request multiplication. For a
+ *    typical user with 1–3 roles that's 100–200 batched requests — well
+ *    within Casdoor's batch capacity.
+ */
+function subjectCandidates(user: AuthUser): string[] {
+  const out = new Set<string>();
+  if (user.id) out.add(user.id);
+  for (const role of user.roles) {
+    if (!role) continue;
+    out.add(role); // raw, e.g. "teacher" or "k12/teacher_group"
+    if (!role.startsWith('role:')) out.add(`role:${role}`); // prefixed, e.g. "role:teacher"
+  }
+  return Array.from(out);
+}
+
 async function buildFromCasdoor(user: AuthUser): Promise<MenuSnapshot> {
   const dom = permissionDomain();
-  // One enforce request per (menu × op). Order matters — we rely on the
-  // returned boolean[] sharing the same indexing.
+  const subs = subjectCandidates(user);
+  // Build a flat batch of (subject × menu × op) requests. We track which
+  // (menu, op) each row maps to so we can OR the per-subject results.
   const reqs: CasbinRequest[] = [];
-  const keys: Array<{ menuId: string; op: MenuOp }> = [];
-  for (const menu of MENUS) {
-    for (const op of MENU_OPS) {
-      reqs.push([user.id, dom, menu.id, op]);
-      keys.push({ menuId: menu.id, op });
+  const keys: Array<{ menuId: string; op: MenuOp; subject: string }> = [];
+  for (const sub of subs) {
+    for (const menu of MENUS) {
+      for (const op of MENU_OPS) {
+        reqs.push(
+          dom === null ? [sub, menu.id, op] : [sub, dom, menu.id, op],
+        );
+        keys.push({ menuId: menu.id, op, subject: sub });
+      }
     }
   }
 
   const results = await batchEnforce(reqs);
 
   const byMenu: MenuMap = {};
+  // Track which subject won each (menu, op) for debug logging.
+  const winnerBySlot = new Map<string, string>();
+  for (const menu of MENUS) {
+    byMenu[menu.id] = { visible: false, operable: false };
+  }
   for (let i = 0; i < keys.length; i++) {
-    const { menuId, op } = keys[i];
-    const allow = results[i] === true;
-    const bits = byMenu[menuId] ?? { visible: false, operable: false };
-    bits[op] = allow;
-    byMenu[menuId] = bits;
+    if (results[i] !== true) continue;
+    const { menuId, op, subject } = keys[i];
+    byMenu[menuId][op] = true;
+    const slot = `${menuId}#${op}`;
+    if (!winnerBySlot.has(slot)) winnerBySlot.set(slot, subject);
   }
   // Implicit rule: anything that is `operable` is also `visible` — saves
   // admins from having to set both flags for every grant.
@@ -185,10 +305,54 @@ async function buildFromCasdoor(user: AuthUser): Promise<MenuSnapshot> {
     if (byMenu[id].operable) byMenu[id].visible = true;
   }
 
+  // Single high-signal debug line: subjects we tried + grants per
+  // subject — answers "why didn't my policy match?" instantly.
+  const grantsBySubject = new Map<string, string[]>();
+  for (const [slot, subject] of winnerBySlot) {
+    const arr = grantsBySubject.get(subject) ?? [];
+    arr.push(slot);
+    grantsBySubject.set(subject, arr);
+  }
+  log.debug(
+    `casdoor enforce result for user=${user.id}: tried subjects=[${subs.join(', ')}] | ` +
+      (grantsBySubject.size === 0
+        ? 'NO subject matched any policy — check `p, <sub>, ...` rows in Casdoor'
+        : Array.from(grantsBySubject.entries())
+            .map(([s, slots]) => `${s} → [${slots.join(',')}]`)
+            .join(' | ')),
+  );
+
   return {
     byMenu,
     generatedAt: Date.now(),
     source: 'casdoor',
+  };
+}
+
+// ─── Guest (fail-closed) fallback ─────────────────────────────────────
+
+/**
+ * Build a deny-by-default snapshot exposing only a handful of public,
+ * read-only routes. Used when the operator explicitly opted into Casdoor
+ * RBAC (`CASDOOR_RBAC_ENABLED=true`) but the policy server is currently
+ * unreachable. We intentionally do NOT consult `OPENMAIC_ROLE_PERMISSIONS`
+ * here — that would silently extend rights the operator may have already
+ * removed in Casdoor. Better to under-permit and surface the outage.
+ */
+function buildGuestFallback(_user: AuthUser): MenuSnapshot {
+  const byMenu: MenuMap = {};
+  for (const menu of MENUS) {
+    byMenu[menu.id] = { visible: false, operable: false };
+  }
+  for (const id of GUEST_VISIBLE_MENU_IDS) {
+    if (byMenu[id]) {
+      byMenu[id] = { visible: true, operable: false };
+    }
+  }
+  return {
+    byMenu,
+    generatedAt: Date.now(),
+    source: 'guest-fallback',
   };
 }
 
