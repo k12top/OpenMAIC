@@ -767,8 +767,10 @@ export const useSettingsStore = create<SettingsState>()(
               image: Record<string, { baseUrl?: string }>;
               video: Record<string, { baseUrl?: string }>;
               webSearch: Record<string, { baseUrl?: string }>;
-              /** Operator defaults from env (DEFAULT_TTS_PROVIDER, etc.) — see getServerDefaults */
+              /** Operator defaults from env (DEFAULT_MODEL, DEFAULT_TTS_PROVIDER, etc.) — see getServerDefaults */
               defaults?: {
+                /** `<provider>:<model>` form, sourced from DEFAULT_MODEL */
+                llmModel?: string;
                 ttsProvider?: string;
                 asrProvider?: string;
                 imageProvider?: string;
@@ -1156,21 +1158,49 @@ export const useSettingsStore = create<SettingsState>()(
                 }
               }
 
-              // LLM auto-select: only on true first load (no provider selected yet)
+              // LLM auto-select: fires whenever the user has no model picked
+              // yet (modelId is empty). The previous guard also required
+              // `!state.providerId`, but providerId defaults to 'openai' on
+              // first load — making the guard impossible to satisfy and
+              // forcing every new user to manually pick a model in Settings.
+              //
+              // Priority order, first match wins:
+              //   1. Operator's DEFAULT_MODEL (`<provider>:<model>`), provided
+              //      that provider is server-configured.
+              //   2. First server-configured provider's first model.
               let autoProviderId: ProviderId | undefined;
               let autoModelId: string | undefined;
-              if (!state.providerId && !state.modelId) {
-                for (const [pid, cfg] of Object.entries(newProvidersConfig)) {
-                  if (cfg.isServerConfigured) {
-                    // Prefer server-restricted models, fall back to built-in list
-                    const serverModels = cfg.serverModels;
-                    const modelId = serverModels?.length
-                      ? serverModels[0]
-                      : PROVIDERS[pid as ProviderId]?.models[0]?.id;
-                    if (modelId) {
-                      autoProviderId = pid as ProviderId;
-                      autoModelId = modelId;
-                      break;
+              if (!state.modelId) {
+                const serverDefaults = data.defaults;
+                const llmDefault = serverDefaults?.llmModel?.trim();
+                if (llmDefault) {
+                  // Local mini-parser to avoid pulling parseModelString from
+                  // ai/providers (heavier import surface). Mirrors the same
+                  // "split on first colon, default to openai if bare" logic.
+                  const colon = llmDefault.indexOf(':');
+                  const pid = (
+                    colon > 0 ? llmDefault.slice(0, colon) : 'openai'
+                  ) as ProviderId;
+                  const mid = colon > 0 ? llmDefault.slice(colon + 1) : llmDefault;
+                  const cfg = newProvidersConfig[pid];
+                  if (cfg?.isServerConfigured && mid) {
+                    autoProviderId = pid;
+                    autoModelId = mid;
+                  }
+                }
+                if (!autoModelId) {
+                  for (const [pid, cfg] of Object.entries(newProvidersConfig)) {
+                    if (cfg.isServerConfigured) {
+                      // Prefer server-restricted models, fall back to built-in list
+                      const serverModels = cfg.serverModels;
+                      const modelId = serverModels?.length
+                        ? serverModels[0]
+                        : PROVIDERS[pid as ProviderId]?.models[0]?.id;
+                      if (modelId) {
+                        autoProviderId = pid as ProviderId;
+                        autoModelId = modelId;
+                        break;
+                      }
                     }
                   }
                 }
