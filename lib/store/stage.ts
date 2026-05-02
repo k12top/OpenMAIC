@@ -168,6 +168,15 @@ interface StageState {
    * No-op when no stage is loaded.
    */
   setLectureMode: (value: boolean) => void;
+
+  /**
+   * Set or clear a per-classroom override for an AI agent's display name.
+   * Pass `null` (or empty string) to remove the override and fall back to
+   * the lower-priority sources (generated config / global preset / i18n /
+   * registry). Persisted with the stage so the rename follows the
+   * courseware across refresh and shared viewers.
+   */
+  setAgentNameOverride: (agentId: string, name: string | null) => void;
 }
 
 const useStageStoreBase = create<StageState>()((set, get) => ({
@@ -575,6 +584,25 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
     const { stage } = get();
     if (!stage) return;
     set({ stage: { ...stage, lectureMode: value } });
+    debouncedSave();
+  },
+
+  setAgentNameOverride: (agentId, name) => {
+    const { stage } = get();
+    if (!stage || !agentId) return;
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    const next = { ...(stage.agentNameOverrides ?? {}) };
+    if (name === null || trimmed === '') {
+      delete next[agentId];
+    } else {
+      next[agentId] = trimmed;
+    }
+    set({
+      stage: {
+        ...stage,
+        agentNameOverrides: Object.keys(next).length > 0 ? next : undefined,
+      },
+    });
     debouncedSave();
   },
 

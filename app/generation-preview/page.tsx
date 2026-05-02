@@ -35,6 +35,7 @@ import { nanoid } from 'nanoid';
 import type { Stage } from '@/lib/types/stage';
 import type { SceneOutline, PdfImage, ImageMapping } from '@/lib/types/generation';
 import { AgentRevealModal } from '@/components/agent/agent-reveal-modal';
+import { applyEffectiveNames } from '@/lib/agents/resolve-name';
 import { createLogger } from '@/lib/logger';
 import { type GenerationSessionState, ALL_STEPS, getActiveSteps } from './types';
 import { StepVisualizer } from './components/visualizers';
@@ -573,15 +574,21 @@ function GenerationPreviewContent() {
             agentRevealResolveRef.current = resolve;
           });
 
-          agents = savedIds
-            .map((id) => useAgentRegistry.getState().getAgent(id))
-            .filter(Boolean)
-            .map((a) => ({
-              id: a!.id,
-              name: a!.name,
-              role: a!.role,
-              persona: a!.persona,
-            }));
+          agents = applyEffectiveNames(
+            savedIds
+              .map((id) => useAgentRegistry.getState().getAgent(id))
+              .filter(Boolean)
+              .map((a) => ({
+                id: a!.id,
+                name: a!.name,
+                role: a!.role,
+                persona: a!.persona,
+              })),
+            {
+              settingsPresets: settings.agentNamePresets,
+              t,
+            },
+          );
         } catch (err: unknown) {
           if (err instanceof Error && err.message === INSUFFICIENT_CREDITS_MARKER) throw err;
           log.warn('[Generation] Agent save failed, falling back to presets:', err);
@@ -596,15 +603,21 @@ function GenerationPreviewContent() {
           const a = registry.getAgent(id);
           return a && !a.isGenerated;
         });
-        agents = fallbackIds
-          .map((id) => registry.getAgent(id))
-          .filter(Boolean)
-          .map((a) => ({
-            id: a!.id,
-            name: a!.name,
-            role: a!.role,
-            persona: a!.persona,
-          }));
+        agents = applyEffectiveNames(
+          fallbackIds
+            .map((id) => registry.getAgent(id))
+            .filter(Boolean)
+            .map((a) => ({
+              id: a!.id,
+              name: a!.name,
+              role: a!.role,
+              persona: a!.persona,
+            })),
+          {
+            settingsPresets: settings.agentNamePresets,
+            t,
+          },
+        );
         stage.agentIds = fallbackIds;
       }
 
@@ -759,6 +772,22 @@ function GenerationPreviewContent() {
       setStatusMessage('');
       if (!outlines || outlines.length === 0) {
         throw new Error(t('generation.outlineEmptyResponse'));
+      }
+
+      // Embed (potentially renamed) generated agent configs on the stage so
+      // the share / cloud-sync flows can hydrate the same names without
+      // re-running agent generation. The reveal modal may have rewritten
+      // these names mid-flow; we read the latest from generatedAgents state.
+      if (settings.agentMode === 'auto' && generatedAgents.length > 0) {
+        stage.generatedAgentConfigs = generatedAgents.map((a) => ({
+          id: a.id,
+          name: a.name,
+          role: a.role,
+          persona: a.persona,
+          avatar: a.avatar,
+          color: a.color,
+          priority: a.priority,
+        }));
       }
 
       // Store stage and outlines
@@ -1530,6 +1559,26 @@ function GenerationPreviewContent() {
         onAllRevealed={() => {
           agentRevealResolveRef.current?.();
           agentRevealResolveRef.current = null;
+        }}
+        onAgentRename={async (agentId, newName) => {
+          setGeneratedAgents((prev) =>
+            prev.map((a) => (a.id === agentId ? { ...a, name: newName } : a)),
+          );
+          // Reflect into the registry immediately so the AgentBar /
+          // Roundtable / chat orchestration all see the user-chosen name.
+          useAgentRegistry.getState().updateAgent(agentId, { name: newName });
+          // Persist into IndexedDB so a refresh keeps the rename, and so
+          // the classroom page hydrates the right name when navigating in.
+          try {
+            const { db } = await import('@/lib/utils/database');
+            const record = await db.generatedAgents.get(agentId);
+            if (record) {
+              await db.generatedAgents.put({ ...record, name: newName });
+            }
+          } catch (err) {
+            log.warn('[Reveal] failed to persist rename:', err);
+          }
+          toast.success(t('agent.renameSuccess'));
         }}
       />
     </div>

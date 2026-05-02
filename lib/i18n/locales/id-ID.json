@@ -594,6 +594,9 @@
     "keyboardShortcuts": "Pintasan",
     "generalSettings": "Umum",
     "systemSettings": "Sistem",
+    "profileSection": "Profil",
+    "profileSectionHint": "Perbarui nama panggilan, avatar, dan bio Anda. Agen AI akan memanggil Anda dengan nama ini.",
+    "agentNamePresetsHint": "Penggantian nama di sini berlaku global. Setiap kelas tetap dapat menimpa nama-nama ini.",
     "addProvider": "Tambah",
     "importFromClipboard": "Impor dari Papan Klip",
     "apiSecret": "Kunci API",
@@ -1098,7 +1101,24 @@
       "asr": "Pengenalan suara",
       "pdf": "Pemrosesan PDF",
       "webSearch": "Pencarian web",
-      "general": "Pengaturan umum"
+      "general": "Pengaturan umum",
+      "agents": "Ganti nama agen",
+      "profile": "Profil pribadi"
     }
+  },
+  "agent": {
+    "editName": "Edit nama",
+    "saveName": "Simpan nama",
+    "nameLabel": "Nama tampilan",
+    "namePlaceholder": "Masukkan nama tampilan…",
+    "nameRequired": "Nama tidak boleh kosong",
+    "resetToDefault": "Kembalikan ke default",
+    "renameSuccess": "Nama diperbarui",
+    "renameReset": "Dikembalikan ke nama default",
+    "renameStaleHint": "Dialog yang sudah dihasilkan mungkin masih menyebut nama lama. Buat ulang aksi terkait jika perlu.",
+    "customName": "Nama kustom",
+    "customNameBadge": "Kustom",
+    "scopeStageDesc": "Hanya berlaku di kelas ini dan ikut saat dibagikan.",
+    "scopeGlobalDesc": "Berlaku global untuk semua kelas Anda; setiap kelas dapat menimpanya."
   }
 }

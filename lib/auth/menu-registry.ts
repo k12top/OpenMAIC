@@ -86,6 +86,15 @@ export const MENUS: readonly MenuItem[] = [
   { id: 'settings.pdf', labelKey: 'menu.settings.pdf' },
   { id: 'settings.webSearch', labelKey: 'menu.settings.webSearch' },
   { id: 'settings.general', labelKey: 'menu.settings.general' },
+
+  // Per-user / per-classroom AI agent rename surface (settings panel,
+  // reveal modal, classroom agent bar). Visible controls who SEES the
+  // pencil affordance; operable controls who can actually save a rename.
+  { id: 'settings.agents', labelKey: 'menu.settings.agents' },
+
+  // Real-person learner profile (avatar / nickname / bio). Editable from
+  // the home page profile card and the Settings dialog Profile section.
+  { id: 'settings.profile', labelKey: 'menu.settings.profile' },
 ];
 
 /** Lookup table for O(1) registry queries. */

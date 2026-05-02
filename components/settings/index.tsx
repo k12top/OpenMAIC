@@ -26,6 +26,7 @@ import {
   Search,
   Volume2,
   Mic,
+  User,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useSettingsStore } from '@/lib/store/settings';
@@ -59,6 +60,7 @@ import { ModelEditDialog } from './model-edit-dialog';
 import { AddProviderDialog, type NewProviderData } from './add-provider-dialog';
 import type { SettingsSection, EditingModel } from '@/lib/types/settings';
 import { MenuGate } from '@/components/auth/menu-gate';
+import { UserProfileCard } from '@/components/user-profile';
 
 // ─── Provider List Column (reusable) ───
 function ProviderListColumn<T extends string>({
@@ -504,6 +506,8 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
     switch (activeSection) {
       case 'general':
         return <h2 className="text-lg font-semibold">{t('settings.systemSettings')}</h2>;
+      case 'profile':
+        return <h2 className="text-lg font-semibold">{t('settings.profileSection')}</h2>;
       case 'providers':
         if (selectedProvider) {
           return (
@@ -784,6 +788,21 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
               </button>
             </MenuGate>
 
+            <MenuGate menu="settings.profile" op="visible">
+              <button
+                onClick={() => setActiveSection('profile')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'profile'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.profileSection')}</span>
+              </button>
+            </MenuGate>
+
             <MenuGate menu="settings.general" op="visible">
               <button
                 onClick={() => setActiveSection('general')}
@@ -983,6 +1002,20 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5">
               {activeSection === 'general' && <GeneralSettings />}
+
+              {activeSection === 'profile' && (
+                <div className="max-w-2xl mx-auto space-y-3">
+                  <div>
+                    <h2 className="text-base font-semibold mb-1">
+                      {t('settings.profileSection')}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {t('settings.profileSectionHint')}
+                    </p>
+                  </div>
+                  <UserProfileCard />
+                </div>
+              )}
 
               {activeSection === 'providers' && selectedProvider && (
                 <ProviderConfigPanel

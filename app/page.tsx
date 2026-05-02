@@ -1,65 +1,59 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  ArrowUp,
-  BookOpen,
-  Check,
-  ChevronDown,
-  Clock,
-  Coins,
-  Copy,
-  ImagePlus,
-  Pencil,
-  Trash2,
-  Settings,
-  Sun,
-  Moon,
-  Monitor,
-  BotOff,
-  ChevronUp,
-  LogIn,
-  LogOut,
-  Volume2,
-  CheckCircle2,
-} from 'lucide-react';
-import { useI18n } from '@/lib/hooks/use-i18n';
-import { LanguageSwitcher } from '@/components/language-switcher';
-import { createLogger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
-import { Textarea as UITextarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SettingsDialog } from '@/components/settings';
-import { GenerationToolbar } from '@/components/generation/generation-toolbar';
 import { AgentBar } from '@/components/agent/agent-bar';
-import { useTheme } from '@/lib/hooks/use-theme';
-import { nanoid } from 'nanoid';
-import { storePdfBlob } from '@/lib/utils/image-storage';
-import type { UserRequirements } from '@/lib/types/generation';
-import { useSettingsStore } from '@/lib/store/settings';
-import { useUserProfileStore, AVATAR_OPTIONS } from '@/lib/store/user-profile';
-import {
-  StageListItem,
-  listStages,
-  deleteStageData,
-  renameStage,
-  getFirstSlideByStages,
-} from '@/lib/utils/stage-storage';
-import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
-import type { Slide } from '@/lib/types/slides';
-import { useMediaGenerationStore } from '@/lib/store/media-generation';
-import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
-import { LandingPage } from '@/components/landing/landing-page';
 import { Can } from '@/components/auth/can';
 import { MenuGate } from '@/components/auth/menu-gate';
+import { GenerationToolbar } from '@/components/generation/generation-toolbar';
+import { LandingPage } from '@/components/landing/landing-page';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { SettingsDialog } from '@/components/settings';
+import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BRAND_NAME } from '@/lib/constants/brand';
+import { useDraftCache } from '@/lib/hooks/use-draft-cache';
+import { useI18n } from '@/lib/hooks/use-i18n';
+import { useTheme } from '@/lib/hooks/use-theme';
+import { createLogger } from '@/lib/logger';
+import { useMediaGenerationStore } from '@/lib/store/media-generation';
+import { useSettingsStore } from '@/lib/store/settings';
+import { AVATAR_OPTIONS, useUserProfileStore } from '@/lib/store/user-profile';
+import type { UserRequirements } from '@/lib/types/generation';
+import type { Slide } from '@/lib/types/slides';
+import { cn } from '@/lib/utils';
+import { storePdfBlob } from '@/lib/utils/image-storage';
+import {
+    StageListItem,
+    deleteStageData,
+    getFirstSlideByStages,
+    listStages,
+    renameStage,
+} from '@/lib/utils/stage-storage';
+import {
+    ArrowUp,
+    BookOpen,
+    BotOff,
+    CheckCircle2,
+    Clock,
+    Coins,
+    Copy,
+    LogIn,
+    LogOut,
+    Monitor,
+    Moon,
+    Pencil,
+    Settings,
+    Sun,
+    Trash2
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { nanoid } from 'nanoid';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 const log = createLogger('Home');
 

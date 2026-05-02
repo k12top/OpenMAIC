@@ -7,6 +7,11 @@
 
 import { useState } from 'react';
 import { useAgentRegistry } from '@/lib/orchestration/registry/store';
+import { useStageStore } from '@/lib/store/stage';
+import { useSettingsStore } from '@/lib/store/settings';
+import { resolveAgentName } from '@/lib/agents/resolve-name';
+import { AgentRenameDialog } from '@/components/agent/agent-rename-dialog';
+import { useMenuPerm } from '@/components/auth/menu-gate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,8 +24,12 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 export function AgentConfigPanel() {
   const { t } = useI18n();
   const { listAgents, deleteAgent } = useAgentRegistry();
+  const stage = useStageStore((s) => s.stage);
+  const settingsPresets = useSettingsStore((s) => s.agentNamePresets);
+  const canRenameAgents = useMenuPerm('settings.agents', 'operable');
   const agents = listAgents();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<{ id: string; baseName: string } | null>(null);
 
   const handleDelete = (agentId: string) => {
     if (confirm(t('agentConfig.deleteConfirm'))) {
@@ -30,6 +39,14 @@ export function AgentConfigPanel() {
       }
     }
   };
+
+  const getDisplayName = (agentId: string, baseName: string) =>
+    resolveAgentName(agentId, baseName, {
+      stageOverrides: stage?.agentNameOverrides ?? null,
+      generatedConfigs: stage?.generatedAgentConfigs ?? null,
+      settingsPresets,
+      t,
+    });
 
   return (
     <div className="flex flex-col h-full p-4 gap-4">
@@ -75,7 +92,7 @@ export function AgentConfigPanel() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-base">{agent.name}</CardTitle>
+                      <CardTitle className="text-base">{getDisplayName(agent.id, agent.name)}</CardTitle>
                       <CardDescription className="text-sm">{agent.role}</CardDescription>
                     </div>
                   </div>
@@ -114,12 +131,22 @@ export function AgentConfigPanel() {
                       )}
                     </div>
                   </div>
-                  {!agent.isDefault && (
-                    <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" className="flex-1">
+                  <div className="flex gap-2 pt-2">
+                    {canRenameAgents && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRenameTarget({ id: agent.id, baseName: agent.name });
+                        }}
+                      >
                         <EditIcon className="w-3 h-3 mr-1" />
                         {t('agentConfig.edit')}
                       </Button>
+                    )}
+                    {!agent.isDefault && (
                       <Button
                         size="sm"
                         variant="destructive"
@@ -130,8 +157,8 @@ export function AgentConfigPanel() {
                       >
                         <Trash2Icon className="w-3 h-3" />
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -149,6 +176,17 @@ export function AgentConfigPanel() {
             </Button>
           </div>
         </div>
+      )}
+
+      {renameTarget && (
+        <AgentRenameDialog
+          open={!!renameTarget}
+          onOpenChange={(open) => {
+            if (!open) setRenameTarget(null);
+          }}
+          agentId={renameTarget.id}
+          baseName={renameTarget.baseName}
+        />
       )}
     </div>
   );

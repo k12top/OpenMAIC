@@ -651,6 +651,9 @@
         "keyboardShortcuts": "键盘快捷键",
         "generalSettings": "常规设置",
         "systemSettings": "系统设置",
+        "profileSection": "个人资料",
+        "profileSectionHint": "更新你的昵称、头像和简介。AI 老师会用昵称称呼你。",
+        "agentNamePresetsHint": "这里的改名是全局生效的，单个课堂仍可独立覆盖。",
         "addProvider": "添加",
         "importFromClipboard": "从剪贴板导入",
         "apiSecret": "API 密钥",
@@ -1276,7 +1279,24 @@
             "asr": "语音识别",
             "pdf": "PDF 处理",
             "webSearch": "联网搜索",
-            "general": "通用设置"
+            "general": "通用设置",
+            "agents": "智能体改名",
+            "profile": "个人资料"
         }
+    },
+    "agent": {
+        "editName": "修改名称",
+        "saveName": "保存名称",
+        "nameLabel": "显示名称",
+        "namePlaceholder": "输入展示名称…",
+        "nameRequired": "名称不能为空",
+        "resetToDefault": "恢复默认",
+        "renameSuccess": "名称已更新",
+        "renameReset": "已恢复默认名称",
+        "renameStaleHint": "已生成的台词若引用了旧名，可对该 action 单独重新生成。",
+        "customName": "自定义名称",
+        "customNameBadge": "已自定义",
+        "scopeStageDesc": "仅在当前课堂生效，分享时跟随课堂带走。",
+        "scopeGlobalDesc": "对你的所有课堂全局生效；单个课堂可独立覆盖。"
     }
 }

@@ -645,6 +645,9 @@
         "keyboardShortcuts": "Shortcuts",
         "generalSettings": "General",
         "systemSettings": "System",
+        "profileSection": "Profile",
+        "profileSectionHint": "Update your nickname, avatar and bio. Your nickname is used by AI agents when addressing you.",
+        "agentNamePresetsHint": "Renames here apply globally. A specific classroom can still override these names.",
         "addProvider": "Add",
         "importFromClipboard": "Import from Clipboard",
         "apiSecret": "API Key",
@@ -1270,7 +1273,24 @@
             "asr": "Speech-to-text",
             "pdf": "PDF processing",
             "webSearch": "Web search",
-            "general": "General settings"
+            "general": "General settings",
+            "agents": "Agent rename",
+            "profile": "Personal profile"
         }
+    },
+    "agent": {
+        "editName": "Edit name",
+        "saveName": "Save name",
+        "nameLabel": "Display name",
+        "namePlaceholder": "Enter a display name…",
+        "nameRequired": "Name cannot be empty",
+        "resetToDefault": "Reset to default",
+        "renameSuccess": "Name updated",
+        "renameReset": "Reverted to the default name",
+        "renameStaleHint": "Already-generated speech may still mention the old name. Regenerate any individual action if needed.",
+        "customName": "Custom name",
+        "customNameBadge": "Custom",
+        "scopeStageDesc": "Applies only to the current classroom and follows it when shared.",
+        "scopeGlobalDesc": "Applies globally for you across all classrooms unless a specific classroom overrides it."
     }
 }

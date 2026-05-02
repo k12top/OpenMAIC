@@ -626,6 +626,9 @@
     "keyboardShortcuts": "Raccourcis",
     "generalSettings": "Général",
     "systemSettings": "Système",
+    "profileSection": "Profil",
+    "profileSectionHint": "Mettez à jour votre pseudo, votre avatar et votre bio. Les agents IA s'adressent à vous par votre pseudo.",
+    "agentNamePresetsHint": "Les renommages ici s'appliquent globalement. Une salle de classe peut toujours définir ses propres noms.",
     "addProvider": "Ajouter",
     "importFromClipboard": "Importer depuis le presse-papiers",
     "apiSecret": "Clé API",
@@ -1130,7 +1133,24 @@
       "asr": "Reconnaissance vocale",
       "pdf": "Traitement PDF",
       "webSearch": "Recherche web",
-      "general": "Paramètres généraux"
+      "general": "Paramètres généraux",
+      "agents": "Renommer les agents",
+      "profile": "Profil personnel"
     }
+  },
+  "agent": {
+    "editName": "Modifier le nom",
+    "saveName": "Enregistrer le nom",
+    "nameLabel": "Nom affiché",
+    "namePlaceholder": "Saisissez un nom affiché…",
+    "nameRequired": "Le nom ne peut pas être vide",
+    "resetToDefault": "Rétablir la valeur par défaut",
+    "renameSuccess": "Nom mis à jour",
+    "renameReset": "Nom par défaut rétabli",
+    "renameStaleHint": "Les répliques déjà générées peuvent encore mentionner l'ancien nom. Régénérez l'action concernée si nécessaire.",
+    "customName": "Nom personnalisé",
+    "customNameBadge": "Personnalisé",
+    "scopeStageDesc": "S'applique uniquement à la salle de classe actuelle et la suit lors du partage.",
+    "scopeGlobalDesc": "S'applique globalement à toutes vos salles de classe ; chaque salle peut le remplacer."
   }
 }

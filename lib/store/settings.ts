@@ -151,6 +151,14 @@ export interface SettingsState {
   maxTurns: string;
   agentMode: 'preset' | 'auto';
   autoAgentCount: number;
+  /**
+   * Global per-user overrides for AI agent display names. Maps stable
+   * `agentId` → desired display name. Used as the third-priority source
+   * after stage-level overrides and stage-generated configs, ahead of the
+   * `settings.agentNames.<id>` i18n fallback. Empty string clears the
+   * override (use the default).
+   */
+  agentNamePresets: Record<string, string>;
 
   // Outline confirmation (pause generation after outlines stream so user can review/edit)
   outlineConfirmEnabled: boolean;
@@ -173,6 +181,11 @@ export interface SettingsState {
   setMaxTurns: (turns: string) => void;
   setAgentMode: (mode: 'preset' | 'auto') => void;
   setAutoAgentCount: (count: number) => void;
+  /**
+   * Set or clear the global preset name for an agent. Pass `null` to
+   * remove the override and fall back to the i18n / registry default.
+   */
+  setAgentNamePreset: (agentId: string, name: string | null) => void;
   setOutlineConfirmEnabled: (enabled: boolean) => void;
 
   // Layout actions
@@ -550,6 +563,7 @@ export const useSettingsStore = create<SettingsState>()(
         maxTurns: migratedData?.maxTurns?.toString() || '10',
         agentMode: 'auto' as const,
         autoAgentCount: 3,
+        agentNamePresets: {},
         outlineConfirmEnabled: true,
 
         // Playback controls
@@ -619,6 +633,18 @@ export const useSettingsStore = create<SettingsState>()(
         setMaxTurns: (turns) => set({ maxTurns: turns }),
         setAgentMode: (mode) => set({ agentMode: mode }),
         setAutoAgentCount: (count) => set({ autoAgentCount: count }),
+        setAgentNamePreset: (agentId, name) =>
+          set((state) => {
+            const next = { ...state.agentNamePresets };
+            const trimmed = typeof name === 'string' ? name.trim() : '';
+            if (!agentId) return state;
+            if (name === null || trimmed === '') {
+              delete next[agentId];
+            } else {
+              next[agentId] = trimmed;
+            }
+            return { agentNamePresets: next };
+          }),
         setOutlineConfirmEnabled: (enabled) => set({ outlineConfirmEnabled: enabled }),
 
         // Layout actions

@@ -11,6 +11,9 @@ import type { TTSProviderId } from '@/lib/audio/types';
 import { USER_AVATAR } from '@/lib/types/roundtable';
 import type { Participant, ParticipantRole } from '@/lib/types/roundtable';
 import { useUserProfileStore } from '@/lib/store/user-profile';
+import { useSettingsStore } from '@/lib/store/settings';
+import { useStageStore } from '@/lib/store/stage';
+import { resolveAgentName } from '@/lib/agents/resolve-name';
 import type { AgentInfo } from '@/lib/generation/pipeline-types';
 
 interface AgentRegistryState {
@@ -283,6 +286,17 @@ export function agentsToParticipants(
     return (b.priority ?? 0) - (a.priority ?? 0);
   });
 
+  // Pull rename overrides once for the whole roster: per-classroom override
+  // (highest), per-classroom generated config, then global preset, then i18n.
+  const stage = useStageStore.getState().stage;
+  const settingsPresets = useSettingsStore.getState().agentNamePresets;
+  const nameCtx = {
+    stageOverrides: stage?.agentNameOverrides ?? null,
+    generatedConfigs: stage?.generatedAgentConfigs ?? null,
+    settingsPresets,
+    t: t ?? null,
+  };
+
   for (const agent of resolved) {
     // Map agent role to participant role:
     // The first agent with role "teacher" becomes the left-side teacher.
@@ -293,10 +307,7 @@ export function agentsToParticipants(
       hasTeacher = true;
     }
 
-    // Use i18n name for default agents, fall back to registry name
-    const i18nName = t?.(`settings.agentNames.${agent.id}`);
-    const displayName =
-      i18nName && i18nName !== `settings.agentNames.${agent.id}` ? i18nName : agent.name;
+    const displayName = resolveAgentName(agent.id, agent.name, nameCtx);
 
     participants.push({
       id: agent.id,

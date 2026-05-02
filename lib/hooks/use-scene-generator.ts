@@ -13,6 +13,7 @@ import type { Action, SpeechAction } from '@/lib/types/action';
 import type { TTSProviderId } from '@/lib/audio/types';
 import { splitLongSpeechActions, hashSpeechText } from '@/lib/audio/tts-utils';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
+import { applyEffectiveNames } from '@/lib/agents/resolve-name';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('SceneGenerator');
@@ -34,6 +35,23 @@ interface SceneActionsResult {
 interface LlmModelOverride {
   providerId: ProviderId;
   modelId: string;
+}
+
+/**
+ * Apply per-classroom + global per-user name overrides to an `agents`
+ * roster before sending it to a generation API. Pulls override sources
+ * from the current stage and settings stores so individual call sites
+ * don't have to.
+ */
+function resolveAgentsForRequest(agents?: AgentInfo[]): AgentInfo[] | undefined {
+  if (!agents || agents.length === 0) return agents;
+  const stage = useStageStore.getState().stage;
+  const presets = useSettingsStore.getState().agentNamePresets;
+  return applyEffectiveNames(agents, {
+    stageOverrides: stage?.agentNameOverrides ?? null,
+    generatedConfigs: stage?.generatedAgentConfigs ?? null,
+    settingsPresets: presets,
+  });
 }
 
 function getApiHeaders(modelOverride?: LlmModelOverride): HeadersInit {
@@ -390,7 +408,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               pdfImages: params.pdfImages,
               imageMapping: params.imageMapping,
               stageInfo: params.stageInfo,
-              agents: params.agents,
+              agents: resolveAgentsForRequest(params.agents),
             },
             signal,
           );
@@ -451,7 +469,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               allOutlines: outlines,
               content: contentResult.content,
               stageId: stage.id,
-              agents: params.agents,
+              agents: resolveAgentsForRequest(params.agents),
               previousSpeeches,
               userProfile: params.userProfile,
             },
@@ -576,7 +594,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             pdfImages: params.pdfImages,
             imageMapping: params.imageMapping,
             stageInfo: params.stageInfo,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
           },
           signal,
         );
@@ -606,7 +624,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             allOutlines: state.outlines,
             content: contentResult.content,
             stageId: state.stage.id,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
             previousSpeeches,
             userProfile: params.userProfile,
           },
@@ -748,7 +766,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             pdfImages: params.pdfImages,
             imageMapping: params.imageMapping,
             stageInfo: params.stageInfo,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
           },
           signal,
           modelOverride,
@@ -772,7 +790,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             allOutlines: store.getState().outlines,
             content: contentResult.content,
             stageId: state.stage.id,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
             previousSpeeches,
             userProfile: params.userProfile,
           },

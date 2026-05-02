@@ -16,6 +16,7 @@ import { useCanvasStore } from '@/lib/store/canvas';
 import { useSettingsStore } from '@/lib/store/settings';
 import { useUserProfileStore } from '@/lib/store/user-profile';
 import { useAgentRegistry } from '@/lib/orchestration/registry/store';
+import { resolveAgentName } from '@/lib/agents/resolve-name';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { getCurrentModelConfig } from '@/lib/utils/model-config';
 import { USER_AVATAR } from '@/lib/types/roundtable';
@@ -459,15 +460,31 @@ export function useChatSessions(options: UseChatSessionsOptions = {}) {
     ): Promise<void> => {
       const settingsState = useSettingsStore.getState();
 
-      // Attach full configs for generated (non-default) agents so the server can use them.
-      // The server-side registry only has default agents; generated agents exist only client-side.
-      const generatedConfigs = requestTemplate.config.agentIds
-        .filter((id: string) => !id.startsWith('default-'))
+      // Attach full configs for any agents that need server-side override:
+      // (1) generated (non-default) agents, because the server registry only
+      //     ships the default roster; (2) default agents whose effective name
+      //     differs from the registry default — so the user-chosen rename
+      //     reaches `You are ${agentConfig.name}.` and the peer roster.
+      const stage = useStageStore.getState().stage;
+      const overrideContext = {
+        stageOverrides: stage?.agentNameOverrides ?? null,
+        generatedConfigs: stage?.generatedAgentConfigs ?? null,
+        settingsPresets: settingsState.agentNamePresets,
+      };
+      const overrideConfigs = requestTemplate.config.agentIds
         .map((id: string) => useAgentRegistry.getState().getAgent(id))
         .filter((agent): agent is NonNullable<typeof agent> => Boolean(agent))
-        .map(({ createdAt: _c, updatedAt: _u, isDefault: _d, ...rest }) => rest);
-      if (generatedConfigs.length > 0) {
-        requestTemplate.config.agentConfigs = generatedConfigs;
+        .filter((agent) => {
+          if (!agent.id.startsWith('default-')) return true;
+          const effective = resolveAgentName(agent.id, agent.name, overrideContext);
+          return effective !== agent.name;
+        })
+        .map(({ createdAt: _c, updatedAt: _u, isDefault: _d, ...rest }) => ({
+          ...rest,
+          name: resolveAgentName(rest.id, rest.name, overrideContext),
+        }));
+      if (overrideConfigs.length > 0) {
+        requestTemplate.config.agentConfigs = overrideConfigs;
       }
 
       const defaultMaxTurns = requestTemplate.config.agentIds.length <= 1 ? 1 : 10;

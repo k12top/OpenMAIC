@@ -626,6 +626,9 @@
     "keyboardShortcuts": "ショートカット",
     "generalSettings": "一般",
     "systemSettings": "システム",
+    "profileSection": "プロフィール",
+    "profileSectionHint": "ニックネーム、アバター、自己紹介を更新します。AI 教師はこのニックネームであなたを呼びかけます。",
+    "agentNamePresetsHint": "ここでの改名はグローバルに反映されます。個別の教室で上書きすることもできます。",
     "addProvider": "追加",
     "importFromClipboard": "クリップボードからインポート",
     "apiSecret": "APIキー",
@@ -1130,7 +1133,24 @@
       "asr": "音声認識",
       "pdf": "PDF 処理",
       "webSearch": "Web 検索",
-      "general": "一般設定"
+      "general": "一般設定",
+      "agents": "エージェント名変更",
+      "profile": "プロフィール"
     }
+  },
+  "agent": {
+    "editName": "名前を編集",
+    "saveName": "名前を保存",
+    "nameLabel": "表示名",
+    "namePlaceholder": "表示名を入力…",
+    "nameRequired": "名前を入力してください",
+    "resetToDefault": "デフォルトに戻す",
+    "renameSuccess": "名前を更新しました",
+    "renameReset": "デフォルト名に戻しました",
+    "renameStaleHint": "生成済みのセリフには旧名が残っている場合があります。必要に応じて該当アクションを再生成してください。",
+    "customName": "カスタム名",
+    "customNameBadge": "カスタム",
+    "scopeStageDesc": "現在の教室にのみ適用され、共有時にも引き継がれます。",
+    "scopeGlobalDesc": "あなたのすべての教室に適用されます。個別教室で上書き可能です。"
   }
 }
