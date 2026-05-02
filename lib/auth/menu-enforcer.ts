@@ -372,7 +372,18 @@ const ACTION_TO_MENU_OPS: Record<Action, Array<{ menuId: string; op: MenuOp }>> 
   ],
   reorder: [{ menuId: 'sidebar.reorderScenes', op: 'operable' }],
   'delete-scene': [{ menuId: 'sidebar.deleteScene', op: 'operable' }],
-  'add-scene': [{ menuId: 'sidebar.addScene', op: 'operable' }],
+  // `add-scene` grants the parent plus every fine-grained child menu so
+  // env-fallback (`OPENMAIC_ROLE_PERMISSIONS`) stays equivalent to the
+  // pre-split behavior. Casdoor deploys should still list each child in
+  // CSV when policies are authored explicitly.
+  'add-scene': [
+    { menuId: 'sidebar.addScene', op: 'operable' },
+    { menuId: 'sidebar.addScene.slide', op: 'operable' },
+    { menuId: 'sidebar.addScene.quiz', op: 'operable' },
+    { menuId: 'sidebar.addScene.interactive', op: 'operable' },
+    { menuId: 'sidebar.addScene.append', op: 'operable' },
+    { menuId: 'sidebar.addScene.insert', op: 'operable' },
+  ],
   share: [
     { menuId: 'header.share', op: 'operable' },
     { menuId: 'header.sync', op: 'operable' },

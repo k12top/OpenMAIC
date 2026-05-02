@@ -386,7 +386,12 @@
         "generate": "Generate",
         "generating": "Generating…",
         "success": "New page added to the classroom",
-        "failed": "Generation failed"
+        "failed": "Generation failed",
+        "typeLocked": "Your role is not allowed to create this scene type — contact an admin to request access",
+        "typeForbidden": "Your role is not allowed to create this scene type",
+        "appendForbidden": "Your role is not allowed to append a new page at the end",
+        "insertForbidden": "Your role is not allowed to insert a new page in the middle",
+        "noTypesAllowed": "Your role is not currently granted any add-scene type"
     },
     "speech": {
         "staleBadge": "Audio out of sync",
@@ -1262,6 +1267,11 @@
         },
         "sidebar": {
             "addScene": "Add scene",
+            "addSceneSlide": "Add scene · Lecture slide",
+            "addSceneQuiz": "Add scene · Quiz",
+            "addSceneInteractive": "Add scene · Interactive / animation",
+            "addSceneAppend": "Add scene · Append at end",
+            "addSceneInsert": "Add scene · Insert anywhere",
             "reorderScenes": "Reorder scenes",
             "deleteScene": "Delete scene"
         },

@@ -41,6 +41,7 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import type { Scene, SceneType, SlideContent } from '@/lib/types/stage';
 import { PENDING_SCENE_ID } from '@/lib/store/stage';
 import { useCan } from '@/components/auth/can';
+import { useMenuPerm } from '@/components/auth/menu-gate';
 import { AddSceneDialog } from '@/components/stage/add-scene-dialog';
 
 interface SceneSidebarProps {
@@ -79,9 +80,24 @@ export function SceneSidebar({
   // belong to them. `useCan` respects classroom ownership AND RBAC.
   const canReorder = useCan('reorder');
   const canDeleteScene = useCan('delete-scene');
-  const canAddScene = useCan('add-scene');
+  // Add-scene parent gate. operable check is owner-bypassed via
+  // `useMenuPerm`; visible check is NOT owner-bypassed by design (Casdoor
+  // can hide a feature even from the owner) — but we OR with `isOwner`
+  // so a deploy that grants only `operable` to teachers doesn't suddenly
+  // hide the affordance from the classroom creator.
+  const canAddSceneOp = useCan('add-scene');
+  const isOwner = useStageStore.use.isOwner();
+  const addSceneVisible = useMenuPerm('sidebar.addScene', 'visible') || isOwner;
+  // Per-position sub-permissions. operable check is owner-bypassed too,
+  // so the classroom creator continues to see both buttons unless an
+  // admin explicitly removes them via Casdoor.
+  const canInsertScene = useMenuPerm('sidebar.addScene.insert', 'operable');
+  const canAppendScene = useMenuPerm('sidebar.addScene.append', 'operable');
   const showOwnerControls = (canReorder || canDeleteScene) && !isSharedView;
-  const showAddSceneButton = canAddScene && !isSharedView;
+  // Parent gate: must be both visible AND operable to render any add-scene
+  // affordance. Visibility=false => button does not render at all (per the
+  // user's chosen "hide-not-disable" semantic for this surface).
+  const showAddSceneButton = canAddSceneOp && addSceneVisible && !isSharedView;
   // `addSceneAt` carries the `insertAfterOrder` prop AddSceneDialog expects.
   // null = closed; -1 = append at end; otherwise insert after that order.
   // We use a sentinel rather than `undefined` so the open state can be
@@ -287,8 +303,10 @@ export function SceneSidebar({
                     />
                     {/* Per-row hover-reveal "+" insert affordance. Lives
                         in the natural flow so it doesn't shift surrounding
-                        scenes; the row only swells from h-1 → h-6 on hover. */}
-                    {showAddSceneButton && (
+                        scenes; the row only swells from h-1 → h-6 on hover.
+                        Gated separately on `sidebar.addScene.insert` so a
+                        deploy can grant append-only delegation. */}
+                    {showAddSceneButton && canInsertScene && (
                       <SceneInsertButton
                         label={t('sidebar.insertHere')}
                         onClick={() => setAddSceneAt(scene.order)}
@@ -304,8 +322,10 @@ export function SceneSidebar({
               are no existing scenes (empty sidebar) and as the explicit
               "append at end" affordance. Always visible during generation
               so users can queue extra pages while the pipeline is running;
-              `AddSceneDialog` runs its own independent fetch path. */}
-          {showAddSceneButton && (
+              `AddSceneDialog` runs its own independent fetch path. Gated
+              on `sidebar.addScene.append` so a deploy can grant insert-
+              only delegation independently of append. */}
+          {showAddSceneButton && canAppendScene && (
             <button
               type="button"
               onClick={() =>

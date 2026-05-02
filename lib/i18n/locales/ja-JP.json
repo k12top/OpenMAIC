@@ -369,7 +369,12 @@
     "generate": "生成",
     "generating": "生成中…",
     "success": "新しいページを追加しました",
-    "failed": "生成に失敗しました"
+    "failed": "生成に失敗しました",
+    "typeLocked": "現在のロールではこの種類を作成できません。管理者にご相談ください",
+    "typeForbidden": "現在のロールではこの種類のページを作成できません",
+    "appendForbidden": "現在のロールでは末尾に新規ページを追加できません",
+    "insertForbidden": "現在のロールでは途中に新規ページを挿入できません",
+    "noTypesAllowed": "現在のロールに新規ページ作成権限が付与されていません"
   },
   "speech": {
     "staleBadge": "音声が本文と不一致",
@@ -1122,6 +1127,11 @@
     },
     "sidebar": {
       "addScene": "ページを追加",
+      "addSceneSlide": "ページを追加 · 講義スライド",
+      "addSceneQuiz": "ページを追加 · 小テスト",
+      "addSceneInteractive": "ページを追加 · インタラクティブ / アニメ",
+      "addSceneAppend": "ページを追加 · 末尾に追加",
+      "addSceneInsert": "ページを追加 · 任意位置に挿入",
       "reorderScenes": "ページの並べ替え",
       "deleteScene": "ページを削除"
     },

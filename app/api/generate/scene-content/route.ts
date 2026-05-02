@@ -75,22 +75,62 @@ export async function POST(req: NextRequest) {
 
     // RBAC: if the stageId points to an existing classroom in the DB,
     // the caller is in the "add scene to existing classroom" flow. Gate
-    // it on `sidebar.addScene` operable so non-owner viewers can't push
-    // new scenes to a classroom they don't own. Initial classroom-
-    // creation flows (no DB row yet) bypass this check entirely so that
-    // the original generation pipeline keeps working unchanged.
+    // on three layers:
+    //   (1) `sidebar.addScene`              — parent: any add-scene
+    //   (2) `sidebar.addScene.{type}`       — per-type: slide/quiz/interactive
+    //   (3) `sidebar.addScene.{position}`   — per-position: append vs insert
+    // Initial classroom-creation flows (no DB row yet) bypass this check
+    // entirely so the original generation pipeline keeps working unchanged.
+    // `pbl` outlines also bypass per-type since they're never produced
+    // through the AddSceneDialog UI.
     if (isDbConfigured()) {
       try {
         const db = getDb();
         const classroom = await db.query.classrooms.findFirst({
           where: eq(schema.classrooms.id, stageId),
-          columns: { id: true, userId: true },
+          columns: { id: true, userId: true, scenesJson: true },
         });
         if (classroom) {
-          await assertMenuPerm(auth.user, 'sidebar.addScene', 'operable', {
-            isResourceOwner: classroom.userId === auth.user.id,
-            resourceId: stageId,
-          });
+          const isResourceOwner = classroom.userId === auth.user.id;
+          const guardCtx = { isResourceOwner, resourceId: stageId };
+
+          await assertMenuPerm(auth.user, 'sidebar.addScene', 'operable', guardCtx);
+
+          // Per-type gate. Only enforce when the type is one of the
+          // dialog-creatable kinds; `pbl` and unknown types fall through
+          // to the parent gate alone.
+          const outlineType = rawOutline?.type;
+          if (
+            outlineType === 'slide' ||
+            outlineType === 'quiz' ||
+            outlineType === 'interactive'
+          ) {
+            await assertMenuPerm(
+              auth.user,
+              `sidebar.addScene.${outlineType}`,
+              'operable',
+              guardCtx,
+            );
+          }
+
+          // Per-position gate. Scenes are stored as a JSONB array on
+          // the classroom row, so derive max order in JS rather than via
+          // a separate scenes table query. Requested order > max → append.
+          const persistedScenes = Array.isArray(classroom.scenesJson)
+            ? (classroom.scenesJson as Array<{ order?: number }>)
+            : [];
+          const maxOrder = persistedScenes.reduce(
+            (acc, s) => (typeof s.order === 'number' && s.order > acc ? s.order : acc),
+            0,
+          );
+          const requestedOrder = rawOutline?.order ?? maxOrder + 1;
+          const isAppend = requestedOrder > maxOrder;
+          await assertMenuPerm(
+            auth.user,
+            isAppend ? 'sidebar.addScene.append' : 'sidebar.addScene.insert',
+            'operable',
+            guardCtx,
+          );
         }
       } catch (err) {
         if (err instanceof ForbiddenError) {

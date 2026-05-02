@@ -68,7 +68,48 @@ export const MENUS: readonly MenuItem[] = [
   { id: 'header.export', labelKey: 'menu.header.export' },
 
   // ── Scene sidebar ───────────────────────────────────────────────────
+  // Parent menu — must be visible+operable for the "+" affordance to
+  // appear at all. Sub-permissions below refine which scene type and
+  // which insertion position the viewer is allowed to use.
   { id: 'sidebar.addScene', labelKey: 'menu.sidebar.addScene' },
+  // Per-type sub-permissions. visible=false hides the type tile in
+  // AddSceneDialog entirely; operable=false renders it locked. `pbl` is
+  // intentionally absent — it's only produced by the initial generation
+  // pipeline and never offered through AddSceneDialog.
+  // NOTE: i18n labels for these sub-permissions are sibling keys under
+  // `menu.sidebar` rather than nested under `menu.sidebar.addScene`,
+  // because the parent label is already a string and JSON cannot mix
+  // string + object at the same path.
+  {
+    id: 'sidebar.addScene.slide',
+    labelKey: 'menu.sidebar.addSceneSlide',
+    parent: 'sidebar.addScene',
+  },
+  {
+    id: 'sidebar.addScene.quiz',
+    labelKey: 'menu.sidebar.addSceneQuiz',
+    parent: 'sidebar.addScene',
+  },
+  {
+    id: 'sidebar.addScene.interactive',
+    labelKey: 'menu.sidebar.addSceneInteractive',
+    parent: 'sidebar.addScene',
+  },
+  // Per-position sub-permissions. `append` covers the bottom "+ Add
+  // page" button (always at the end); `insert` covers the per-row
+  // hover-reveal "+" buttons that drop a page between two existing
+  // ones. Granting only `append` lets a viewer extend the lesson
+  // without disrupting the existing scene order.
+  {
+    id: 'sidebar.addScene.append',
+    labelKey: 'menu.sidebar.addSceneAppend',
+    parent: 'sidebar.addScene',
+  },
+  {
+    id: 'sidebar.addScene.insert',
+    labelKey: 'menu.sidebar.addSceneInsert',
+    parent: 'sidebar.addScene',
+  },
   { id: 'sidebar.reorderScenes', labelKey: 'menu.sidebar.reorderScenes' },
   { id: 'sidebar.deleteScene', labelKey: 'menu.sidebar.deleteScene' },
 

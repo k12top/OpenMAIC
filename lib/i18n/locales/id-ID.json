@@ -369,7 +369,12 @@
     "generate": "Buat",
     "generating": "Membuat…",
     "success": "Halaman baru ditambahkan ke kelas",
-    "failed": "Pembuatan gagal"
+    "failed": "Pembuatan gagal",
+    "typeLocked": "Peran Anda belum diizinkan membuat tipe ini — hubungi admin untuk minta akses",
+    "typeForbidden": "Peran Anda tidak diizinkan membuat tipe halaman ini",
+    "appendForbidden": "Peran Anda tidak diizinkan menambah halaman di akhir",
+    "insertForbidden": "Peran Anda tidak diizinkan menyisipkan halaman di tengah",
+    "noTypesAllowed": "Peran Anda saat ini belum diberi izin menambah halaman"
   },
   "speech": {
     "staleBadge": "Audio tidak sinkron",
@@ -1090,6 +1095,11 @@
     },
     "sidebar": {
       "addScene": "Tambah halaman",
+      "addSceneSlide": "Tambah halaman · Slide pengajaran",
+      "addSceneQuiz": "Tambah halaman · Kuis",
+      "addSceneInteractive": "Tambah halaman · Interaktif / animasi",
+      "addSceneAppend": "Tambah halaman · Sambungkan di akhir",
+      "addSceneInsert": "Tambah halaman · Sisipkan di mana saja",
       "reorderScenes": "Atur ulang halaman",
       "deleteScene": "Hapus halaman"
     },

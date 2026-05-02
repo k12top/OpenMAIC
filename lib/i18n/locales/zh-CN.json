@@ -389,7 +389,12 @@
         "generate": "生成",
         "generating": "生成中…",
         "success": "新页面已加入课堂",
-        "failed": "生成失败"
+        "failed": "生成失败",
+        "typeLocked": "你的角色暂时无权创建此类型，请联系管理员",
+        "typeForbidden": "你的角色无权创建该类型的页面",
+        "appendForbidden": "你的角色无权在末尾追加新页面",
+        "insertForbidden": "你的角色无权在中间位置插入新页面",
+        "noTypesAllowed": "你的角色暂未被授权创建任何类型的新页面"
     },
     "speech": {
         "staleBadge": "音频与文本不一致",
@@ -1268,6 +1273,11 @@
         },
         "sidebar": {
             "addScene": "新增页面",
+            "addSceneSlide": "新增页面 · 讲解页",
+            "addSceneQuiz": "新增页面 · 测试页",
+            "addSceneInteractive": "新增页面 · 互动 / 动画演示",
+            "addSceneAppend": "新增页面 · 末尾追加",
+            "addSceneInsert": "新增页面 · 任意位置插入",
             "reorderScenes": "调整页面顺序",
             "deleteScene": "删除页面"
         },

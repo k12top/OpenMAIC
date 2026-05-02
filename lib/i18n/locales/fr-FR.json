@@ -369,7 +369,12 @@
     "generate": "Générer",
     "generating": "Génération…",
     "success": "Nouvelle page ajoutée à la classe",
-    "failed": "Échec de la génération"
+    "failed": "Échec de la génération",
+    "typeLocked": "Votre rôle ne peut pas créer ce type de page — contactez un admin pour obtenir l'accès",
+    "typeForbidden": "Votre rôle ne peut pas créer ce type de page",
+    "appendForbidden": "Votre rôle ne peut pas ajouter une page à la fin",
+    "insertForbidden": "Votre rôle ne peut pas insérer une page au milieu",
+    "noTypesAllowed": "Votre rôle n'a pour l'instant aucune autorisation d'ajout de page"
   },
   "speech": {
     "staleBadge": "Audio désynchronisé",
@@ -1122,6 +1127,11 @@
     },
     "sidebar": {
       "addScene": "Ajouter une page",
+      "addSceneSlide": "Ajouter une page · Diapo de cours",
+      "addSceneQuiz": "Ajouter une page · Quiz",
+      "addSceneInteractive": "Ajouter une page · Interactive / animation",
+      "addSceneAppend": "Ajouter une page · Ajouter à la fin",
+      "addSceneInsert": "Ajouter une page · Insérer où l'on veut",
       "reorderScenes": "Réorganiser les pages",
       "deleteScene": "Supprimer la page"
     },
