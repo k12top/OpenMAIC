@@ -185,7 +185,9 @@
         "mediaPromptsLabel": "Media prompts",
         "mediaPromptsHint": "Adjust the prompt for each image or video",
         "startRegenerate": "Start regenerating",
-        "ownerOnly": "Visible only to the classroom owner"
+        "ownerOnly": "Visible only to the classroom owner",
+        "syncSuccess": "Successfully synced to cloud",
+        "syncFailed": "Failed to sync to cloud"
     },
     "whiteboard": {
         "title": "Interactive Whiteboard",

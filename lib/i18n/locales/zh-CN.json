@@ -188,7 +188,9 @@
         "mediaPromptsLabel": "媒体提示词",
         "mediaPromptsHint": "可按元素调整生成图/视频的提示词",
         "startRegenerate": "开始重新生成",
-        "ownerOnly": "仅课件作者可见"
+        "ownerOnly": "仅课件作者可见",
+        "syncSuccess": "同步到云端成功",
+        "syncFailed": "同步到云端失败"
     },
     "whiteboard": {
         "title": "互动白板",

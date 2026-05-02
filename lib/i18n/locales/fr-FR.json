@@ -169,7 +169,9 @@
     "mediaPromptsLabel": "Invites pour les médias",
     "mediaPromptsHint": "Ajustez l'invite de chaque image ou vidéo",
     "startRegenerate": "Lancer la régénération",
-    "ownerOnly": "Visible uniquement par le propriétaire du cours"
+    "ownerOnly": "Visible uniquement par le propriétaire du cours",
+    "syncSuccess": "Synchronisé avec succès sur le cloud",
+    "syncFailed": "Échec de la synchronisation sur le cloud"
   },
   "whiteboard": {
     "title": "Tableau blanc interactif",

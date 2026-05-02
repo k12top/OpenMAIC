@@ -169,7 +169,9 @@
     "mediaPromptsLabel": "メディア プロンプト",
     "mediaPromptsHint": "画像や動画ごとのプロンプトを調整できます",
     "startRegenerate": "再生成を開始",
-    "ownerOnly": "この機能は教材の作者のみ利用できます"
+    "ownerOnly": "この機能は教材の作者のみ利用できます",
+    "syncSuccess": "クラウドへの同期に成功しました",
+    "syncFailed": "クラウドへの同期に失敗しました"
   },
   "whiteboard": {
     "title": "インタラクティブホワイトボード",

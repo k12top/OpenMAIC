@@ -169,7 +169,9 @@
     "mediaPromptsLabel": "Prompt Media",
     "mediaPromptsHint": "Sesuaikan prompt untuk setiap gambar atau video",
     "startRegenerate": "Mulai buat ulang",
-    "ownerOnly": "Hanya terlihat oleh pemilik kelas"
+    "ownerOnly": "Hanya terlihat oleh pemilik kelas",
+    "syncSuccess": "Berhasil disinkronkan ke cloud",
+    "syncFailed": "Gagal menyinkronkan ke cloud"
   },
   "whiteboard": {
     "title": "Papan Tulis Interaktif",
