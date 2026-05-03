@@ -356,7 +356,27 @@
         "pushFailed": "推送失败",
         "pushSuccessClean": "分享内容已更新，所有媒体均已就绪",
         "pushSuccessSummary": "分享内容已更新（补传 {{uploaded}} / {{total}} 个媒体，跳过 {{skipped}}）",
-        "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。"
+        "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。",
+        "viewer": {
+            "bannerPublicTitle": "共享课堂（公开）",
+            "bannerPublicHint": "持有链接即可观看。若需账号专属能力请先登录。",
+            "bannerReadonlyTitle": "共享课堂（需登录）",
+            "bannerReadonlyHint": "请使用你的账号登录后打开本课堂。",
+            "bannerEditableTitle": "共享课堂 — 可复制到你的空间",
+            "bannerEditableHint": "复制到「我的课堂」后即可自行编辑、用自己的链接上课或留作备份。",
+            "bannerSsoTitle": "共享课堂（组织内）",
+            "bannerSsoHint": "仅通过你所在组织 SSO 登录的成员可访问此链接。",
+            "copyToMine": "复制到我的课堂",
+            "signInToCopy": "登录后复制",
+            "signIn": "登录",
+            "copying": "正在复制…",
+            "copySuccess": "已复制到你的账号",
+            "copyFailed": "复制失败，请稍后重试",
+            "lectureAsAuto": "自动播放视图",
+            "lectureAsLecture": "讲解模式视图",
+            "lectureAsAutoTooltip": "在本机切换为自动播放（不会修改作者的课堂文件）",
+            "lectureAsLectureTooltip": "在本机切回讲解模式（不会修改作者的课堂文件）"
+        }
     },
     "sidebar": {
         "addScene": "新增页面",

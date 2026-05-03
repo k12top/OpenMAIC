@@ -336,7 +336,27 @@
     "pushFailed": "Gagal mengirim",
     "pushSuccessClean": "Bagikan sudah terbaru — semua media tersinkron",
     "pushSuccessSummary": "Bagikan diperbarui ({{uploaded}}/{{total}} media diunggah ulang, {{skipped}} dilewati)",
-    "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang."
+    "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang.",
+    "viewer": {
+      "bannerPublicTitle": "Kelas bersama (publik)",
+      "bannerPublicHint": "Siapa pun yang punya tautan dapat melihat. Masuk jika memerlukan fitur khusus akun.",
+      "bannerReadonlyTitle": "Kelas bersama (wajib masuk)",
+      "bannerReadonlyHint": "Masuk dengan akun Anda untuk membuka kelas ini.",
+      "bannerEditableTitle": "Kelas bersama — dapat disalin",
+      "bannerEditableHint": "Simpan salinan ke Kelas saya untuk mengajar dari tautan Anda sendiri, mengedit, atau cadangan.",
+      "bannerSsoTitle": "Kelas bersama (organisasi)",
+      "bannerSsoHint": "Hanya anggota yang masuk lewat SSO organisasi Anda yang dapat mengakses tautan ini.",
+      "copyToMine": "Salin ke Kelas saya",
+      "signInToCopy": "Masuk untuk menyalin",
+      "signIn": "Masuk",
+      "copying": "Menyalin…",
+      "copySuccess": "Kelas telah disalin ke akun Anda",
+      "copyFailed": "Tidak dapat menyalin kelas ini",
+      "lectureAsAuto": "Tampilan putar otomatis",
+      "lectureAsLecture": "Tampilan mode kuliah",
+      "lectureAsAutoTooltip": "Beralih ke putar otomatis hanya di perangkat ini (tidak mengubah berkas penulis)",
+      "lectureAsLectureTooltip": "Kembali ke mode kuliah hanya di perangkat ini (tidak mengubah berkas penulis)"
+    }
   },
   "sidebar": {
     "addScene": "Tambah halaman",

@@ -336,7 +336,27 @@
     "pushFailed": "Échec de l'envoi",
     "pushSuccessClean": "Partage à jour — tous les médias sont synchronisés",
     "pushSuccessSummary": "Partage mis à jour ({{uploaded}}/{{total}} médias renvoyés, {{skipped}} ignorés)",
-    "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants."
+    "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants.",
+    "viewer": {
+      "bannerPublicTitle": "Classe partagée (publique)",
+      "bannerPublicHint": "Toute personne disposant du lien peut consulter. Connectez-vous si des fonctions réservées au compte sont nécessaires.",
+      "bannerReadonlyTitle": "Classe partagée (connexion requise)",
+      "bannerReadonlyHint": "Connectez-vous avec votre compte pour ouvrir cette classe.",
+      "bannerEditableTitle": "Classe partagée — copiable",
+      "bannerEditableHint": "Enregistrez une copie dans Mes classes pour modifier, enseigner avec votre propre lien ou conserver une sauvegarde.",
+      "bannerSsoTitle": "Classe partagée (organisation)",
+      "bannerSsoHint": "Seuls les membres connectés via le SSO de votre organisation peuvent accéder à ce lien.",
+      "copyToMine": "Copier dans Mes classes",
+      "signInToCopy": "Se connecter pour copier",
+      "signIn": "Se connecter",
+      "copying": "Copie en cours…",
+      "copySuccess": "Classe copiée sur votre compte",
+      "copyFailed": "Impossible de copier cette classe",
+      "lectureAsAuto": "Vue lecture auto",
+      "lectureAsLecture": "Vue mode cours",
+      "lectureAsAutoTooltip": "Passer en lecture auto sur cet appareil uniquement (ne modifie pas le fichier de l'auteur)",
+      "lectureAsLectureTooltip": "Revenir au mode cours sur cet appareil uniquement (ne modifie pas le fichier de l'auteur)"
+    }
   },
   "sidebar": {
     "addScene": "Ajouter une page",

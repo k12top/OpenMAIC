@@ -336,7 +336,27 @@
     "pushFailed": "送信に失敗",
     "pushSuccessClean": "共有が最新です。すべてのメディアが同期されています",
     "pushSuccessSummary": "共有を更新しました（{{uploaded}}/{{total}}件のメディアを再アップロード、{{skipped}}件をスキップ）",
-    "pushExplanation": "「最新を今すぐ送信」は現在の編集をクラウドへ同期し、足りない音声や画像を補ってアップロードします。"
+    "pushExplanation": "「最新を今すぐ送信」は現在の編集をクラウドへ同期し、足りない音声や画像を補ってアップロードします。",
+    "viewer": {
+      "bannerPublicTitle": "共有クラス（公開）",
+      "bannerPublicHint": "リンクを知る人なら誰でも閲覧できます。アカウント限定の機能が必要な場合はログインしてください。",
+      "bannerReadonlyTitle": "共有クラス（ログイン必須）",
+      "bannerReadonlyHint": "アカウントでログインしてからこのクラスを開いてください。",
+      "bannerEditableTitle": "共有クラス — 自分のクラスにコピー可能",
+      "bannerEditableHint": "「マイクラス」にコピーすると編集・自分用リンクでの授業・バックアップができます。",
+      "bannerSsoTitle": "共有クラス（組織内）",
+      "bannerSsoHint": "組織の SSO でサインインしたメンバーのみがこのリンクにアクセスできます。",
+      "copyToMine": "マイクラスにコピー",
+      "signInToCopy": "ログインしてコピー",
+      "signIn": "ログイン",
+      "copying": "コピー中…",
+      "copySuccess": "アカウントにコピーしました",
+      "copyFailed": "コピーに失敗しました。しばらくしてから再度お試しください",
+      "lectureAsAuto": "自動再生表示",
+      "lectureAsLecture": "講義モード表示",
+      "lectureAsAutoTooltip": "この端末だけ自動再生に切り替え（作者のファイルは変更しません）",
+      "lectureAsLectureTooltip": "この端末だけ講義モードに戻す（作者のファイルは変更しません）"
+    }
   },
   "sidebar": {
     "addScene": "ページを追加",

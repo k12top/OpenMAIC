@@ -353,7 +353,27 @@
         "pushFailed": "Push failed",
         "pushSuccessClean": "Share is up to date — all media in sync",
         "pushSuccessSummary": "Share updated ({{uploaded}}/{{total}} media re-uploaded, {{skipped}} skipped)",
-        "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images."
+        "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images.",
+        "viewer": {
+            "bannerPublicTitle": "Shared classroom (public)",
+            "bannerPublicHint": "Anyone with this link can view. Sign in if you need account-only features.",
+            "bannerReadonlyTitle": "Shared classroom (sign-in)",
+            "bannerReadonlyHint": "Sign in with your account to open this classroom.",
+            "bannerEditableTitle": "Shared classroom — you can copy it",
+            "bannerEditableHint": "Save a copy under My Classrooms to edit, teach from your own link, or keep a backup.",
+            "bannerSsoTitle": "Shared classroom (organization)",
+            "bannerSsoHint": "Only members signed in through your organization can access this link.",
+            "copyToMine": "Copy to My Classrooms",
+            "signInToCopy": "Sign in to copy",
+            "signIn": "Sign in",
+            "copying": "Copying…",
+            "copySuccess": "Classroom copied to your account",
+            "copyFailed": "Could not copy this classroom",
+            "lectureAsAuto": "Auto-play view",
+            "lectureAsLecture": "Lecture view",
+            "lectureAsAutoTooltip": "Switch to auto-play on this device only (does not change the author’s file)",
+            "lectureAsLectureTooltip": "Switch back to lecture mode on this device only"
+        }
     },
     "sidebar": {
         "addScene": "Add page",
