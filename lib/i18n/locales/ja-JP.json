@@ -337,6 +337,10 @@
     "pushSuccessClean": "共有が最新です。すべてのメディアが同期されています",
     "pushSuccessSummary": "共有を更新しました（{{uploaded}}/{{total}}件のメディアを再アップロード、{{skipped}}件をスキップ）",
     "pushExplanation": "「最新を今すぐ送信」は現在の編集をクラウドへ同期し、足りない音声や画像を補ってアップロードします。",
+    "lectureModeLabel": "講義モード",
+    "lectureModeDesc": "オンにすると、共有リンクを開いた人は講義モードで開始します。中央の再生ボタンは非表示になり、AI ナレーションはミュートされ、講師が自分で進行できます。",
+    "lectureModeOn": "講義モードを有効にしました",
+    "lectureModeOff": "講義モードを無効にしました",
     "viewer": {
       "bannerPublicTitle": "共有クラス（公開）",
       "bannerPublicHint": "リンクを知る人なら誰でも閲覧できます。アカウント限定の機能が必要な場合はログインしてください。",
@@ -1152,6 +1156,7 @@
     },
     "header": {
       "share": "共有",
+      "shareLectureMode": "共有 · 講義モード",
       "sync": "クラウドに同期",
       "export": "エクスポート"
     },

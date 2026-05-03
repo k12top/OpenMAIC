@@ -354,6 +354,10 @@
         "pushSuccessClean": "Share is up to date — all media in sync",
         "pushSuccessSummary": "Share updated ({{uploaded}}/{{total}} media re-uploaded, {{skipped}} skipped)",
         "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images.",
+        "lectureModeLabel": "Classroom (lecture) mode",
+        "lectureModeDesc": "When on, viewers open the share in lecture mode: the central play button is hidden and AI narration is muted so the teacher can present.",
+        "lectureModeOn": "Classroom mode enabled",
+        "lectureModeOff": "Classroom mode disabled",
         "viewer": {
             "bannerPublicTitle": "Shared classroom (public)",
             "bannerPublicHint": "Anyone with this link can view. Sign in if you need account-only features.",
@@ -1292,6 +1296,7 @@
         },
         "header": {
             "share": "Share",
+            "shareLectureMode": "Share · Classroom mode",
             "sync": "Sync to cloud",
             "export": "Export"
         },

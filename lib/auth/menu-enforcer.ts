@@ -386,6 +386,7 @@ const ACTION_TO_MENU_OPS: Record<Action, Array<{ menuId: string; op: MenuOp }>> 
   ],
   share: [
     { menuId: 'header.share', op: 'operable' },
+    { menuId: 'header.share.lectureMode', op: 'operable' },
     { menuId: 'header.sync', op: 'operable' },
   ],
   'delete-classroom': [{ menuId: 'home.deleteClassroom', op: 'operable' }],

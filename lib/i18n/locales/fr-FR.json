@@ -337,6 +337,10 @@
     "pushSuccessClean": "Partage à jour — tous les médias sont synchronisés",
     "pushSuccessSummary": "Partage mis à jour ({{uploaded}}/{{total}} médias renvoyés, {{skipped}} ignorés)",
     "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants.",
+    "lectureModeLabel": "Mode cours",
+    "lectureModeDesc": "Une fois activé, les spectateurs ouvrent le partage en mode cours : le bouton central de lecture est masqué et la narration IA coupée pour laisser l'enseignant présenter.",
+    "lectureModeOn": "Mode cours activé",
+    "lectureModeOff": "Mode cours désactivé",
     "viewer": {
       "bannerPublicTitle": "Classe partagée (publique)",
       "bannerPublicHint": "Toute personne disposant du lien peut consulter. Connectez-vous si des fonctions réservées au compte sont nécessaires.",
@@ -1152,6 +1156,7 @@
     },
     "header": {
       "share": "Partager",
+      "shareLectureMode": "Partage · Mode cours",
       "sync": "Synchroniser sur le cloud",
       "export": "Exporter"
     },

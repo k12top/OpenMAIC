@@ -13,6 +13,7 @@ import {
   Lock,
   ShieldCheck,
   RefreshCw,
+  Presentation,
 } from 'lucide-react';
 import { useStageStore } from '@/lib/store/stage';
 import { useI18n } from '@/lib/hooks/use-i18n';
@@ -23,6 +24,7 @@ import {
   uploadMediaToServer,
 } from '@/lib/sync/classroom-sync';
 import { db } from '@/lib/utils/database';
+import { MenuGate } from '@/components/auth/menu-gate';
 
 interface ShareDialogProps {
   open: boolean;
@@ -42,6 +44,8 @@ interface ShareItem {
 export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const { t } = useI18n();
   const stageId = useStageStore((s) => s.stage?.id);
+  const lectureMode = useStageStore((s) => !!s.stage?.lectureMode);
+  const setLectureMode = useStageStore((s) => s.setLectureMode);
 
   const [mode, setMode] = useState<ShareMode>('public');
   const [share, setShare] = useState<ShareItem | null>(null);
@@ -265,6 +269,63 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                   ? t('share.modeEditableDesc')
                   : t('share.modeSsoDesc')}
           </p>
+          <MenuGate menu="header.share.lectureMode" op="operable">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={lectureMode}
+              onClick={() => {
+                if (!stageId) return;
+                const next = !lectureMode;
+                setLectureMode(next);
+                toast.success(
+                  next ? t('share.lectureModeOn') : t('share.lectureModeOff'),
+                );
+              }}
+              disabled={!stageId}
+              className={cn(
+                'w-full mb-3 flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+                lectureMode
+                  ? 'border-purple-200 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950/20'
+                  : 'border-border/40 hover:bg-muted/30',
+                !stageId && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <span
+                className={cn(
+                  'mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg',
+                  lectureMode
+                    ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300'
+                    : 'bg-muted/40 text-muted-foreground',
+                )}
+                aria-hidden
+              >
+                <Presentation className="size-3.5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-foreground">
+                    {t('share.lectureModeLabel')}
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded',
+                      lectureMode
+                        ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300'
+                        : 'bg-muted/50 text-muted-foreground',
+                    )}
+                  >
+                    {lectureMode
+                      ? t('share.lectureModeOn')
+                      : t('share.lectureModeOff')}
+                  </span>
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground/70">
+                  {t('share.lectureModeDesc')}
+                </span>
+              </span>
+            </button>
+          </MenuGate>
           {!share && (
             <button
               onClick={createOrUpdate}

@@ -337,6 +337,10 @@
     "pushSuccessClean": "Bagikan sudah terbaru — semua media tersinkron",
     "pushSuccessSummary": "Bagikan diperbarui ({{uploaded}}/{{total}} media diunggah ulang, {{skipped}} dilewati)",
     "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang.",
+    "lectureModeLabel": "Mode kuliah",
+    "lectureModeDesc": "Saat aktif, penonton membuka tautan dalam mode kuliah: tombol play utama disembunyikan dan narasi AI dibisukan agar pengajar dapat membawakan sendiri.",
+    "lectureModeOn": "Mode kuliah diaktifkan",
+    "lectureModeOff": "Mode kuliah dinonaktifkan",
     "viewer": {
       "bannerPublicTitle": "Kelas bersama (publik)",
       "bannerPublicHint": "Siapa pun yang punya tautan dapat melihat. Masuk jika memerlukan fitur khusus akun.",
@@ -1120,6 +1124,7 @@
     },
     "header": {
       "share": "Bagikan",
+      "shareLectureMode": "Bagikan · Mode kuliah",
       "sync": "Sinkronkan ke cloud",
       "export": "Ekspor"
     },

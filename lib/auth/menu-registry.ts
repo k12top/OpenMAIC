@@ -64,6 +64,16 @@ export const MENUS: readonly MenuItem[] = [
 
   // ── Stage header ────────────────────────────────────────────────────
   { id: 'header.share', labelKey: 'menu.header.share' },
+  // Sub-permission for the "Classroom (lecture) mode" toggle inside the
+  // share dialog. Hidden when the viewer lacks `operable`, so deploys can
+  // restrict it to teacher roles even when the parent share action is
+  // granted broadly. Owner-bypass keeps classroom owners in control of
+  // their own classrooms (matches the existing toolbar.lectureMode entry).
+  {
+    id: 'header.share.lectureMode',
+    labelKey: 'menu.header.shareLectureMode',
+    parent: 'header.share',
+  },
   { id: 'header.sync', labelKey: 'menu.header.sync' },
   { id: 'header.export', labelKey: 'menu.header.export' },
 

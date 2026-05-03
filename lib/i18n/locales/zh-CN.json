@@ -132,7 +132,6 @@
     "agentBar": {
         "readyToLearn": "准备好一起学习了吗？",
         "expandedTitle": "课堂角色配置",
-        "configTooltip": "点击配置课堂角色",
         "voiceLabel": "音色",
         "voiceLoading": "加载中...",
         "voiceAutoAssign": "音色将自动分配",
@@ -357,6 +356,10 @@
         "pushSuccessClean": "分享内容已更新，所有媒体均已就绪",
         "pushSuccessSummary": "分享内容已更新（补传 {{uploaded}} / {{total}} 个媒体，跳过 {{skipped}}）",
         "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。",
+        "lectureModeLabel": "课堂模式",
+        "lectureModeDesc": "开启后，访问者打开链接即进入讲解模式：隐藏中央播放按钮、静音 AI 朗读，由教师亲自授课。",
+        "lectureModeOn": "课堂模式已开启",
+        "lectureModeOff": "课堂模式已关闭",
         "viewer": {
             "bannerPublicTitle": "共享课堂（公开）",
             "bannerPublicHint": "持有链接即可观看。若需账号专属能力请先登录。",
@@ -1298,6 +1301,7 @@
         },
         "header": {
             "share": "分享",
+            "shareLectureMode": "分享 · 课堂模式",
             "sync": "同步到云端",
             "export": "导出"
         },
