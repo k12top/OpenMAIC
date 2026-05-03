@@ -27,6 +27,7 @@ export async function GET() {
       title: r.title,
       language: r.language,
       status: r.status,
+      sceneCount: Number(r.sceneCount ?? 0),
       createdAt: r.createdAt.getTime(),
       updatedAt: r.updatedAt.getTime(),
     }));

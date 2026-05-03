@@ -78,6 +78,7 @@ interface CloudClassroomItem {
     title?: string;
     language?: string;
     status?: string;
+    sceneCount?: number;
     createdAt?: number;
     updatedAt?: number;
 }
@@ -263,21 +264,29 @@ function HomePage() {
         if (!c?.id) continue;
         const cloudUpdated = c.updatedAt ?? 0;
         const cloudCreated = c.createdAt ?? cloudUpdated;
+        const cloudSceneCount = Number(c.sceneCount ?? 0);
         const prev = map.get(c.id);
         if (!prev) {
           map.set(c.id, {
             id: c.id,
             name: c.title || c.id,
             description: undefined,
-            sceneCount: 0,
+            sceneCount: cloudSceneCount,
             createdAt: cloudCreated,
             updatedAt: cloudUpdated,
             source: 'cloud',
           });
         } else {
           // Both sides have the row — pick the newer fields and mark synced.
-          // Local keeps its sceneCount (cloud doesn't expose it cheaply).
-          const merged: ClassroomGridItem = { ...prev, source: 'synced' };
+          // For sceneCount, trust whichever side reports more (the local
+          // IndexedDB sometimes lags briefly during background generation,
+          // and the cloud only reflects what the last sync flushed; the max
+          // of the two is the closest to "what the user actually sees").
+          const merged: ClassroomGridItem = {
+            ...prev,
+            source: 'synced',
+            sceneCount: Math.max(prev.sceneCount ?? 0, cloudSceneCount),
+          };
           if (cloudUpdated > prev.updatedAt) {
             merged.name = c.title || prev.name;
             merged.updatedAt = cloudUpdated;
