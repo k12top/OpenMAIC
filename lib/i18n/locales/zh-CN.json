@@ -438,7 +438,17 @@
         "delete": "删除",
         "rename": "重命名",
         "renamePlaceholder": "输入课堂名称",
-        "renameFailed": "重命名失败"
+        "renameFailed": "重命名失败",
+        "filterAll": "全部",
+        "filterSynced": "已同步",
+        "filterLocal": "仅本地",
+        "filterCloud": "仅云端",
+        "filterEmpty": "当前筛选下没有课堂",
+        "sourceLocalTooltip": "仅在此浏览器，未上传云端。登录后下次保存时会自动同步。",
+        "sourceCloudTooltip": "仅云端，本浏览器未下载。点击进入即可加载到本地。",
+        "syncDeleteWarning": "本地已删除，但云端同步失败，请稍后重试。",
+        "syncRenameWarning": "本地已重命名，但云端同步失败，请稍后重试。",
+        "cloudListUnavailable": "云端课程列表暂不可用，仅显示本浏览器的本地课堂。"
     },
     "upload": {
         "pdfSizeLimit": "支持最大50MB的PDF文件",

@@ -418,7 +418,17 @@
     "delete": "Hapus",
     "rename": "Ubah Nama",
     "renamePlaceholder": "Masukkan nama kelas",
-    "renameFailed": "Gagal mengubah nama kelas"
+    "renameFailed": "Gagal mengubah nama kelas",
+    "filterAll": "Semua",
+    "filterSynced": "Tersinkron",
+    "filterLocal": "Hanya lokal",
+    "filterCloud": "Hanya cloud",
+    "filterEmpty": "Tidak ada kelas yang cocok dengan filter ini",
+    "sourceLocalTooltip": "Hanya ada di peramban ini. Masuk lalu simpan ulang agar tersinkron ke cloud.",
+    "sourceCloudTooltip": "Hanya ada di cloud — buka sekali untuk mengunduhnya ke peramban ini.",
+    "syncDeleteWarning": "Dihapus secara lokal, tetapi sinkronisasi cloud gagal. Silakan coba lagi nanti.",
+    "syncRenameWarning": "Diubah secara lokal, tetapi sinkronisasi cloud gagal. Silakan coba lagi nanti.",
+    "cloudListUnavailable": "Daftar kelas cloud tidak tersedia — hanya menampilkan kelas lokal di peramban ini."
   },
   "upload": {
     "pdfSizeLimit": "Mendukung berkas PDF hingga 50MB",

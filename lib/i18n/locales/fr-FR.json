@@ -418,7 +418,17 @@
     "delete": "Supprimer",
     "rename": "Renommer",
     "renamePlaceholder": "Entrez le nom de la classe",
-    "renameFailed": "Échec du renommage de la classe"
+    "renameFailed": "Échec du renommage de la classe",
+    "filterAll": "Tous",
+    "filterSynced": "Synchronisés",
+    "filterLocal": "Local uniquement",
+    "filterCloud": "Cloud uniquement",
+    "filterEmpty": "Aucune classe ne correspond à ce filtre",
+    "sourceLocalTooltip": "Disponible uniquement sur ce navigateur. Connectez-vous et enregistrez à nouveau pour synchroniser avec le cloud.",
+    "sourceCloudTooltip": "Disponible uniquement dans le cloud — ouvrez-la une fois pour la télécharger sur ce navigateur.",
+    "syncDeleteWarning": "Supprimée localement, mais la synchronisation cloud a échoué. Veuillez réessayer plus tard.",
+    "syncRenameWarning": "Renommée localement, mais la synchronisation cloud a échoué. Veuillez réessayer plus tard.",
+    "cloudListUnavailable": "La liste des classes du cloud est indisponible — affichage des classes locales de ce navigateur uniquement."
   },
   "upload": {
     "pdfSizeLimit": "Prend en charge les fichiers PDF jusqu'à 50 Mo",

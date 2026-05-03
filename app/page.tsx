@@ -38,8 +38,10 @@ import {
     BotOff,
     CheckCircle2,
     Clock,
+    Cloud,
     Coins,
     Copy,
+    HardDrive,
     LogIn,
     LogOut,
     Monitor,
@@ -62,6 +64,23 @@ const OUTLINE_CONFIRM_STORAGE_KEY = 'outlineConfirmEnabled';
 const PARALLEL_GEN_STORAGE_KEY = 'parallelGenerationEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
+const CLASSROOM_FILTER_STORAGE_KEY = 'classroomFilter';
+
+type ClassroomSource = 'local' | 'cloud' | 'synced';
+type ClassroomFilter = 'all' | 'synced' | 'local' | 'cloud';
+
+interface ClassroomGridItem extends StageListItem {
+    source: ClassroomSource;
+}
+
+interface CloudClassroomItem {
+    id: string;
+    title?: string;
+    language?: string;
+    status?: string;
+    createdAt?: number;
+    updatedAt?: number;
+}
 
 interface FormState {
   pdfFile: File | null;
@@ -99,6 +118,8 @@ function HomePage() {
   // Model setup state
   const currentModelId = useSettingsStore((s) => s.modelId);
   const [recentOpen, setRecentOpen] = useState(true);
+  const [classroomFilter, setClassroomFilter] = useState<ClassroomFilter>('all');
+  const [cloudListAvailable, setCloudListAvailable] = useState(true);
 
   // Credits
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -128,6 +149,19 @@ function HomePage() {
     try {
       const saved = localStorage.getItem(RECENT_OPEN_STORAGE_KEY);
       if (saved !== null) setRecentOpen(saved !== 'false');
+    } catch {
+      /* localStorage unavailable */
+    }
+    try {
+      const savedFilter = localStorage.getItem(CLASSROOM_FILTER_STORAGE_KEY);
+      if (
+        savedFilter === 'all' ||
+        savedFilter === 'synced' ||
+        savedFilter === 'local' ||
+        savedFilter === 'cloud'
+      ) {
+        setClassroomFilter(savedFilter);
+      }
     } catch {
       /* localStorage unavailable */
     }
@@ -178,7 +212,7 @@ function HomePage() {
 
   const [themeOpen, setThemeOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [classrooms, setClassrooms] = useState<StageListItem[]>([]);
+  const [classrooms, setClassrooms] = useState<ClassroomGridItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, Slide>>({});
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -198,13 +232,103 @@ function HomePage() {
 
   const loadClassrooms = async () => {
     try {
-      const list = await listStages();
-      setClassrooms(list);
-      // Load first slide thumbnails
-      if (list.length > 0) {
-        const slides = await getFirstSlideByStages(list.map((c) => c.id));
-        setThumbnails(slides);
+      // Merge two sources: local IndexedDB (instant, may be empty in a fresh
+      // browser) and cloud `/api/classrooms` (authoritative for the user's
+      // owned classrooms across devices). Either failure degrades silently —
+      // the home page must always render whatever it can.
+      const [localRes, cloudRes] = await Promise.allSettled([
+        listStages(),
+        fetch('/api/classrooms', { credentials: 'same-origin' }).then(async (r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return (await r.json()) as { items?: CloudClassroomItem[] };
+        }),
+      ]);
+
+      const local: StageListItem[] =
+        localRes.status === 'fulfilled' ? localRes.value : [];
+      let cloud: CloudClassroomItem[] = [];
+      if (cloudRes.status === 'fulfilled') {
+        cloud = Array.isArray(cloudRes.value?.items) ? cloudRes.value.items : [];
+        setCloudListAvailable(true);
+      } else {
+        setCloudListAvailable(false);
+        log.warn('Cloud classroom listing failed, using local only:', cloudRes.reason);
       }
+
+      const map = new Map<string, ClassroomGridItem>();
+      for (const l of local) {
+        map.set(l.id, { ...l, source: 'local' });
+      }
+      for (const c of cloud) {
+        if (!c?.id) continue;
+        const cloudUpdated = c.updatedAt ?? 0;
+        const cloudCreated = c.createdAt ?? cloudUpdated;
+        const prev = map.get(c.id);
+        if (!prev) {
+          map.set(c.id, {
+            id: c.id,
+            name: c.title || c.id,
+            description: undefined,
+            sceneCount: 0,
+            createdAt: cloudCreated,
+            updatedAt: cloudUpdated,
+            source: 'cloud',
+          });
+        } else {
+          // Both sides have the row — pick the newer fields and mark synced.
+          // Local keeps its sceneCount (cloud doesn't expose it cheaply).
+          const merged: ClassroomGridItem = { ...prev, source: 'synced' };
+          if (cloudUpdated > prev.updatedAt) {
+            merged.name = c.title || prev.name;
+            merged.updatedAt = cloudUpdated;
+          }
+          if (cloudCreated && (!prev.createdAt || cloudCreated < prev.createdAt)) {
+            merged.createdAt = cloudCreated;
+          }
+          map.set(c.id, merged);
+        }
+      }
+
+      const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+      setClassrooms(merged);
+
+      // Thumbnails: hydrate locally for items we have in IndexedDB, then
+      // ask the server for any cloud-only IDs. Local results win when both
+      // exist (cheaper, no network round trip).
+      const localIds = local.map((l) => l.id);
+      const cloudOnlyIds = merged
+        .filter((m) => m.source === 'cloud')
+        .map((m) => m.id);
+
+      const [localThumbs, cloudThumbs] = await Promise.allSettled([
+        localIds.length > 0
+          ? getFirstSlideByStages(localIds)
+          : Promise.resolve({} as Record<string, Slide>),
+        cloudOnlyIds.length > 0
+          ? fetch(
+              `/api/classrooms/thumbnails?ids=${encodeURIComponent(cloudOnlyIds.join(','))}`,
+              { credentials: 'same-origin' },
+            ).then(async (r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return (await r.json()) as { items?: Record<string, Slide | null> };
+            })
+          : Promise.resolve({ items: {} } as { items: Record<string, Slide | null> }),
+      ]);
+
+      const next: Record<string, Slide> = {};
+      if (cloudThumbs.status === 'fulfilled') {
+        const items = cloudThumbs.value?.items ?? {};
+        for (const [id, slide] of Object.entries(items)) {
+          if (slide) next[id] = slide as Slide;
+        }
+      } else {
+        log.warn('Cloud thumbnails fetch failed:', cloudThumbs.reason);
+      }
+      // Local last so it wins on conflict.
+      if (localThumbs.status === 'fulfilled') {
+        Object.assign(next, localThumbs.value);
+      }
+      setThumbnails(next);
     } catch (err) {
       log.error('Failed to load classrooms:', err);
     }
@@ -228,22 +352,72 @@ function HomePage() {
 
   const confirmDelete = async (id: string) => {
     setPendingDeleteId(null);
+    const target = classrooms.find((c) => c.id === id);
+    const wasLocalOnly = target?.source === 'local';
+
+    let localOk = false;
     try {
       await deleteStageData(id);
-      await loadClassrooms();
+      localOk = true;
     } catch (err) {
-      log.error('Failed to delete classroom:', err);
+      log.error('Failed to delete classroom (local):', err);
+    }
+
+    // Push the deletion to the cloud as well, but only when the row actually
+    // exists server-side (local-only items short-circuit). Failure here is
+    // non-fatal — the local list already reflects the deletion.
+    if (!wasLocalOnly) {
+      try {
+        const res = await fetch(`/api/classroom/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        if (!res.ok && res.status !== 404) {
+          log.warn(`Cloud delete returned ${res.status} for ${id}`);
+          toast.warning(t('classroom.syncDeleteWarning'));
+        }
+      } catch (err) {
+        log.warn('Cloud delete failed:', err);
+        toast.warning(t('classroom.syncDeleteWarning'));
+      }
+    }
+
+    if (!localOk) {
       toast.error('Failed to delete classroom');
     }
+
+    await loadClassrooms();
   };
 
   const handleRename = async (id: string, newName: string) => {
+    const target = classrooms.find((c) => c.id === id);
+    const wasLocalOnly = target?.source === 'local';
+
     try {
       await renameStage(id, newName);
       setClassrooms((prev) => prev.map((c) => (c.id === id ? { ...c, name: newName } : c)));
     } catch (err) {
       log.error('Failed to rename classroom:', err);
       toast.error(t('classroom.renameFailed'));
+      return;
+    }
+
+    if (!wasLocalOnly) {
+      try {
+        const res = await fetch(`/api/classroom/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newName }),
+        });
+        if (!res.ok && res.status !== 404) {
+          log.warn(`Cloud rename returned ${res.status} for ${id}`);
+          toast.warning(t('classroom.syncRenameWarning'));
+        }
+      } catch (err) {
+        log.warn('Cloud rename failed:', err);
+        toast.warning(t('classroom.syncRenameWarning'));
+      }
     }
   };
 
@@ -652,53 +826,128 @@ function HomePage() {
           </motion.div>
           {/* Historic Library Section */}
           <div className="flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-foreground/80 flex items-center gap-2">
-                <Clock className="size-4 text-violet-500" />
-                {t('classroom.recentClassrooms')}
-                <span className="ml-2 px-2 py-0.5 rounded-md bg-border/40 text-[10px] font-bold text-muted-foreground">
-                  {classrooms.length}
-                </span>
-              </h2>
-            </div>
+            {(() => {
+              const FILTERS: Array<{ id: ClassroomFilter; labelKey: string }> = [
+                { id: 'all', labelKey: 'classroom.filterAll' },
+                { id: 'synced', labelKey: 'classroom.filterSynced' },
+                { id: 'local', labelKey: 'classroom.filterLocal' },
+                { id: 'cloud', labelKey: 'classroom.filterCloud' },
+              ];
+              const counts: Record<ClassroomFilter, number> = {
+                all: classrooms.length,
+                synced: classrooms.filter((c) => c.source === 'synced').length,
+                local: classrooms.filter((c) => c.source === 'local').length,
+                cloud: classrooms.filter((c) => c.source === 'cloud').length,
+              };
+              const displayed =
+                classroomFilter === 'all'
+                  ? classrooms
+                  : classrooms.filter((c) => c.source === classroomFilter);
+              const onPickFilter = (next: ClassroomFilter) => {
+                setClassroomFilter(next);
+                try {
+                  localStorage.setItem(CLASSROOM_FILTER_STORAGE_KEY, next);
+                } catch {
+                  /* ignore */
+                }
+              };
+              return (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-bold text-foreground/80 flex items-center gap-2">
+                      <Clock className="size-4 text-violet-500" />
+                      {t('classroom.recentClassrooms')}
+                      <span className="ml-2 px-2 py-0.5 rounded-md bg-border/40 text-[10px] font-bold text-muted-foreground">
+                        {classrooms.length}
+                      </span>
+                    </h2>
+                    <div className="flex items-center gap-1.5">
+                      {FILTERS.map((f) => {
+                        const active = classroomFilter === f.id;
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => onPickFilter(f.id)}
+                            aria-pressed={active}
+                            className={cn(
+                              'h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors border',
+                              active
+                                ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-600/20'
+                                : 'bg-white dark:bg-slate-900 text-muted-foreground hover:text-foreground border-border/60 hover:bg-slate-50 dark:hover:bg-slate-800',
+                            )}
+                          >
+                            <span>{t(f.labelKey)}</span>
+                            <span
+                              className={cn(
+                                'inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-bold',
+                                active
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-muted-foreground',
+                              )}
+                            >
+                              {counts[f.id]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {classrooms.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
-                {classrooms.map((classroom, i) => (
-                  <motion.div
-                    key={classroom.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: Math.min(i * 0.04, 0.4),
-                      duration: 0.4,
-                    }}
-                  >
-                    <ClassroomCard
-                      classroom={classroom}
-                      slide={thumbnails[classroom.id]}
-                      formatDate={formatDate}
-                      onDelete={handleDelete}
-                      onRename={handleRename}
-                      confirmingDelete={pendingDeleteId === classroom.id}
-                      onConfirmDelete={() => confirmDelete(classroom.id)}
-                      onCancelDelete={() => setPendingDeleteId(null)}
-                      onClick={() => router.push(`/classroom/${classroom.id}`)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
-                <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
-                  <BookOpen className="size-8" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground/80 mb-2">No Documents Yet</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Use the prompt workspace above to generate your first interactive document!
-                </p>
-              </div>
-            )}
+                  {!cloudListAvailable && (
+                    <div className="mb-4 px-3 py-2 rounded-lg border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/70 dark:bg-amber-950/30 text-[12px] text-amber-700 dark:text-amber-300">
+                      {t('classroom.cloudListUnavailable')}
+                    </div>
+                  )}
+
+                  {displayed.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+                      {displayed.map((classroom, i) => (
+                        <motion.div
+                          key={classroom.id}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            delay: Math.min(i * 0.04, 0.4),
+                            duration: 0.4,
+                          }}
+                        >
+                          <ClassroomCard
+                            classroom={classroom}
+                            slide={thumbnails[classroom.id]}
+                            formatDate={formatDate}
+                            onDelete={handleDelete}
+                            onRename={handleRename}
+                            confirmingDelete={pendingDeleteId === classroom.id}
+                            onConfirmDelete={() => confirmDelete(classroom.id)}
+                            onCancelDelete={() => setPendingDeleteId(null)}
+                            onClick={() => router.push(`/classroom/${classroom.id}`)}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : classrooms.length > 0 ? (
+                    <div className="mt-4 flex flex-col items-center justify-center p-10 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
+                      <p className="text-sm text-muted-foreground">
+                        {t('classroom.filterEmpty')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
+                      <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
+                        <BookOpen className="size-8" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground/80 mb-2">
+                        No Documents Yet
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Use the prompt workspace above to generate your first interactive document!
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -940,7 +1189,7 @@ function ClassroomCard({
   onCancelDelete,
   onClick,
 }: {
-  classroom: StageListItem;
+  classroom: ClassroomGridItem;
   slide?: Slide;
   formatDate: (ts: number) => string;
   onDelete: (id: string, e: React.MouseEvent) => void;
@@ -1007,6 +1256,37 @@ function ClassroomCard({
             </div>
           </div>
         ) : null}
+
+        {/* Source badge — top-left. Hidden in the default `synced` state to
+            keep the card clean; only highlight asymmetries (cloud-only
+            means "open me on this device to download", local-only means
+            "log in or wait for sync to push"). */}
+        {classroom.source !== 'synced' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'absolute top-2 left-2 size-7 rounded-full flex items-center justify-center backdrop-blur-sm shadow-sm pointer-events-auto',
+                  classroom.source === 'cloud'
+                    ? 'bg-sky-500/85 text-white'
+                    : 'bg-amber-500/85 text-white',
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {classroom.source === 'cloud' ? (
+                  <Cloud className="size-3.5" />
+                ) : (
+                  <HardDrive className="size-3.5" />
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[220px] text-xs leading-snug">
+              {classroom.source === 'cloud'
+                ? t('classroom.sourceCloudTooltip')
+                : t('classroom.sourceLocalTooltip')}
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Delete — top-right, only on hover. Gated by `delete-classroom` permission. */}
         <AnimatePresence>

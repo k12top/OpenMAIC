@@ -418,7 +418,17 @@
     "delete": "削除",
     "rename": "名前を変更",
     "renamePlaceholder": "教室名を入力",
-    "renameFailed": "教室名の変更に失敗しました"
+    "renameFailed": "教室名の変更に失敗しました",
+    "filterAll": "すべて",
+    "filterSynced": "同期済み",
+    "filterLocal": "ローカルのみ",
+    "filterCloud": "クラウドのみ",
+    "filterEmpty": "このフィルターに一致する教室はありません",
+    "sourceLocalTooltip": "このブラウザにのみ存在します。ログインして再保存するとクラウドへ同期されます。",
+    "sourceCloudTooltip": "クラウドにのみ存在します。一度開くとこのブラウザにダウンロードされます。",
+    "syncDeleteWarning": "ローカルでは削除されましたが、クラウド同期に失敗しました。後ほど再試行してください。",
+    "syncRenameWarning": "ローカルでは名前を変更しましたが、クラウド同期に失敗しました。後ほど再試行してください。",
+    "cloudListUnavailable": "クラウド教室一覧を取得できません。このブラウザのローカル教室のみ表示しています。"
   },
   "upload": {
     "pdfSizeLimit": "50MBまでのPDFファイルに対応しています",

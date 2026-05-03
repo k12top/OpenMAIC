@@ -435,7 +435,17 @@
         "delete": "Delete",
         "rename": "Rename",
         "renamePlaceholder": "Enter classroom name",
-        "renameFailed": "Failed to rename classroom"
+        "renameFailed": "Failed to rename classroom",
+        "filterAll": "All",
+        "filterSynced": "Synced",
+        "filterLocal": "Local only",
+        "filterCloud": "Cloud only",
+        "filterEmpty": "No classrooms match this filter",
+        "sourceLocalTooltip": "Only on this browser. Sign in and re-save to push to the cloud.",
+        "sourceCloudTooltip": "Only in the cloud — open it once to download to this browser.",
+        "syncDeleteWarning": "Deleted locally but cloud sync failed. Please retry later.",
+        "syncRenameWarning": "Renamed locally but cloud sync failed. Please retry later.",
+        "cloudListUnavailable": "Cloud classroom list is unavailable — showing this browser's local classrooms only."
     },
     "upload": {
         "pdfSizeLimit": "Supports PDF files up to 50MB",
