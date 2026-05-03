@@ -123,6 +123,20 @@ export function EditSceneSourceDialog({
     return currentScene as Scene;
   }, [text, sceneId, currentScene]);
 
+  // Stale-speech count for the Speech tab badge. Computed off the same
+  // `localPreviewScene` the SpeechEditorPane uses so the two stay in sync
+  // even when the user has unsaved JSON edits in the code tab.
+  const staleSpeechCount = useMemo(() => {
+    const actions = localPreviewScene?.actions || [];
+    let count = 0;
+    for (const a of actions) {
+      if (a.type === 'speech' && a.audioId && isSpeechAudioStale(a as SpeechAction)) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [localPreviewScene]);
+
   const handleTextChange = useCallback(
     (next: string) => {
       setText(next);
@@ -391,6 +405,17 @@ export function EditSceneSourceDialog({
               >
                 <Mic className="w-3.5 h-3.5" />
                 {t('editSource.speech')}
+                {staleSpeechCount > 0 && (
+                  <span
+                    className="ml-0.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] font-semibold bg-amber-500 text-white"
+                    title={t('speech.staleSummary', {
+                      count: staleSpeechCount,
+                      total: staleSpeechCount,
+                    })}
+                  >
+                    {staleSpeechCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -449,6 +474,22 @@ function SpeechEditorPane({ scene, onTextChange, focusAudioId, t }: SpeechEditor
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Batch-regen state. Lifted into the pane so the header progress label
+  // and per-row spinners stay in sync. Note: we read text from this pane's
+  // `scene` prop (= localPreviewScene from the dialog), matching the
+  // existing per-line button — so unsaved edits in the code tab also feed
+  // into batch regen, mirroring the pre-existing behavior. Save commits
+  // the JSON afterwards so audioTextHash and text land together.
+  const [batchBusyIds, setBatchBusyIds] = useState<Set<string>>(new Set());
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const batchRunning = batchProgress !== null;
+
+  const staleActions = useMemo(
+    () => speechActions.filter((a) => isSpeechAudioStale(a)),
+    [speechActions],
+  );
+  const staleCount = staleActions.length;
+
   // Scroll the requested action into view on mount / focusAudioId change.
   useEffect(() => {
     if (!focusAudioId || !containerRef.current) return;
@@ -458,6 +499,58 @@ function SpeechEditorPane({ scene, onTextChange, focusAudioId, t }: SpeechEditor
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusAudioId]);
 
+  const handleBatchRegen = useCallback(async () => {
+    if (batchRunning) return;
+    // Snapshot stale set NOW — successful regens flip them out of stale,
+    // which would otherwise shrink the loop mid-iteration.
+    const targets = staleActions.filter((a) => !!a.audioId && a.text.trim());
+    if (targets.length === 0) return;
+
+    setBatchProgress({ done: 0, total: targets.length });
+    let okCount = 0;
+    const failures: string[] = [];
+
+    for (let i = 0; i < targets.length; i += 1) {
+      const action = targets[i];
+      const audioId = action.audioId!;
+      setBatchBusyIds((prev) => {
+        const next = new Set(prev);
+        next.add(audioId);
+        return next;
+      });
+      try {
+        const result = await regenerateSingleSpeechAudio(audioId, action.text);
+        if (result.success) {
+          okCount += 1;
+        } else {
+          failures.push(audioId.slice(0, 6));
+        }
+      } catch {
+        failures.push(audioId.slice(0, 6));
+      } finally {
+        setBatchBusyIds((prev) => {
+          const next = new Set(prev);
+          next.delete(audioId);
+          return next;
+        });
+        setBatchProgress({ done: i + 1, total: targets.length });
+      }
+    }
+
+    setBatchProgress(null);
+    if (failures.length === 0) {
+      toast.success(t('speech.regenAllSummaryOk', { ok: okCount }));
+    } else {
+      toast.warning(
+        t('speech.regenAllSummaryMixed', {
+          ok: okCount,
+          fail: failures.length,
+          ids: failures.join(', '),
+        }),
+      );
+    }
+  }, [batchRunning, staleActions, t]);
+
   if (speechActions.length === 0) {
     return (
       <div className="w-full flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
@@ -466,17 +559,73 @@ function SpeechEditorPane({ scene, onTextChange, focusAudioId, t }: SpeechEditor
     );
   }
 
+  const headerLabel = batchRunning
+    ? t('speech.regenAllRunning', {
+        done: batchProgress!.done,
+        total: batchProgress!.total,
+      })
+    : staleCount > 0
+      ? t('speech.staleSummary', { count: staleCount, total: speechActions.length })
+      : t('speech.regenAllNoStale');
+
   return (
-    <div ref={containerRef} className="w-full overflow-y-auto p-4 space-y-3">
-      {speechActions.map((action) => (
-        <SpeechActionRow
-          key={action.audioId}
-          action={action}
-          highlighted={action.audioId === focusAudioId}
-          onTextChange={(text) => onTextChange(action.audioId!, text)}
-          t={t}
-        />
-      ))}
+    <div className="w-full flex flex-col min-w-0">
+      <div
+        className={cn(
+          'sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-2',
+          'border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur',
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {staleCount > 0 ? (
+            <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
+          ) : (
+            <RefreshCw className="size-3.5 shrink-0 text-gray-400" />
+          )}
+          <span
+            className={cn(
+              'text-xs font-medium truncate',
+              staleCount > 0
+                ? 'text-amber-700 dark:text-amber-400'
+                : 'text-gray-500 dark:text-gray-400',
+            )}
+          >
+            {headerLabel}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleBatchRegen}
+          disabled={batchRunning || staleCount === 0}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors shrink-0',
+            staleCount > 0
+              ? 'bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50'
+              : 'text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed',
+          )}
+          title={t('speech.regenAllStale', { count: staleCount })}
+        >
+          {batchRunning ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <RefreshCw className="size-3" />
+          )}
+          {t('speech.regenAllStale', { count: staleCount })}
+        </button>
+      </div>
+      <div ref={containerRef} className="flex-1 w-full overflow-y-auto p-4 space-y-3">
+        {speechActions.map((action) => (
+          <SpeechActionRow
+            key={action.audioId}
+            action={action}
+            highlighted={action.audioId === focusAudioId}
+            externalBusy={!!action.audioId && batchBusyIds.has(action.audioId)}
+            batchRunning={batchRunning}
+            onTextChange={(text) => onTextChange(action.audioId!, text)}
+            t={t}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -484,19 +633,31 @@ function SpeechEditorPane({ scene, onTextChange, focusAudioId, t }: SpeechEditor
 interface SpeechActionRowProps {
   action: SpeechAction;
   highlighted: boolean;
+  /** True while the parent batch is regenerating this row. Drives spinner. */
+  externalBusy?: boolean;
+  /** True while any batch is running — disables per-row regen to avoid double-fire. */
+  batchRunning?: boolean;
   onTextChange: (text: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
-function SpeechActionRow({ action, highlighted, onTextChange, t }: SpeechActionRowProps) {
-  const [busy, setBusy] = useState(false);
+function SpeechActionRow({
+  action,
+  highlighted,
+  externalBusy = false,
+  batchRunning = false,
+  onTextChange,
+  t,
+}: SpeechActionRowProps) {
+  const [localBusy, setLocalBusy] = useState(false);
   const [playing, setPlaying] = useState(false);
   const playerRef = useRef<AudioPlayer | null>(null);
   const stale = isSpeechAudioStale(action);
+  const busy = localBusy || externalBusy;
 
   const handleRegen = useCallback(async () => {
     if (!action.audioId || !action.text.trim()) return;
-    setBusy(true);
+    setLocalBusy(true);
     try {
       const result = await regenerateSingleSpeechAudio(action.audioId, action.text);
       if (result.success) {
@@ -505,7 +666,7 @@ function SpeechActionRow({ action, highlighted, onTextChange, t }: SpeechActionR
         toast.error(result.error || t('speech.regenFailed'));
       }
     } finally {
-      setBusy(false);
+      setLocalBusy(false);
     }
   }, [action, t]);
 
@@ -568,7 +729,7 @@ function SpeechActionRow({ action, highlighted, onTextChange, t }: SpeechActionR
           <button
             type="button"
             onClick={handleRegen}
-            disabled={busy || !action.text.trim()}
+            disabled={busy || batchRunning || !action.text.trim()}
             className={cn(
               'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors',
               stale

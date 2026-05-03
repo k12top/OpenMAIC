@@ -8,7 +8,8 @@
   },
   "home": {
     "slogan": "Ruang kelas interaktif & pembuatan dokumen AI",
-    "greetingWithName": "Halo, {{name}}"
+    "greetingWithName": "Halo, {{name}}",
+    "loginFailed": "Login gagal. Silakan coba lagi."
   },
   "landing": {
     "badge": "Platform kursus bertenaga AI",
@@ -324,9 +325,9 @@
     "modePublic": "Publik",
     "modePublicDesc": "Siapa pun yang punya tautan bisa melihat",
     "modeReadonly": "Perlu masuk",
-    "modeReadonlyDesc": "Pengunjung harus masuk untuk melihat",
+    "modeReadonlyDesc": "Penerima harus masuk terlebih dahulu sebelum dapat melihat kelas ini",
     "modeEditable": "Bisa disalin",
-    "modeEditableDesc": "Pengunjung yang masuk bisa menyalin ke kelas mereka",
+    "modeEditableDesc": "Penerima harus masuk; setelah login mereka bisa menyalinnya ke Kelas saya",
     "modeSso": "Hanya organisasi",
     "modeSsoDesc": "Hanya anggota organisasi Anda yang bisa melihat",
     "persistentBadge": "Tautan permanen",
@@ -347,7 +348,7 @@
       "bannerReadonlyTitle": "Kelas bersama (wajib masuk)",
       "bannerReadonlyHint": "Masuk dengan akun Anda untuk membuka kelas ini.",
       "bannerEditableTitle": "Kelas bersama — dapat disalin",
-      "bannerEditableHint": "Simpan salinan ke Kelas saya untuk mengajar dari tautan Anda sendiri, mengedit, atau cadangan.",
+      "bannerEditableHint": "Masuk dulu, lalu simpan salinan ke Kelas saya untuk mengajar dari tautan Anda sendiri, mengedit, atau cadangan.",
       "bannerSsoTitle": "Kelas bersama (organisasi)",
       "bannerSsoHint": "Hanya anggota yang masuk lewat SSO organisasi Anda yang dapat mengakses tautan ini.",
       "copyToMine": "Salin ke Kelas saya",
@@ -409,7 +410,13 @@
     "regenerateOne": "Buat ulang baris ini",
     "regenerating": "Membuat ulang…",
     "regenSuccess": "Audio dibuat ulang",
-    "regenFailed": "Gagal membuat ulang"
+    "regenFailed": "Gagal membuat ulang",
+    "staleSummary": "{{count}} dari {{total}} baris tidak sinkron",
+    "regenAllStale": "Buat ulang semua yang basi ({{count}})",
+    "regenAllRunning": "Membuat ulang {{done}} / {{total}}…",
+    "regenAllNoStale": "Semua audio sudah terbaru",
+    "regenAllSummaryOk": "{{ok}} baris audio dibuat ulang",
+    "regenAllSummaryMixed": "{{ok}} berhasil, {{fail}} gagal ({{ids}})"
   },
   "classroom": {
     "recentClassrooms": "Terbaru",

@@ -8,7 +8,8 @@
   },
   "home": {
     "slogan": "Salle de classe interactive et création de documents par l'IA",
-    "greetingWithName": "Bonjour, {{name}}"
+    "greetingWithName": "Bonjour, {{name}}",
+    "loginFailed": "Échec de la connexion. Veuillez réessayer."
   },
   "landing": {
     "badge": "Plateforme de cours assistée par l'IA",
@@ -324,9 +325,9 @@
     "modePublic": "Public",
     "modePublicDesc": "Toute personne disposant du lien peut consulter",
     "modeReadonly": "Connexion requise",
-    "modeReadonlyDesc": "Les visiteurs doivent se connecter pour voir",
+    "modeReadonlyDesc": "Les destinataires doivent se connecter avant de pouvoir consulter cette classe",
     "modeEditable": "Copiable",
-    "modeEditableDesc": "Les visiteurs connectés peuvent copier dans leur classe",
+    "modeEditableDesc": "Les destinataires doivent se connecter ; une fois connectés, ils peuvent copier la classe dans leur propre espace",
     "modeSso": "Organisation seule",
     "modeSsoDesc": "Seuls les membres de votre organisation peuvent voir",
     "persistentBadge": "Lien permanent",
@@ -347,7 +348,7 @@
       "bannerReadonlyTitle": "Classe partagée (connexion requise)",
       "bannerReadonlyHint": "Connectez-vous avec votre compte pour ouvrir cette classe.",
       "bannerEditableTitle": "Classe partagée — copiable",
-      "bannerEditableHint": "Enregistrez une copie dans Mes classes pour modifier, enseigner avec votre propre lien ou conserver une sauvegarde.",
+      "bannerEditableHint": "Connectez-vous, puis enregistrez une copie dans Mes classes pour modifier, enseigner avec votre propre lien ou conserver une sauvegarde.",
       "bannerSsoTitle": "Classe partagée (organisation)",
       "bannerSsoHint": "Seuls les membres connectés via le SSO de votre organisation peuvent accéder à ce lien.",
       "copyToMine": "Copier dans Mes classes",
@@ -409,7 +410,13 @@
     "regenerateOne": "Régénérer cette ligne",
     "regenerating": "Régénération…",
     "regenSuccess": "Audio régénéré",
-    "regenFailed": "Échec de la régénération"
+    "regenFailed": "Échec de la régénération",
+    "staleSummary": "{{count}} ligne(s) sur {{total}} désynchronisée(s)",
+    "regenAllStale": "Régénérer tous les obsolètes ({{count}})",
+    "regenAllRunning": "Régénération {{done}} / {{total}}…",
+    "regenAllNoStale": "Tous les audios sont à jour",
+    "regenAllSummaryOk": "{{ok}} ligne(s) audio régénérée(s)",
+    "regenAllSummaryMixed": "{{ok}} régénérée(s), {{fail}} échec(s) ({{ids}})"
   },
   "classroom": {
     "recentClassrooms": "Récents",

@@ -53,7 +53,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { nanoid } from 'nanoid';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -106,6 +106,7 @@ function HomePage() {
   const { theme, setTheme } = useTheme();
   const { nickname } = useUserProfileStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
@@ -143,6 +144,21 @@ function HomePage() {
       })
       .catch(() => {});
   }, []);
+
+  // Surface auth-callback failures (?error=auth_failed&reason=...). The
+  // callback bounces back here when token exchange / Casdoor returns
+  // anything unexpected, so without this effect the user sees a silently
+  // unauthenticated home page and assumes login worked.
+  useEffect(() => {
+    const error = searchParams?.get('error');
+    if (error !== 'auth_failed') return;
+    const reason = searchParams?.get('reason') || '';
+    const message = reason
+      ? `${t('home.loginFailed')} (${reason})`
+      : t('home.loginFailed');
+    toast.error(message);
+    router.replace('/');
+  }, [searchParams, router, t]);
 
   // Hydrate client-only state after mount (avoids SSR mismatch)
   /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */

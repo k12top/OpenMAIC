@@ -8,7 +8,8 @@
     },
     "home": {
         "slogan": "Interactive classroom & AI document creation",
-        "greetingWithName": "Hi, {{name}}"
+        "greetingWithName": "Hi, {{name}}",
+        "loginFailed": "Sign-in failed. Please try again."
     },
     "landing": {
         "badge": "AI-Powered Courseware Platform",
@@ -341,9 +342,9 @@
         "modePublic": "Public",
         "modePublicDesc": "Anyone with the link can view",
         "modeReadonly": "Sign-in required",
-        "modeReadonlyDesc": "Viewers must sign in to access",
+        "modeReadonlyDesc": "Recipients must sign in before they can view this classroom",
         "modeEditable": "Copy-able",
-        "modeEditableDesc": "Signed-in viewers can copy to their own classroom",
+        "modeEditableDesc": "Recipients must sign in; once signed in they can save a copy to their own classrooms",
         "modeSso": "Organization only",
         "modeSsoDesc": "Only members of your organization can view",
         "persistentBadge": "Persistent link",
@@ -364,7 +365,7 @@
             "bannerReadonlyTitle": "Shared classroom (sign-in)",
             "bannerReadonlyHint": "Sign in with your account to open this classroom.",
             "bannerEditableTitle": "Shared classroom — you can copy it",
-            "bannerEditableHint": "Save a copy under My Classrooms to edit, teach from your own link, or keep a backup.",
+            "bannerEditableHint": "Sign in, then save a copy under My Classrooms to edit, teach from your own link, or keep a backup.",
             "bannerSsoTitle": "Shared classroom (organization)",
             "bannerSsoHint": "Only members signed in through your organization can access this link.",
             "copyToMine": "Copy to My Classrooms",
@@ -426,7 +427,13 @@
         "regenerateOne": "Regenerate this line",
         "regenerating": "Regenerating…",
         "regenSuccess": "Speech regenerated",
-        "regenFailed": "Regeneration failed"
+        "regenFailed": "Regeneration failed",
+        "staleSummary": "{{count}} of {{total}} lines out of sync",
+        "regenAllStale": "Regenerate all stale ({{count}})",
+        "regenAllRunning": "Regenerating {{done}} / {{total}}…",
+        "regenAllNoStale": "All speech up to date",
+        "regenAllSummaryOk": "{{ok}} speech line(s) regenerated",
+        "regenAllSummaryMixed": "{{ok}} regenerated, {{fail}} failed ({{ids}})"
     },
     "classroom": {
         "recentClassrooms": "Recent",

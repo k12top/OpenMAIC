@@ -9,8 +9,29 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
 
+  // Diagnostic: log inbound shape so we can correlate with /api/auth/me
+  // failures. We log the *presence* of the code (not its value) to avoid
+  // leaking single-use credentials into shared log aggregators.
+  console.info('[auth/callback] enter', {
+    origin: publicOrigin,
+    hasCode: !!code,
+    state: state || null,
+  });
+
+  // Helper: build an auth-failure redirect that ALSO clears the SSO probe
+  // marker. Without this, middleware would believe the browser already
+  // failed an SSO probe and never auto-bounce the user to login again,
+  // leaving them stuck unauthenticated.
+  const failRedirect = (reason: string) => {
+    const target = `${publicOrigin}/?error=auth_failed&reason=${encodeURIComponent(reason)}`;
+    const res = NextResponse.redirect(target);
+    res.cookies.delete('sso_probed');
+    console.info('[auth/callback] fail', { reason });
+    return res;
+  };
+
   if (!code) {
-    return NextResponse.json({ error: 'No code provided' }, { status: 400 });
+    return failRedirect('missing_code');
   }
 
   try {
@@ -55,10 +76,22 @@ export async function GET(request: Request) {
     // Clear the SSO probe marker so future cross-site probes work correctly
     response.cookies.delete('sso_probed');
 
+    // `casdoorUser` is loosely-typed across Casdoor versions: id is canonical
+    // but some installs return only `name` / `sub`. Cast through `any` to
+    // tolerate both shapes without forcing the SDK type.
+    const u = casdoorUser as any;
+    const issuedUserId = (u && (u.id || u.name || u.sub)) || '<unknown>';
+    console.info('[auth/callback] ok', {
+      user: issuedUserId,
+      redirectUrl,
+      tokenLen: token.access_token?.length ?? 0,
+    });
+
     return response;
   } catch (error) {
+    const reason = error instanceof Error ? error.message : 'token_exchange_failed';
     console.error('Casdoor authentication error:', error);
-    return NextResponse.redirect(`${publicOrigin}/?error=auth_failed`);
+    return failRedirect(reason || 'token_exchange_failed');
   }
 }
 

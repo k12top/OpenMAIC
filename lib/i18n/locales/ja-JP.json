@@ -8,7 +8,8 @@
   },
   "home": {
     "slogan": "インタラクティブ授業とドキュメント生成",
-    "greetingWithName": "こんにちは、{{name}}さん"
+    "greetingWithName": "こんにちは、{{name}}さん",
+    "loginFailed": "サインインに失敗しました。もう一度お試しください。"
   },
   "landing": {
     "badge": "AI 授業コンテンツプラットフォーム",
@@ -324,9 +325,9 @@
     "modePublic": "公開",
     "modePublicDesc": "リンクを知っている人なら誰でも閲覧可能",
     "modeReadonly": "サインインで閲覧",
-    "modeReadonlyDesc": "閲覧にはサインインが必要",
+    "modeReadonlyDesc": "閲覧者はサインインしないとこの授業を表示できません",
     "modeEditable": "コピー可能",
-    "modeEditableDesc": "サインイン後に自分のクラスへコピー可能",
+    "modeEditableDesc": "閲覧者はまずサインインが必要。サインイン後は自分の「マイクラス」にコピーできます",
     "modeSso": "組織内のみ",
     "modeSsoDesc": "あなたの組織のメンバーのみ閲覧可能",
     "persistentBadge": "永続リンク",
@@ -347,7 +348,7 @@
       "bannerReadonlyTitle": "共有クラス（ログイン必須）",
       "bannerReadonlyHint": "アカウントでログインしてからこのクラスを開いてください。",
       "bannerEditableTitle": "共有クラス — 自分のクラスにコピー可能",
-      "bannerEditableHint": "「マイクラス」にコピーすると編集・自分用リンクでの授業・バックアップができます。",
+      "bannerEditableHint": "サインインしてから「マイクラス」にコピーすれば、編集・自分用リンクでの授業・バックアップができます。",
       "bannerSsoTitle": "共有クラス（組織内）",
       "bannerSsoHint": "組織の SSO でサインインしたメンバーのみがこのリンクにアクセスできます。",
       "copyToMine": "マイクラスにコピー",
@@ -409,7 +410,13 @@
     "regenerateOne": "この一文を再生成",
     "regenerating": "再生成中…",
     "regenSuccess": "音声を再生成しました",
-    "regenFailed": "再生成に失敗しました"
+    "regenFailed": "再生成に失敗しました",
+    "staleSummary": "{{count}} / {{total}} 件の音声が本文と不一致",
+    "regenAllStale": "古い音声を一括再生成 ({{count}})",
+    "regenAllRunning": "再生成中 {{done}} / {{total}}…",
+    "regenAllNoStale": "音声はすべて最新です",
+    "regenAllSummaryOk": "{{ok}} 件の音声を再生成しました",
+    "regenAllSummaryMixed": "成功 {{ok}} 件、失敗 {{fail}} 件（{{ids}}）"
   },
   "classroom": {
     "recentClassrooms": "最近の教室",

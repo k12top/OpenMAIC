@@ -9,6 +9,7 @@
     "home": {
         "slogan": "智能互动课堂与文书生成",
         "greetingWithName": "嗨，{{name}}!",
+        "loginFailed": "登录失败，请重试。",
         "logout": "退出登录",
         "workspace": "工作空间",
         "sidebarBranding": "翔宇文淑"
@@ -343,9 +344,9 @@
         "modePublic": "公开",
         "modePublicDesc": "任何人通过链接即可查看",
         "modeReadonly": "登录可看",
-        "modeReadonlyDesc": "需要登录账号才能查看",
+        "modeReadonlyDesc": "对方需要先登录账号才能查看本课堂",
         "modeEditable": "可复制",
-        "modeEditableDesc": "登录后可复制到自己的课堂",
+        "modeEditableDesc": "对方需要先登录，登录后可复制到自己的「我的课堂」",
         "modeSso": "组织内可见",
         "modeSsoDesc": "仅限你所在组织的成员可见",
         "persistentBadge": "持久链接",
@@ -366,7 +367,7 @@
             "bannerReadonlyTitle": "共享课堂（需登录）",
             "bannerReadonlyHint": "请使用你的账号登录后打开本课堂。",
             "bannerEditableTitle": "共享课堂 — 可复制到你的空间",
-            "bannerEditableHint": "复制到「我的课堂」后即可自行编辑、用自己的链接上课或留作备份。",
+            "bannerEditableHint": "登录后复制到「我的课堂」即可自行编辑、用自己的链接上课或留作备份。",
             "bannerSsoTitle": "共享课堂（组织内）",
             "bannerSsoHint": "仅通过你所在组织 SSO 登录的成员可访问此链接。",
             "copyToMine": "复制到我的课堂",
@@ -428,7 +429,13 @@
         "regenerateOne": "重生本句",
         "regenerating": "重生中…",
         "regenSuccess": "语音已重新生成",
-        "regenFailed": "语音重生失败"
+        "regenFailed": "语音重生失败",
+        "staleSummary": "{{count}} / {{total}} 条语音与文本不一致",
+        "regenAllStale": "一键重生过期 ({{count}})",
+        "regenAllRunning": "正在重生 {{done}} / {{total}}…",
+        "regenAllNoStale": "全部语音已是最新",
+        "regenAllSummaryOk": "已重生 {{ok}} 条语音",
+        "regenAllSummaryMixed": "成功 {{ok}} 条，失败 {{fail}} 条（{{ids}}）"
     },
     "classroom": {
         "recentClassrooms": "最近学习",
