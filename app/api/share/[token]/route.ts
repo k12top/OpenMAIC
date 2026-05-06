@@ -29,22 +29,23 @@ export async function GET(
     return NextResponse.json({ error: 'Share link has expired' }, { status: 410 });
   }
 
-  // All share modes (public / readonly / editable) are viewable without authentication.
-  // SSO shares require a valid session; unauthenticated requests get a 401
-  // with `requiresAuth: true` so the client can redirect to Casdoor login.
-  // Mode affects only the client-side UI (banner + CTA). The /copy endpoint
-  // still requires auth for `editable` shares.
-
+  // Auth model (single source of truth — keep in sync with share-dialog copy):
+  //   public   → fully anonymous (the only mode that grants drive-by access)
+  //   readonly → must sign in (read-only, no copy)
+  //   sso      → must sign in (semantically "must use org SSO" — same gate)
+  //   editable → must sign in (and the /copy endpoint still re-checks auth)
+  // Unauthenticated requests for any non-public mode get a 401 with
+  // `requiresAuth: true` so the client can bounce through Casdoor login.
   // Detect if the current viewer is the author of the source classroom. The
   // client uses this to re-enable owner-only UI (e.g. regenerate-scene) when
   // the author is viewing their own share link.
   const authedUser = await optionalAuth();
 
-  if (share.mode === 'sso' && !authedUser) {
+  if (share.mode !== 'public' && !authedUser) {
     return NextResponse.json(
       {
         error: 'Authentication required',
-        code: 'REQUIRES_SSO',
+        code: 'REQUIRES_AUTH',
         requiresAuth: true,
       },
       { status: 401 },

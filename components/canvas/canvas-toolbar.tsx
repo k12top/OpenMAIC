@@ -17,13 +17,16 @@ import {
   Minimize2,
   RefreshCw,
   Code2,
+  Presentation,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useStageStore } from '@/lib/store';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditSceneSourceDialog } from '@/components/stage/edit-scene-source-dialog';
 import { useCan } from '@/components/auth/can';
+import { useMenuPerm } from '@/components/auth/menu-gate';
 
 export interface CanvasToolbarProps {
   readonly currentSceneIndex: number;
@@ -134,10 +137,28 @@ export function CanvasToolbar({
   // structural edits via the raw JSON editor can conflict with a live
   // in-browser viewer session (hot-swapping scenes mid-render).
   const isSharedView = useStageStore((s) => s.isSharedView);
+  const isOwner = useStageStore((s) => s.isOwner);
   const canRegenerate = useCan('regenerate');
   const canEditSource = useCan('edit-source');
   const showRegenerate = !!onRegenerateScene && canRegenerate;
   const showEditSource = canEditSource && !isSharedView;
+  // Lecture-mode toggle is RBAC-driven via `toolbar.lectureMode` (the menu
+  // entry's owner-bypass automatically grants the original author). Click
+  // semantics depend on the viewer's relationship to the source classroom:
+  //  - Author (or non-shared session): write through `setLectureMode` so the
+  //    change persists to the stage and propagates via debouncedSave.
+  //  - Other "teacher" viewers on a share link: flip `stage.lectureMode`
+  //    directly via `setState` so the change is purely local — never sent
+  //    to the cloud, never seen by other viewers.
+  // We deliberately drop the previous `lectureMode === true` gate on the
+  // viewer branch: any teacher should be able to enter / leave lecture mode
+  // regardless of how the author saved the share.
+  const canLectureToggle = useMenuPerm('toolbar.lectureMode', 'operable');
+  const lectureMode = useStageStore((s) => !!s.stage?.lectureMode);
+  const setLectureMode = useStageStore((s) => s.setLectureMode);
+  const lectureWritesCloud = !isSharedView || isOwner;
+  const showLectureToggle = canLectureToggle;
+  const lectureToggleDisabled = !!isLiveSession;
   // Is the currently visible scene being regenerated? When true, swap the
   // icon for a spinner and disable clicks to prevent double-submits.
   const currentSceneId = useStageStore((s) => s.currentSceneId);
@@ -340,7 +361,7 @@ export function CanvasToolbar({
               </span>
               {t('roundtable.stopDiscussion')}
             </button>
-          ) : showPlayPause ? (
+          ) : showPlayPause && !lectureMode ? (
             <button
               onClick={onPlayPause}
               className={cn(
@@ -377,8 +398,57 @@ export function CanvasToolbar({
 
           <CtrlDivider />
 
-          {/* Auto-play */}
-          {onToggleAutoPlay && (
+          {/* Lecture / Auto mode toggle.
+              - Owner branch: persistent toggle, gated by toolbar.lectureMode.
+              - Viewer branch: ephemeral local override on shared view (no
+                cloud write, no RBAC gate, no toast). */}
+          {showLectureToggle && (
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (lectureToggleDisabled) return;
+                      const next = !lectureMode;
+                      if (lectureWritesCloud) {
+                        setLectureMode(next);
+                        toast.success(
+                          next
+                            ? t('toolbar.lectureModeOn')
+                            : t('toolbar.lectureModeOff'),
+                        );
+                      } else {
+                        useStageStore.setState((state) =>
+                          state.stage
+                            ? { stage: { ...state.stage, lectureMode: next } }
+                            : state,
+                        );
+                      }
+                    }}
+                    disabled={lectureToggleDisabled}
+                    className={cn(
+                      ctrlBtn,
+                      'w-8 h-6',
+                      lectureToggleDisabled && 'opacity-40 cursor-not-allowed',
+                      lectureMode
+                        ? 'text-purple-600 dark:text-purple-400'
+                        : 'text-gray-500 dark:text-gray-400',
+                    )}
+                    aria-label={t('toolbar.lectureModeTooltip')}
+                  >
+                    <Presentation className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {lectureMode ? t('toolbar.lectureModeOn') : t('toolbar.lectureModeOff')}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Auto-play (hidden in lecture mode — auto-advance is irrelevant
+              when the teacher drives advance manually) */}
+          {onToggleAutoPlay && !lectureMode && (
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>

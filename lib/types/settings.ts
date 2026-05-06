@@ -4,6 +4,7 @@ export type SettingsSection =
   | 'general'
   | 'providers'
   | 'agents'
+  | 'profile'
   | 'tts'
   | 'asr'
   | 'pdf'

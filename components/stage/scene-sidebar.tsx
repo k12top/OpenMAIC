@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { Fragment, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PanelLeftClose,
@@ -14,6 +14,7 @@ import {
   Coins,
   GripVertical,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import {
   DndContext,
@@ -40,6 +41,8 @@ import { useI18n } from '@/lib/hooks/use-i18n';
 import type { Scene, SceneType, SlideContent } from '@/lib/types/stage';
 import { PENDING_SCENE_ID } from '@/lib/store/stage';
 import { useCan } from '@/components/auth/can';
+import { useMenuPerm } from '@/components/auth/menu-gate';
+import { AddSceneDialog } from '@/components/stage/add-scene-dialog';
 
 interface SceneSidebarProps {
   readonly collapsed: boolean;
@@ -77,7 +80,29 @@ export function SceneSidebar({
   // belong to them. `useCan` respects classroom ownership AND RBAC.
   const canReorder = useCan('reorder');
   const canDeleteScene = useCan('delete-scene');
+  // Add-scene parent gate. operable check is owner-bypassed via
+  // `useMenuPerm`; visible check is NOT owner-bypassed by design (Casdoor
+  // can hide a feature even from the owner) — but we OR with `isOwner`
+  // so a deploy that grants only `operable` to teachers doesn't suddenly
+  // hide the affordance from the classroom creator.
+  const canAddSceneOp = useCan('add-scene');
+  const isOwner = useStageStore.use.isOwner();
+  const addSceneVisible = useMenuPerm('sidebar.addScene', 'visible') || isOwner;
+  // Per-position sub-permissions. operable check is owner-bypassed too,
+  // so the classroom creator continues to see both buttons unless an
+  // admin explicitly removes them via Casdoor.
+  const canInsertScene = useMenuPerm('sidebar.addScene.insert', 'operable');
+  const canAppendScene = useMenuPerm('sidebar.addScene.append', 'operable');
   const showOwnerControls = (canReorder || canDeleteScene) && !isSharedView;
+  // Parent gate: must be both visible AND operable to render any add-scene
+  // affordance. Visibility=false => button does not render at all (per the
+  // user's chosen "hide-not-disable" semantic for this surface).
+  const showAddSceneButton = canAddSceneOp && addSceneVisible && !isSharedView;
+  // `addSceneAt` carries the `insertAfterOrder` prop AddSceneDialog expects.
+  // null = closed; -1 = append at end; otherwise insert after that order.
+  // We use a sentinel rather than `undefined` so the open state can be
+  // round-tripped via `addSceneAt !== null`.
+  const [addSceneAt, setAddSceneAt] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -254,32 +279,64 @@ export function SceneSidebar({
                 const slideContent = isSlide ? (scene.content as SlideContent) : null;
                 const isRegenerating = regeneratingSceneIds.includes(scene.id);
                 return (
-                  <SortableSceneCard
-                    key={scene.id}
-                    scene={scene}
-                    index={index}
-                    isActive={isActive}
-                    isRegenerating={isRegenerating}
-                    slideContent={slideContent}
-                    getSceneTypeIcon={getSceneTypeIcon}
-                    onSelect={() => {
-                      if (onSceneSelect) onSceneSelect(scene.id);
-                      else setCurrentSceneId(scene.id);
-                    }}
-                    showOwnerControls={showOwnerControls}
-                    canReorder={canReorder && !isSharedView}
-                    canDelete={canDeleteScene && !isSharedView}
-                    sidebarWidth={sidebarWidth}
-                    viewportSize={viewportSize}
-                    viewportRatio={viewportRatio}
-                    regeneratingLabel={t('stage.regenerating')}
-                    onDeleteClick={(id, title) => handleDeleteScene(id, title)}
-                    dragDisabled={isRegenerating || !(canReorder && !isSharedView)}
-                  />
+                  <Fragment key={scene.id}>
+                    <SortableSceneCard
+                      scene={scene}
+                      index={index}
+                      isActive={isActive}
+                      isRegenerating={isRegenerating}
+                      slideContent={slideContent}
+                      getSceneTypeIcon={getSceneTypeIcon}
+                      onSelect={() => {
+                        if (onSceneSelect) onSceneSelect(scene.id);
+                        else setCurrentSceneId(scene.id);
+                      }}
+                      showOwnerControls={showOwnerControls}
+                      canReorder={canReorder && !isSharedView}
+                      canDelete={canDeleteScene && !isSharedView}
+                      sidebarWidth={sidebarWidth}
+                      viewportSize={viewportSize}
+                      viewportRatio={viewportRatio}
+                      regeneratingLabel={t('stage.regenerating')}
+                      onDeleteClick={(id, title) => handleDeleteScene(id, title)}
+                      dragDisabled={isRegenerating || !(canReorder && !isSharedView)}
+                    />
+                    {/* Per-row hover-reveal "+" insert affordance. Lives
+                        in the natural flow so it doesn't shift surrounding
+                        scenes; the row only swells from h-1 → h-6 on hover.
+                        Gated separately on `sidebar.addScene.insert` so a
+                        deploy can grant append-only delegation. */}
+                    {showAddSceneButton && canInsertScene && (
+                      <SceneInsertButton
+                        label={t('sidebar.insertHere')}
+                        onClick={() => setAddSceneAt(scene.order)}
+                      />
+                    )}
+                  </Fragment>
                 );
               })}
             </SortableContext>
           </DndContext>
+
+          {/* Owner-only fallback "+ Add scene" button — used when there
+              are no existing scenes (empty sidebar) and as the explicit
+              "append at end" affordance. Always visible during generation
+              so users can queue extra pages while the pipeline is running;
+              `AddSceneDialog` runs its own independent fetch path. Gated
+              on `sidebar.addScene.append` so a deploy can grant insert-
+              only delegation independently of append. */}
+          {showAddSceneButton && canAppendScene && (
+            <button
+              type="button"
+              onClick={() =>
+                setAddSceneAt(scenes[scenes.length - 1]?.order ?? 0)
+              }
+              className="w-full mt-1 px-2 py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-300 dark:hover:border-purple-600 hover:bg-purple-50/40 dark:hover:bg-purple-900/10 transition-colors flex items-center justify-center gap-1.5 text-xs font-medium"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {t('sidebar.addScene')}
+            </button>
+          )}
 
           {/* Single placeholder for the next generating page (clickable) */}
           {generatingOutlines.length > 0 &&
@@ -421,7 +478,55 @@ export function SceneSidebar({
         {/* Spacer to push toggle button area */}
         <div className="mt-auto" />
       </div>
+
+      {/* Owner-only AI-assisted add-scene dialog. Open state and the
+          insertion target are coupled in `addSceneAt` so each per-row "+"
+          button feeds its own scene order in. */}
+      {showAddSceneButton && (
+        <AddSceneDialog
+          open={addSceneAt !== null}
+          onOpenChange={(open) => {
+            if (!open) setAddSceneAt(null);
+          }}
+          insertAfterOrder={addSceneAt ?? undefined}
+        />
+      )}
     </div>
+  );
+}
+
+interface SceneInsertButtonProps {
+  readonly label: string;
+  readonly onClick: () => void;
+}
+
+/**
+ * Thin "+ insert here" affordance rendered between every pair of scenes.
+ * Collapses to a 2px line in its resting state so the sidebar layout stays
+ * unchanged, swells to a clickable strip on hover with a centered Plus
+ * icon. Modeled after the per-row insert UX in Notion / Figma.
+ */
+function SceneInsertButton({ label, onClick }: SceneInsertButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        'group/insert relative w-full flex items-center justify-center overflow-hidden',
+        'h-1.5 hover:h-6 transition-[height] duration-150 ease-out',
+        'text-purple-500/0 hover:text-purple-600 dark:hover:text-purple-400',
+      )}
+    >
+      <span className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-px bg-transparent group-hover/insert:bg-purple-300/70 dark:group-hover/insert:bg-purple-600/40 transition-colors" />
+      <span className="relative inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/40 ring-1 ring-purple-200 dark:ring-purple-700/40 opacity-0 group-hover/insert:opacity-100 transition-opacity duration-150">
+        <Plus className="w-3 h-3" />
+      </span>
+    </button>
   );
 }
 

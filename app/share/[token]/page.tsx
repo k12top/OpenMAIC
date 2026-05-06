@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, Copy, LogIn, Globe, Loader2, Lock, Play } from 'lucide-react';
+import { Copy, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/hooks/use-i18n';
 import { Stage } from '@/components/stage';
 import { ThemeProvider } from '@/lib/hooks/use-theme';
 import { useStageStore } from '@/lib/store';
@@ -23,15 +24,13 @@ interface SharedClassroom {
 type ShareMode = 'public' | 'readonly' | 'editable' | 'sso';
 
 // ─── Direct classroom view: used for all share modes ─────────────────────────
-// public   → violet banner, Sign In button for unauth viewers
-// readonly → blue banner, Sign In button for unauth viewers
-// editable → emerald banner, "Copy to My Classrooms" primary button
-//            (redirects to login for unauth viewers, auto-copies after return)
+// 顶栏（可复制说明 + 复制按钮）仅在 editable 模式显示。讲解 / 自动切换由
+// 底部 CanvasToolbar 统一承载（详见 components/canvas/canvas-toolbar.tsx
+// 里的 viewerLectureToggle 分支），分享页本身不再绘制单独的浮窗按钮。
 
 function DirectClassroomView({
   classroom,
   mode,
-  token,
   authenticated,
   isOwnerOfSource,
   onCopy,
@@ -39,14 +38,13 @@ function DirectClassroomView({
 }: {
   classroom: SharedClassroom;
   mode: ShareMode;
-  token: string;
   authenticated: boolean;
   isOwnerOfSource: boolean;
   onCopy: () => void;
   copying: boolean;
 }) {
+  const { t } = useI18n();
   const [ready, setReady] = useState(false);
-  const stageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     useStageStore.getState().setStage(classroom.stage);
@@ -93,53 +91,57 @@ function DirectClassroomView({
     );
   }
 
-  const bannerClass =
-    mode === 'public'
-      ? 'bg-violet-600 dark:bg-violet-700'
-      : mode === 'readonly'
-        ? 'bg-blue-600 dark:bg-blue-700'
-        : mode === 'editable'
-          ? 'bg-emerald-600 dark:bg-emerald-700'
-          : 'bg-indigo-700 dark:bg-indigo-800';
-
-  const BannerIcon =
-    mode === 'public' ? Globe : mode === 'readonly' ? Eye : mode === 'editable' ? Copy : Lock;
+  const copyPrimaryClass = cn(
+    'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold',
+    'bg-white text-emerald-900 shadow-lg shadow-black/15 ring-1 ring-white/60',
+    'transition-all hover:bg-emerald-50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-55',
+  );
 
   return (
     <ThemeProvider>
       <MediaStageProvider value={classroom.id}>
         <div className="h-screen flex flex-col overflow-hidden">
-          {/* Mode banner */}
-          <div>
-            <div className="flex items-center gap-2 shrink-0">
-              {mode === 'editable' ? (
-                <button
-                  onClick={onCopy}
-                  disabled={copying}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors font-medium disabled:opacity-60"
-                >
-                  {copying ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <Copy className="size-3" />
-                  )}
-                  {authenticated ? 'Copy to My Classrooms' : 'Sign In to Copy'}
-                </button>
-              ) : (
-                !authenticated && (
-                  <a
-                    href={`/api/auth/login?returnUrl=/share/${token}`}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors font-medium"
-                  >
-                    <LogIn className="size-3" />
-                    Sign In
-                  </a>
-                )
+          {/* 可复制模式专用顶栏（说明 + 复制按钮） */}
+          {mode === 'editable' && (
+            <header
+              className={cn(
+                'shrink-0 border-b border-black/10 bg-emerald-600 text-white dark:bg-emerald-700',
+                'shadow-[0_4px_24px_rgba(0,0,0,0.12)]',
               )}
-            </div>
-          </div>
+            >
+              <div className="mx-auto flex w-full max-w-[1920px] flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25"
+                    aria-hidden
+                  >
+                    <Copy className="size-5 text-white" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0 pt-0.5">
+                    <h1 className="text-sm font-semibold tracking-tight text-white sm:text-base">
+                      {t('share.viewer.bannerEditableTitle')}
+                    </h1>
+                    <p className="mt-0.5 max-w-2xl text-xs leading-snug text-white/80 sm:text-[13px]">
+                      {t('share.viewer.bannerEditableHint')}
+                    </p>
+                  </div>
+                </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden relative" ref={stageContainerRef}>
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
+                  <button type="button" onClick={onCopy} disabled={copying} className={copyPrimaryClass}>
+                    {copying ? (
+                      <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <Copy className="size-4 shrink-0" aria-hidden />
+                    )}
+                    {authenticated ? t('share.viewer.copyToMine') : t('share.viewer.signInToCopy')}
+                  </button>
+                </div>
+              </div>
+            </header>
+          )}
+
+          <div className="flex-1 flex flex-col overflow-hidden relative">
             <Stage autoPlayOnMount={false} />
           </div>
         </div>
@@ -152,6 +154,7 @@ function DirectClassroomView({
 
 export default function SharePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldAutoCopy = searchParams.get('copy') === '1';
@@ -180,9 +183,10 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     let redirected = false;
     fetch(`/api/share/${token}`)
       .then(async (r) => {
-        // SSO share + unauth viewer: server returns 401 with requiresAuth.
-        // Hard redirect to Casdoor login; we never render any error state
-        // because the user isn't "missing" — they just need to sign in first.
+        // Any non-public share + unauth viewer: server returns 401 with
+        // requiresAuth. Hard redirect to Casdoor login; we never render any
+        // error state because the user isn't "missing" — they just need to
+        // sign in first. (See app/api/share/[token]/route.ts.)
         if (r.status === 401) {
           const data = await r.json().catch(() => ({}));
           if (data?.requiresAuth) {
@@ -225,14 +229,14 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
       }
       if (!res.ok) throw new Error('Copy failed');
       const data = await res.json();
-      toast.success('Classroom copied to your account!');
+      toast.success(t('share.viewer.copySuccess'));
       router.push(data.url);
     } catch {
-      toast.error('Failed to copy classroom');
+      toast.error(t('share.viewer.copyFailed'));
     } finally {
       setCopying(false);
     }
-  }, [authenticated, copying, router, token]);
+  }, [authenticated, copying, router, t, token]);
 
   // Auto-copy after login redirect (editable + ?copy=1 + authed)
   useEffect(() => {
@@ -299,7 +303,6 @@ export default function SharePage({ params }: { params: Promise<{ token: string 
     <DirectClassroomView
       classroom={classroom}
       mode={mode}
-      token={token}
       authenticated={authenticated}
       isOwnerOfSource={isOwnerOfSource}
       onCopy={handleCopy}

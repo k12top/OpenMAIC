@@ -26,6 +26,7 @@ import {
   Search,
   Volume2,
   Mic,
+  User,
 } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useSettingsStore } from '@/lib/store/settings';
@@ -58,6 +59,8 @@ import { GeneralSettings } from './general-settings';
 import { ModelEditDialog } from './model-edit-dialog';
 import { AddProviderDialog, type NewProviderData } from './add-provider-dialog';
 import type { SettingsSection, EditingModel } from '@/lib/types/settings';
+import { MenuGate } from '@/components/auth/menu-gate';
+import { UserProfileCard } from '@/components/user-profile';
 
 // ─── Provider List Column (reusable) ───
 function ProviderListColumn<T extends string>({
@@ -503,6 +506,8 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
     switch (activeSection) {
       case 'general':
         return <h2 className="text-lg font-semibold">{t('settings.systemSettings')}</h2>;
+      case 'profile':
+        return <h2 className="text-lg font-semibold">{t('settings.profileSection')}</h2>;
       case 'providers':
         if (selectedProvider) {
           return (
@@ -673,111 +678,145 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
         <DialogTitle className="sr-only">{t('settings.title')}</DialogTitle>
         <DialogDescription className="sr-only">{t('settings.description')}</DialogDescription>
         <div className="flex h-full overflow-hidden">
-          {/* Left Sidebar - Navigation */}
+          {/* Left Sidebar - Navigation
+              Each entry is wrapped in <MenuGate menu="settings.*" op="visible"> so
+              admins can hide individual provider categories per-role from Casdoor.
+              Default policy in env-fallback mode keeps all sections visible. */}
           <div className="flex-shrink-0 bg-muted/30 p-3 space-y-1" style={{ width: sidebarWidth }}>
-            <button
-              onClick={() => setActiveSection('providers')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'providers'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Box className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.providers')}</span>
-            </button>
+            <MenuGate menu="settings.providers" op="visible">
+              <button
+                onClick={() => setActiveSection('providers')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'providers'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Box className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.providers')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('image')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'image'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <ImageIcon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.imageSettings')}</span>
-            </button>
+            <MenuGate menu="settings.image" op="visible">
+              <button
+                onClick={() => setActiveSection('image')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'image'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <ImageIcon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.imageSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('video')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'video'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Film className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.videoSettings')}</span>
-            </button>
+            <MenuGate menu="settings.video" op="visible">
+              <button
+                onClick={() => setActiveSection('video')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'video'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Film className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.videoSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('tts')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'tts'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Volume2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.ttsSettings')}</span>
-            </button>
+            <MenuGate menu="settings.tts" op="visible">
+              <button
+                onClick={() => setActiveSection('tts')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'tts'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Volume2 className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.ttsSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('asr')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'asr'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Mic className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.asrSettings')}</span>
-            </button>
+            <MenuGate menu="settings.asr" op="visible">
+              <button
+                onClick={() => setActiveSection('asr')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'asr'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Mic className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.asrSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('pdf')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'pdf'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <FileText className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.pdfSettings')}</span>
-            </button>
+            <MenuGate menu="settings.pdf" op="visible">
+              <button
+                onClick={() => setActiveSection('pdf')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'pdf'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.pdfSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('web-search')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'web-search'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.webSearchSettings')}</span>
-            </button>
+            <MenuGate menu="settings.webSearch" op="visible">
+              <button
+                onClick={() => setActiveSection('web-search')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'web-search'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.webSearchSettings')}</span>
+              </button>
+            </MenuGate>
 
-            <button
-              onClick={() => setActiveSection('general')}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
-                activeSection === 'general'
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted',
-              )}
-            >
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="truncate">{t('settings.systemSettings')}</span>
-            </button>
+            <MenuGate menu="settings.profile" op="visible">
+              <button
+                onClick={() => setActiveSection('profile')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'profile'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.profileSection')}</span>
+              </button>
+            </MenuGate>
+
+            <MenuGate menu="settings.general" op="visible">
+              <button
+                onClick={() => setActiveSection('general')}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left min-w-0',
+                  activeSection === 'general'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'hover:bg-muted',
+                )}
+              >
+                <Settings className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('settings.systemSettings')}</span>
+              </button>
+            </MenuGate>
           </div>
 
           {/* Sidebar resize handle */}
@@ -963,6 +1002,20 @@ export function SettingsDialog({ open, onOpenChange, initialSection }: SettingsD
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5">
               {activeSection === 'general' && <GeneralSettings />}
+
+              {activeSection === 'profile' && (
+                <div className="max-w-2xl mx-auto space-y-3">
+                  <div>
+                    <h2 className="text-base font-semibold mb-1">
+                      {t('settings.profileSection')}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {t('settings.profileSectionHint')}
+                    </p>
+                  </div>
+                  <UserProfileCard />
+                </div>
+              )}
 
               {activeSection === 'providers' && selectedProvider && (
                 <ProviderConfigPanel

@@ -8,7 +8,8 @@
   },
   "home": {
     "slogan": "Salle de classe interactive et création de documents par l'IA",
-    "greetingWithName": "Bonjour, {{name}}"
+    "greetingWithName": "Bonjour, {{name}}",
+    "loginFailed": "Échec de la connexion. Veuillez réessayer."
   },
   "landing": {
     "badge": "Plateforme de cours assistée par l'IA",
@@ -45,6 +46,8 @@
     "webSearchOff": "Cliquer pour activer",
     "outlineConfirmOn": "Attendre ma confirmation du plan",
     "outlineConfirmOff": "Cliquer : pause après la génération du plan pour relecture",
+    "parallelOnTooltip": "Génération parallèle activée : les scènes sont générées en lots concurrents pour un gain ~3×. Avantages : continuité réelle des dialogues entre lots préservée. Inconvénients : au sein d'un même lot, les scènes 2-3 ne se référencent pas mutuellement ; pression instantanée sur le LLM/TTS multipliée par K, les scènes en limite de débit iront dans la liste d'échecs pour un re-essai en un clic. Cliquer pour revenir au mode séquentiel.",
+    "parallelOffTooltip": "Génération séquentielle (par défaut) : scènes générées une par une avec une continuité parfaite du contexte. Cliquer pour activer le mode parallèle (~2-3× plus rapide) au prix d'une légère perte de continuité intra-lot.",
     "webSearchDesc": "Rechercher sur le web pour des informations à jour avant la génération",
     "webSearchProvider": "Moteur de recherche",
     "webSearchNoProvider": "Configurer la clé API de recherche dans les paramètres",
@@ -58,7 +61,11 @@
     "ttsPreview": "Aperçu",
     "ttsPreviewing": "Lecture en cours...",
     "toggleChat": "Afficher ou masquer le chat",
-    "openChatPanel": "Ouvrir le panneau de chat"
+    "openChatPanel": "Ouvrir le panneau de chat",
+    "voiceSettings": "Paramètres de voix",
+    "lectureModeOn": "Mode cours",
+    "lectureModeOff": "Mode auto",
+    "lectureModeTooltip": "Mode cours/auto : le mode cours masque le bouton lecture central et coupe la narration IA pour laisser l'enseignant présenter"
   },
   "export": {
     "pptx": "Exporter en PPTX",
@@ -165,7 +172,9 @@
     "mediaPromptsLabel": "Invites pour les médias",
     "mediaPromptsHint": "Ajustez l'invite de chaque image ou vidéo",
     "startRegenerate": "Lancer la régénération",
-    "ownerOnly": "Visible uniquement par le propriétaire du cours"
+    "ownerOnly": "Visible uniquement par le propriétaire du cours",
+    "syncSuccess": "Synchronisé avec succès sur le cloud",
+    "syncFailed": "Échec de la synchronisation sur le cloud"
   },
   "whiteboard": {
     "title": "Tableau blanc interactif",
@@ -301,7 +310,113 @@
     }
   },
   "share": {
-    "notReady": "Disponible une fois la génération terminée"
+    "notReady": "Disponible une fois la génération terminée",
+    "title": "Partage et collaboration",
+    "createLink": "Créer un lien de partage",
+    "applyModeChange": "Mettre à jour le mode de partage",
+    "loading": "Chargement…",
+    "linkCopied": "Lien copié",
+    "linkCreated": "Lien de partage créé",
+    "modeUpdated": "Mode de partage mis à jour",
+    "createFailed": "Échec de création du lien",
+    "revoke": "Révoquer le lien",
+    "revoked": "Révoqué",
+    "revokeFailed": "Échec de la révocation",
+    "modePublic": "Public",
+    "modePublicDesc": "Toute personne disposant du lien peut consulter",
+    "modeReadonly": "Connexion requise",
+    "modeReadonlyDesc": "Les destinataires doivent se connecter avant de pouvoir consulter cette classe",
+    "modeEditable": "Copiable",
+    "modeEditableDesc": "Les destinataires doivent se connecter ; une fois connectés, ils peuvent copier la classe dans leur propre espace",
+    "modeSso": "Organisation seule",
+    "modeSsoDesc": "Seuls les membres de votre organisation peuvent voir",
+    "persistentBadge": "Lien permanent",
+    "persistentHint": "Chaque classe conserve un lien permanent unique par auteur. Après modification, cliquez sur « Pousser maintenant » pour synchroniser tous les visiteurs.",
+    "pushLatest": "Pousser maintenant",
+    "pushing": "Envoi…",
+    "pushFailed": "Échec de l'envoi",
+    "pushSuccessClean": "Partage à jour — tous les médias sont synchronisés",
+    "pushSuccessSummary": "Partage mis à jour ({{uploaded}}/{{total}} médias renvoyés, {{skipped}} ignorés)",
+    "pushExplanation": "« Pousser maintenant » synchronise d'abord vos modifications dans le cloud, puis renvoie l'audio ou les images manquants.",
+    "lectureModeLabel": "Mode cours",
+    "lectureModeDesc": "Une fois activé, les spectateurs ouvrent le partage en mode cours : le bouton central de lecture est masqué et la narration IA coupée pour laisser l'enseignant présenter.",
+    "lectureModeOn": "Mode cours activé",
+    "lectureModeOff": "Mode cours désactivé",
+    "viewer": {
+      "bannerPublicTitle": "Classe partagée (publique)",
+      "bannerPublicHint": "Toute personne disposant du lien peut consulter. Connectez-vous si des fonctions réservées au compte sont nécessaires.",
+      "bannerReadonlyTitle": "Classe partagée (connexion requise)",
+      "bannerReadonlyHint": "Connectez-vous avec votre compte pour ouvrir cette classe.",
+      "bannerEditableTitle": "Classe partagée — copiable",
+      "bannerEditableHint": "Connectez-vous, puis enregistrez une copie dans Mes classes pour modifier, enseigner avec votre propre lien ou conserver une sauvegarde.",
+      "bannerSsoTitle": "Classe partagée (organisation)",
+      "bannerSsoHint": "Seuls les membres connectés via le SSO de votre organisation peuvent accéder à ce lien.",
+      "copyToMine": "Copier dans Mes classes",
+      "signInToCopy": "Se connecter pour copier",
+      "signIn": "Se connecter",
+      "copying": "Copie en cours…",
+      "copySuccess": "Classe copiée sur votre compte",
+      "copyFailed": "Impossible de copier cette classe",
+      "lectureAsAuto": "Vue lecture auto",
+      "lectureAsLecture": "Vue mode cours",
+      "lectureAsAutoTooltip": "Passer en lecture auto sur cet appareil uniquement (ne modifie pas le fichier de l'auteur)",
+      "lectureAsLectureTooltip": "Revenir au mode cours sur cet appareil uniquement (ne modifie pas le fichier de l'auteur)"
+    }
+  },
+  "sidebar": {
+    "addScene": "Ajouter une page",
+    "insertHere": "Insérer une nouvelle page ici"
+  },
+  "addScene": {
+    "title": "Ajouter une nouvelle page",
+    "typeLabel": "Choisir le type de page",
+    "typeSlide": "Diapositive",
+    "typeSlideDesc": "L'IA enseigne un sujet",
+    "typeQuiz": "Quiz",
+    "typeQuizDesc": "Quelques questions pour vérifier la compréhension",
+    "typeInteractive": "Interactif",
+    "typeInteractiveDesc": "Démo animée ou widget interactif",
+    "titleField": "Titre",
+    "titlePlaceholder": "ex. Comment fonctionne un neurone",
+    "descriptionField": "Description",
+    "descriptionPlaceholder": "Décrivez le but de cette page en une phrase ou deux",
+    "keyPointsField": "Points clés",
+    "keyPointPlaceholder": "Une idée clé que cette page doit aborder",
+    "addKeyPoint": "Ajouter un point clé",
+    "quizQuestionCount": "Nombre de questions",
+    "quizDifficulty": "Difficulté",
+    "difficultyEasy": "Facile",
+    "difficultyMedium": "Moyenne",
+    "difficultyHard": "Difficile",
+    "interactiveDesignIdea": "Idée de design (optionnel)",
+    "interactiveDesignIdeaPlaceholder": "Idée de mise en scène ou d'interaction (laisser vide pour laisser faire l'IA)",
+    "aiHint": "Après envoi, l'IA génère d'abord le contenu, puis les actions et l'audio. Vous pouvez continuer à éditer d'autres pages pendant ce temps.",
+    "generate": "Générer",
+    "generating": "Génération…",
+    "success": "Nouvelle page ajoutée à la classe",
+    "failed": "Échec de la génération",
+    "typeLocked": "Votre rôle ne peut pas créer ce type de page — contactez un admin pour obtenir l'accès",
+    "typeForbidden": "Votre rôle ne peut pas créer ce type de page",
+    "appendForbidden": "Votre rôle ne peut pas ajouter une page à la fin",
+    "insertForbidden": "Votre rôle ne peut pas insérer une page au milieu",
+    "noTypesAllowed": "Votre rôle n'a pour l'instant aucune autorisation d'ajout de page"
+  },
+  "speech": {
+    "staleBadge": "Audio désynchronisé",
+    "staleHint": "Cliquez pour vérifier et régénérer cette ligne",
+    "preview": "Aperçu",
+    "previewStop": "Arrêter l'aperçu",
+    "previewMissing": "Aucun audio — générez-le d'abord pour l'écouter",
+    "regenerateOne": "Régénérer cette ligne",
+    "regenerating": "Régénération…",
+    "regenSuccess": "Audio régénéré",
+    "regenFailed": "Échec de la régénération",
+    "staleSummary": "{{count}} ligne(s) sur {{total}} désynchronisée(s)",
+    "regenAllStale": "Régénérer tous les obsolètes ({{count}})",
+    "regenAllRunning": "Régénération {{done}} / {{total}}…",
+    "regenAllNoStale": "Tous les audios sont à jour",
+    "regenAllSummaryOk": "{{ok}} ligne(s) audio régénérée(s)",
+    "regenAllSummaryMixed": "{{ok}} régénérée(s), {{fail}} échec(s) ({{ids}})"
   },
   "classroom": {
     "recentClassrooms": "Récents",
@@ -314,7 +429,17 @@
     "delete": "Supprimer",
     "rename": "Renommer",
     "renamePlaceholder": "Entrez le nom de la classe",
-    "renameFailed": "Échec du renommage de la classe"
+    "renameFailed": "Échec du renommage de la classe",
+    "filterAll": "Tous",
+    "filterSynced": "Synchronisés",
+    "filterLocal": "Local uniquement",
+    "filterCloud": "Cloud uniquement",
+    "filterEmpty": "Aucune classe ne correspond à ce filtre",
+    "sourceLocalTooltip": "Disponible uniquement sur ce navigateur. Connectez-vous et enregistrez à nouveau pour synchroniser avec le cloud.",
+    "sourceCloudTooltip": "Disponible uniquement dans le cloud — ouvrez-la une fois pour la télécharger sur ce navigateur.",
+    "syncDeleteWarning": "Supprimée localement, mais la synchronisation cloud a échoué. Veuillez réessayer plus tard.",
+    "syncRenameWarning": "Renommée localement, mais la synchronisation cloud a échoué. Veuillez réessayer plus tard.",
+    "cloudListUnavailable": "La liste des classes du cloud est indisponible — affichage des classes locales de ce navigateur uniquement."
   },
   "upload": {
     "pdfSizeLimit": "Prend en charge les fichiers PDF jusqu'à 50 Mo",
@@ -552,6 +677,9 @@
     "keyboardShortcuts": "Raccourcis",
     "generalSettings": "Général",
     "systemSettings": "Système",
+    "profileSection": "Profil",
+    "profileSectionHint": "Mettez à jour votre pseudo, votre avatar et votre bio. Les agents IA s'adressent à vous par votre pseudo.",
+    "agentNamePresetsHint": "Les renommages ici s'appliquent globalement. Une salle de classe peut toujours définir ses propres noms.",
     "addProvider": "Ajouter",
     "importFromClipboard": "Importer depuis le presse-papiers",
     "apiSecret": "Clé API",
@@ -1010,5 +1138,76 @@
     "voice": "Voix",
     "speed": "Vitesse",
     "language": "Langue"
+  },
+  "editSource": {
+    "code": "Code",
+    "split": "Vue scindée",
+    "preview": "Aperçu",
+    "speech": "Script vocal",
+    "speechEmpty": "Aucune action vocale sur cette page"
+  },
+  "menu": {
+    "noPermission": "Vous n'avez pas l'autorisation d'utiliser cette fonctionnalité",
+    "route": {
+      "home": "Accueil",
+      "classroom": "Salle de classe",
+      "share": "Salle partagée",
+      "credits": "Crédits",
+      "recharge": "Recharger",
+      "generation": "Aperçu de la génération"
+    },
+    "home": {
+      "generate": "Générer une salle",
+      "deleteClassroom": "Supprimer la salle",
+      "renameClassroom": "Renommer la salle"
+    },
+    "header": {
+      "share": "Partager",
+      "shareLectureMode": "Partage · Mode cours",
+      "sync": "Synchroniser sur le cloud",
+      "export": "Exporter"
+    },
+    "sidebar": {
+      "addScene": "Ajouter une page",
+      "addSceneSlide": "Ajouter une page · Diapo de cours",
+      "addSceneQuiz": "Ajouter une page · Quiz",
+      "addSceneInteractive": "Ajouter une page · Interactive / animation",
+      "addSceneAppend": "Ajouter une page · Ajouter à la fin",
+      "addSceneInsert": "Ajouter une page · Insérer où l'on veut",
+      "reorderScenes": "Réorganiser les pages",
+      "deleteScene": "Supprimer la page"
+    },
+    "toolbar": {
+      "regenerate": "Régénérer cette page",
+      "editSource": "Modifier la source",
+      "lectureMode": "Mode présentation"
+    },
+    "settings": {
+      "providers": "Fournisseurs de modèles",
+      "image": "Génération d'images",
+      "video": "Génération de vidéos",
+      "tts": "Synthèse vocale",
+      "asr": "Reconnaissance vocale",
+      "pdf": "Traitement PDF",
+      "webSearch": "Recherche web",
+      "general": "Paramètres généraux",
+      "agents": "Renommer les agents",
+      "profile": "Profil personnel"
+    }
+  },
+  "agent": {
+    "editName": "Modifier le nom",
+    "saveName": "Enregistrer le nom",
+    "nameLabel": "Nom affiché",
+    "namePlaceholder": "Saisissez un nom affiché…",
+    "nameRequired": "Le nom ne peut pas être vide",
+    "resetToDefault": "Rétablir la valeur par défaut",
+    "renameSuccess": "Nom mis à jour",
+    "renameReset": "Nom par défaut rétabli",
+    "renameStaleHint": "Les répliques déjà générées peuvent encore mentionner l'ancien nom. Régénérez l'action concernée si nécessaire.",
+    "customName": "Nom personnalisé",
+    "customNameBadge": "Personnalisé",
+    "scopeStageDesc": "S'applique uniquement à la salle de classe actuelle et la suit lors du partage.",
+    "scopeGlobalDesc": "S'applique globalement à toutes vos salles de classe ; chaque salle peut le remplacer."
   }
 }

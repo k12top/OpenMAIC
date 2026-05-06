@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, Pencil, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/hooks/use-i18n';
+import { useMenuPerm } from '@/components/auth/menu-gate';
+import { toast } from 'sonner';
 
 interface AgentRevealModalProps {
   agents: Array<{
@@ -19,6 +21,13 @@ interface AgentRevealModalProps {
   onClose: () => void;
   /** Called once after all cards are revealed — signals generation can continue */
   onAllRevealed?: () => void;
+  /**
+   * Called when the user renames an agent in-place. Receives the agent
+   * id and the new (trimmed, non-empty) display name. Parent should
+   * persist the change (registry + IndexedDB + stage.generatedAgentConfigs)
+   * so the new name reaches subsequent generation prompts.
+   */
+  onAgentRename?: (agentId: string, newName: string) => void;
 }
 
 function isUrl(str: string): boolean {
@@ -42,7 +51,13 @@ const ROLE_ICONS: Record<string, string> = {
   student: '🎓',
 };
 
-export function AgentRevealModal({ agents, open, onClose, onAllRevealed }: AgentRevealModalProps) {
+export function AgentRevealModal({
+  agents,
+  open,
+  onClose,
+  onAllRevealed,
+  onAgentRename,
+}: AgentRevealModalProps) {
   const { t } = useI18n();
   const [revealedCount, setRevealedCount] = useState(0);
   const [flipsComplete, setFlipsComplete] = useState(false);
@@ -50,7 +65,43 @@ export function AgentRevealModal({ agents, open, onClose, onAllRevealed }: Agent
   const onAllRevealedRef = useRef(onAllRevealed);
   onAllRevealedRef.current = onAllRevealed;
 
+  // Inline rename state — only one card can be edited at a time
+  const canRenameAgents = useMenuPerm('settings.agents', 'operable');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState('');
+  const editInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  // Reset edit state whenever the modal closes so reopens start fresh
+  useEffect(() => {
+    if (!open) {
+      setEditingId(null);
+      setDraftName('');
+    }
+  }, [open]);
+
   const allRevealed = revealedCount >= agents.length && agents.length > 0;
+
+  const startEdit = (agentId: string, currentName: string) => {
+    setDraftName(currentName);
+    setEditingId(agentId);
+  };
+
+  const commitEdit = (agentId: string) => {
+    const trimmed = draftName.trim();
+    if (!trimmed) {
+      toast.error(t('agent.nameRequired'));
+      return;
+    }
+    onAgentRename?.(agentId, trimmed);
+    setEditingId(null);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -246,12 +297,69 @@ export function AgentRevealModal({ agents, open, onClose, onAllRevealed }: Agent
 
                           {/* Name + role row */}
                           <div className="mt-1.5 flex flex-col items-center gap-0.5 px-3">
-                            <h3
-                              className="max-w-full truncate text-center text-[13px] font-bold tracking-wide"
-                              style={{ color: agent.color }}
-                            >
-                              {agent.name}
-                            </h3>
+                            {editingId === agent.id ? (
+                              <div className="flex items-center gap-1 w-full max-w-[160px]">
+                                <input
+                                  ref={editInputRef}
+                                  type="text"
+                                  value={draftName}
+                                  onChange={(e) => setDraftName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      commitEdit(agent.id);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      setEditingId(null);
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="min-w-0 flex-1 h-6 text-[13px] font-bold text-center bg-transparent border rounded px-1 outline-none focus:ring-1 focus:ring-current"
+                                  style={{
+                                    color: agent.color,
+                                    borderColor: `${agent.color}55`,
+                                  }}
+                                  placeholder={t('agent.namePlaceholder')}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    commitEdit(agent.id);
+                                  }}
+                                  className="size-5 flex items-center justify-center rounded-full shrink-0"
+                                  style={{ color: agent.color }}
+                                  aria-label={t('agent.saveName')}
+                                  title={t('agent.saveName')}
+                                >
+                                  <Check className="size-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="group flex items-center gap-1 max-w-full">
+                                <h3
+                                  className="max-w-full truncate text-center text-[13px] font-bold tracking-wide"
+                                  style={{ color: agent.color }}
+                                >
+                                  {agent.name}
+                                </h3>
+                                {onAgentRename && allRevealed && canRenameAgents && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startEdit(agent.id, agent.name);
+                                    }}
+                                    className="size-4 flex items-center justify-center rounded opacity-0 group-hover:opacity-60 hover:opacity-100 transition-opacity shrink-0"
+                                    style={{ color: agent.color }}
+                                    aria-label={t('agent.editName')}
+                                    title={t('agent.editName')}
+                                  >
+                                    <Pencil className="size-3" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
                             <span
                               className="inline-flex items-center gap-1 rounded-full px-2 py-px text-[10px] font-medium"
                               style={{

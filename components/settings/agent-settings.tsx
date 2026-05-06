@@ -1,12 +1,18 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, User, Users, Sparkles, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, User, Users, Sparkles, Info, Pencil, RotateCcw, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useSettingsStore } from '@/lib/store/settings';
+import { resolveAgentName } from '@/lib/agents/resolve-name';
+import { useMenuPerm } from '@/components/auth/menu-gate';
+import { toast } from 'sonner';
 
 interface Agent {
   id: string;
@@ -37,17 +43,55 @@ export function AgentSettings({
   onAgentModeChange,
 }: AgentSettingsProps) {
   const { t } = useI18n();
+  const agentNamePresets = useSettingsStore((s) => s.agentNamePresets);
+  const setAgentNamePreset = useSettingsStore((s) => s.setAgentNamePreset);
+  const canRenameAgents = useMenuPerm('settings.agents', 'operable');
 
-  const getAgentName = (agent: Agent) => {
-    const key = `settings.agentNames.${agent.id}`;
-    const translated = t(key);
-    return translated !== key ? translated : agent.name;
-  };
+  const getAgentName = (agent: Agent) =>
+    resolveAgentName(agent.id, agent.name, { settingsPresets: agentNamePresets, t });
 
   const getAgentRole = (agent: Agent) => {
     const key = `settings.agentRoles.${agent.role}`;
     const translated = t(key);
     return translated !== key ? translated : agent.role;
+  };
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingId]);
+
+  const startEdit = (agent: Agent) => {
+    if (!canRenameAgents) return;
+    setDraftName(getAgentName(agent));
+    setEditingId(agent.id);
+  };
+
+  const commitEdit = (agent: Agent) => {
+    if (!canRenameAgents) return;
+    const trimmed = draftName.trim();
+    if (!trimmed) {
+      toast.error(t('agent.nameRequired'));
+      return;
+    }
+    setAgentNamePreset(agent.id, trimmed);
+    setEditingId(null);
+    toast.success(t('agent.renameSuccess'), {
+      description: t('agent.renameStaleHint'),
+    });
+  };
+
+  const resetEdit = (agent: Agent) => {
+    if (!canRenameAgents) return;
+    setAgentNamePreset(agent.id, null);
+    setEditingId(null);
+    toast.success(t('agent.renameReset'));
   };
 
   return (
@@ -92,41 +136,122 @@ export function AgentSettings({
             </div>
 
             <div className="space-y-2 border rounded-lg p-2 bg-muted/30">
-              {agents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className={cn(
-                    'flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer',
-                    selectedAgentIds.includes(agent.id)
-                      ? 'bg-primary/10 border-primary/50 shadow-sm'
-                      : 'bg-background hover:bg-muted/50 border-transparent',
-                  )}
-                  onClick={() => onToggleAgent(agent.id)}
-                >
-                  <Checkbox
-                    id={`agent-${agent.id}`}
-                    checked={selectedAgentIds.includes(agent.id)}
-                    onCheckedChange={() => onToggleAgent(agent.id)}
-                    disabled={agent.role === 'teacher'}
-                  />
-                  <Avatar className="size-10">
-                    <AvatarImage src={agent.avatar} alt={getAgentName(agent)} />
-                    <AvatarFallback>{getAgentName(agent).charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm flex items-center gap-1.5">
-                      {getAgentName(agent)}
-                      {agent.role === 'teacher' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 leading-none">
-                          {t('settings.required')}
-                        </span>
+              {agents.map((agent) => {
+                const isEditing = editingId === agent.id;
+                const hasOverride = !!agentNamePresets[agent.id];
+                return (
+                  <div
+                    key={agent.id}
+                    className={cn(
+                      'flex items-center space-x-3 p-3 rounded-lg border transition-all',
+                      isEditing ? 'cursor-default' : 'cursor-pointer',
+                      selectedAgentIds.includes(agent.id)
+                        ? 'bg-primary/10 border-primary/50 shadow-sm'
+                        : 'bg-background hover:bg-muted/50 border-transparent',
+                    )}
+                    onClick={() => {
+                      if (isEditing) return;
+                      onToggleAgent(agent.id);
+                    }}
+                  >
+                    <Checkbox
+                      id={`agent-${agent.id}`}
+                      checked={selectedAgentIds.includes(agent.id)}
+                      onCheckedChange={() => onToggleAgent(agent.id)}
+                      disabled={agent.role === 'teacher'}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Avatar className="size-10">
+                      <AvatarImage src={agent.avatar} alt={getAgentName(agent)} />
+                      <AvatarFallback>{getAgentName(agent).charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                        <div
+                          className="flex items-center gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Input
+                            ref={inputRef}
+                            value={draftName}
+                            onChange={(e) => setDraftName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                commitEdit(agent);
+                              } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setEditingId(null);
+                              }
+                            }}
+                            placeholder={t('agent.namePlaceholder')}
+                            className="h-7 text-sm px-2"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-7"
+                            onClick={() => commitEdit(agent)}
+                            aria-label={t('agent.saveName')}
+                          >
+                            <Check className="size-3.5" />
+                          </Button>
+                          {hasOverride && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-7 text-muted-foreground"
+                              onClick={() => resetEdit(agent)}
+                              aria-label={t('agent.resetToDefault')}
+                              title={t('agent.resetToDefault')}
+                            >
+                              <RotateCcw className="size-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="font-medium text-sm flex items-center gap-1.5 group">
+                          <span className="truncate">{getAgentName(agent)}</span>
+                          {agent.role === 'teacher' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 leading-none">
+                              {t('settings.required')}
+                            </span>
+                          )}
+                          {hasOverride && (
+                            <span
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground leading-none"
+                              title={t('agent.customName')}
+                            >
+                              {t('agent.customNameBadge')}
+                            </span>
+                          )}
+                          {canRenameAgents && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEdit(agent);
+                              }}
+                              className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5 hover:bg-muted"
+                              aria-label={t('agent.editName')}
+                              title={t('agent.editName')}
+                            >
+                              <Pencil className="size-3 text-muted-foreground" />
+                            </button>
+                          )}
+                        </div>
                       )}
+                      <div className="text-xs text-muted-foreground">{getAgentRole(agent)}</div>
                     </div>
-                    <div className="text-xs text-muted-foreground">{getAgentRole(agent)}</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            <p className="text-xs text-muted-foreground -mt-1">
+              {t('settings.agentNamePresetsHint')}
+            </p>
 
             {/* Mode indicator */}
             <div

@@ -8,7 +8,8 @@
     },
     "home": {
         "slogan": "Interactive classroom & AI document creation",
-        "greetingWithName": "Hi, {{name}}"
+        "greetingWithName": "Hi, {{name}}",
+        "loginFailed": "Sign-in failed. Please try again."
     },
     "landing": {
         "badge": "AI-Powered Courseware Platform",
@@ -45,6 +46,8 @@
         "webSearchOff": "Click to enable",
         "outlineConfirmOn": "Pause for me to review the outline",
         "outlineConfirmOff": "Click to pause after outline generation for review",
+        "parallelOnTooltip": "Parallel generation ON: scenes generate concurrently in batches for ~3× speedup. Pros: real speech continuity preserved across batches. Cons: scenes 2-3 within the same batch don't reference each other's lines; upstream LLM/TTS pressure increases ~K× and rate-limited scenes will land in the failed list for one-click retry. Click to restore sequential generation.",
+        "parallelOffTooltip": "Sequential generation (default): scenes are generated one by one with fully continuous speech context. Click to enable parallel mode for ~2-3× speedup at the cost of some intra-batch continuity.",
         "webSearchDesc": "Search the web for up-to-date information before generation",
         "webSearchProvider": "Search engine",
         "webSearchNoProvider": "Configure search API key in Settings",
@@ -58,7 +61,11 @@
         "ttsPreview": "Preview",
         "ttsPreviewing": "Playing...",
         "toggleChat": "Toggle chat panel",
-        "openChatPanel": "Open chat panel"
+        "openChatPanel": "Open chat panel",
+        "voiceSettings": "Voice settings",
+        "lectureModeOn": "Lecture mode",
+        "lectureModeOff": "Auto mode",
+        "lectureModeTooltip": "Lecture/auto mode: lecture mode hides the central play button and mutes AI narration so the teacher can present"
     },
     "export": {
         "pptx": "Export PPTX",
@@ -181,7 +188,9 @@
         "mediaPromptsLabel": "Media prompts",
         "mediaPromptsHint": "Adjust the prompt for each image or video",
         "startRegenerate": "Start regenerating",
-        "ownerOnly": "Visible only to the classroom owner"
+        "ownerOnly": "Visible only to the classroom owner",
+        "syncSuccess": "Successfully synced to cloud",
+        "syncFailed": "Failed to sync to cloud"
     },
     "whiteboard": {
         "title": "Interactive Whiteboard",
@@ -318,7 +327,113 @@
         }
     },
     "share": {
-        "notReady": "Available after generation completes"
+        "notReady": "Available after generation completes",
+        "title": "Share & Collaborate",
+        "createLink": "Create share link",
+        "applyModeChange": "Update share mode",
+        "loading": "Loading…",
+        "linkCopied": "Link copied",
+        "linkCreated": "Share link created",
+        "modeUpdated": "Share mode updated",
+        "createFailed": "Failed to create share link",
+        "revoke": "Revoke link",
+        "revoked": "Revoked",
+        "revokeFailed": "Failed to revoke",
+        "modePublic": "Public",
+        "modePublicDesc": "Anyone with the link can view",
+        "modeReadonly": "Sign-in required",
+        "modeReadonlyDesc": "Recipients must sign in before they can view this classroom",
+        "modeEditable": "Copy-able",
+        "modeEditableDesc": "Recipients must sign in; once signed in they can save a copy to their own classrooms",
+        "modeSso": "Organization only",
+        "modeSsoDesc": "Only members of your organization can view",
+        "persistentBadge": "Persistent link",
+        "persistentHint": "Each classroom keeps a single persistent link per author. After editing, click \"Push latest now\" to sync changes to all viewers.",
+        "pushLatest": "Push latest now",
+        "pushing": "Pushing…",
+        "pushFailed": "Push failed",
+        "pushSuccessClean": "Share is up to date — all media in sync",
+        "pushSuccessSummary": "Share updated ({{uploaded}}/{{total}} media re-uploaded, {{skipped}} skipped)",
+        "pushExplanation": "\"Push latest now\" first syncs your current edits to the cloud, then re-uploads any missing speech audio or images.",
+        "lectureModeLabel": "Classroom (lecture) mode",
+        "lectureModeDesc": "When on, viewers open the share in lecture mode: the central play button is hidden and AI narration is muted so the teacher can present.",
+        "lectureModeOn": "Classroom mode enabled",
+        "lectureModeOff": "Classroom mode disabled",
+        "viewer": {
+            "bannerPublicTitle": "Shared classroom (public)",
+            "bannerPublicHint": "Anyone with this link can view. Sign in if you need account-only features.",
+            "bannerReadonlyTitle": "Shared classroom (sign-in)",
+            "bannerReadonlyHint": "Sign in with your account to open this classroom.",
+            "bannerEditableTitle": "Shared classroom — you can copy it",
+            "bannerEditableHint": "Sign in, then save a copy under My Classrooms to edit, teach from your own link, or keep a backup.",
+            "bannerSsoTitle": "Shared classroom (organization)",
+            "bannerSsoHint": "Only members signed in through your organization can access this link.",
+            "copyToMine": "Copy to My Classrooms",
+            "signInToCopy": "Sign in to copy",
+            "signIn": "Sign in",
+            "copying": "Copying…",
+            "copySuccess": "Classroom copied to your account",
+            "copyFailed": "Could not copy this classroom",
+            "lectureAsAuto": "Auto-play view",
+            "lectureAsLecture": "Lecture view",
+            "lectureAsAutoTooltip": "Switch to auto-play on this device only (does not change the author’s file)",
+            "lectureAsLectureTooltip": "Switch back to lecture mode on this device only"
+        }
+    },
+    "sidebar": {
+        "addScene": "Add page",
+        "insertHere": "Insert a new page here"
+    },
+    "addScene": {
+        "title": "Add a new page",
+        "typeLabel": "Choose page type",
+        "typeSlide": "Slide",
+        "typeSlideDesc": "AI teacher walks through a topic",
+        "typeQuiz": "Quiz",
+        "typeQuizDesc": "A few questions to check understanding",
+        "typeInteractive": "Interactive",
+        "typeInteractiveDesc": "Animated demo or interactive widget",
+        "titleField": "Title",
+        "titlePlaceholder": "e.g. How a neuron fires",
+        "descriptionField": "Description",
+        "descriptionPlaceholder": "Describe what this page should teach in a sentence or two",
+        "keyPointsField": "Key points",
+        "keyPointPlaceholder": "A core idea this page should cover",
+        "addKeyPoint": "Add key point",
+        "quizQuestionCount": "Question count",
+        "quizDifficulty": "Difficulty",
+        "difficultyEasy": "Easy",
+        "difficultyMedium": "Medium",
+        "difficultyHard": "Hard",
+        "interactiveDesignIdea": "Design hint (optional)",
+        "interactiveDesignIdeaPlaceholder": "Any UX or visualisation idea (leave blank to let AI decide)",
+        "aiHint": "After submit, AI will draft the content first, then generate actions and speech. You can keep editing other pages while it runs.",
+        "generate": "Generate",
+        "generating": "Generating…",
+        "success": "New page added to the classroom",
+        "failed": "Generation failed",
+        "typeLocked": "Your role is not allowed to create this scene type — contact an admin to request access",
+        "typeForbidden": "Your role is not allowed to create this scene type",
+        "appendForbidden": "Your role is not allowed to append a new page at the end",
+        "insertForbidden": "Your role is not allowed to insert a new page in the middle",
+        "noTypesAllowed": "Your role is not currently granted any add-scene type"
+    },
+    "speech": {
+        "staleBadge": "Audio out of sync",
+        "staleHint": "Click to review and regenerate this line",
+        "preview": "Preview",
+        "previewStop": "Stop preview",
+        "previewMissing": "No audio yet — generate it first to preview",
+        "regenerateOne": "Regenerate this line",
+        "regenerating": "Regenerating…",
+        "regenSuccess": "Speech regenerated",
+        "regenFailed": "Regeneration failed",
+        "staleSummary": "{{count}} of {{total}} lines out of sync",
+        "regenAllStale": "Regenerate all stale ({{count}})",
+        "regenAllRunning": "Regenerating {{done}} / {{total}}…",
+        "regenAllNoStale": "All speech up to date",
+        "regenAllSummaryOk": "{{ok}} speech line(s) regenerated",
+        "regenAllSummaryMixed": "{{ok}} regenerated, {{fail}} failed ({{ids}})"
     },
     "classroom": {
         "recentClassrooms": "Recent",
@@ -331,7 +446,17 @@
         "delete": "Delete",
         "rename": "Rename",
         "renamePlaceholder": "Enter classroom name",
-        "renameFailed": "Failed to rename classroom"
+        "renameFailed": "Failed to rename classroom",
+        "filterAll": "All",
+        "filterSynced": "Synced",
+        "filterLocal": "Local only",
+        "filterCloud": "Cloud only",
+        "filterEmpty": "No classrooms match this filter",
+        "sourceLocalTooltip": "Only on this browser. Sign in and re-save to push to the cloud.",
+        "sourceCloudTooltip": "Only in the cloud — open it once to download to this browser.",
+        "syncDeleteWarning": "Deleted locally but cloud sync failed. Please retry later.",
+        "syncRenameWarning": "Renamed locally but cloud sync failed. Please retry later.",
+        "cloudListUnavailable": "Cloud classroom list is unavailable — showing this browser's local classrooms only."
     },
     "upload": {
         "pdfSizeLimit": "Supports PDF files up to 50MB",
@@ -571,6 +696,9 @@
         "keyboardShortcuts": "Shortcuts",
         "generalSettings": "General",
         "systemSettings": "System",
+        "profileSection": "Profile",
+        "profileSectionHint": "Update your nickname, avatar and bio. Your nickname is used by AI agents when addressing you.",
+        "agentNamePresetsHint": "Renames here apply globally. A specific classroom can still override these names.",
         "addProvider": "Add",
         "importFromClipboard": "Import from Clipboard",
         "apiSecret": "API Key",
@@ -1154,6 +1282,72 @@
     "editSource": {
         "code": "Code",
         "split": "Split",
-        "preview": "Preview"
+        "preview": "Preview",
+        "speech": "Speech",
+        "speechEmpty": "This page has no speech actions"
+    },
+    "menu": {
+        "noPermission": "You don't have permission to use this feature",
+        "route": {
+            "home": "Home",
+            "classroom": "Classroom",
+            "share": "Shared classroom",
+            "credits": "Credits",
+            "recharge": "Recharge",
+            "generation": "Generation preview"
+        },
+        "home": {
+            "generate": "Generate classroom",
+            "deleteClassroom": "Delete classroom",
+            "renameClassroom": "Rename classroom"
+        },
+        "header": {
+            "share": "Share",
+            "shareLectureMode": "Share · Classroom mode",
+            "sync": "Sync to cloud",
+            "export": "Export"
+        },
+        "sidebar": {
+            "addScene": "Add scene",
+            "addSceneSlide": "Add scene · Lecture slide",
+            "addSceneQuiz": "Add scene · Quiz",
+            "addSceneInteractive": "Add scene · Interactive / animation",
+            "addSceneAppend": "Add scene · Append at end",
+            "addSceneInsert": "Add scene · Insert anywhere",
+            "reorderScenes": "Reorder scenes",
+            "deleteScene": "Delete scene"
+        },
+        "toolbar": {
+            "regenerate": "Regenerate scene",
+            "editSource": "Edit source",
+            "lectureMode": "Lecture mode toggle"
+        },
+        "settings": {
+            "providers": "Model providers",
+            "image": "Image generation",
+            "video": "Video generation",
+            "tts": "Text-to-speech",
+            "asr": "Speech-to-text",
+            "pdf": "PDF processing",
+            "webSearch": "Web search",
+            "general": "General settings",
+            "agents": "Agent rename",
+            "profile": "Personal profile"
+        }
+    },
+    "agent": {
+        "editName": "Edit name",
+        "saveName": "Save name",
+        "nameLabel": "Display name",
+        "namePlaceholder": "Enter a display name…",
+        "nameRequired": "Name cannot be empty",
+        "resetToDefault": "Reset to default",
+        "renameSuccess": "Name updated",
+        "renameReset": "Reverted to the default name",
+        "renameStaleHint": "Already-generated speech may still mention the old name. Regenerate any individual action if needed.",
+        "customName": "Custom name",
+        "customNameBadge": "Custom",
+        "scopeStageDesc": "Applies only to the current classroom and follows it when shared.",
+        "scopeGlobalDesc": "Applies globally for you across all classrooms unless a specific classroom overrides it."
     }
 }

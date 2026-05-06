@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { requireAuth, UnauthenticatedError } from '@/lib/server/auth-guard';
+import { assertMenuPerm, ForbiddenError } from '@/lib/server/menu-guard';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { readClassroom } from '@/lib/server/classroom-storage';
@@ -94,22 +95,64 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Classroom not found' }, { status: 404 });
     }
 
-    const shareToken = nanoid(16);
-    await db.insert(schema.shares).values({
-      classroomId,
-      userId: user.id,
-      shareToken,
-      mode: mode as 'public' | 'readonly' | 'editable' | 'sso',
+    // RBAC: gate the share action by `header.share` operable. Owners are
+    // bypassed automatically (matches client-side `useMenuPerm`).
+    await assertMenuPerm(user, 'header.share', 'operable', {
+      isResourceOwner: classroom.userId === user.id,
+      resourceId: classroomId,
     });
 
+    // Persistent-link model: at most one share row per (classroom, user).
+    // Reuse the existing token if the user already shared this classroom;
+    // only the mode may change. Avoids breaking older links handed to
+    // students when the owner re-clicks "Share".
+    const existing = await db.query.shares.findFirst({
+      where: and(
+        eq(schema.shares.classroomId, classroomId),
+        eq(schema.shares.userId, user.id),
+      ),
+    });
+
+    if (existing) {
+      if (existing.mode !== mode) {
+        await db
+          .update(schema.shares)
+          .set({ mode: mode as 'public' | 'readonly' | 'editable' | 'sso' })
+          .where(eq(schema.shares.id, existing.id));
+      }
+      return NextResponse.json({
+        id: existing.id,
+        shareToken: existing.shareToken,
+        mode,
+        url: `/share/${existing.shareToken}`,
+        reused: true,
+      });
+    }
+
+    const shareToken = nanoid(16);
+    const inserted = await db
+      .insert(schema.shares)
+      .values({
+        classroomId,
+        userId: user.id,
+        shareToken,
+        mode: mode as 'public' | 'readonly' | 'editable' | 'sso',
+      })
+      .returning({ id: schema.shares.id });
+
     return NextResponse.json({
+      id: inserted[0]?.id,
       shareToken,
       mode,
       url: `/share/${shareToken}`,
+      reused: false,
     });
   } catch (err) {
     if (err instanceof UnauthenticatedError) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (err instanceof ForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden', detail: err.message }, { status: 403 });
     }
     console.error('[ShareAPI] POST error:', err);
     const message = err instanceof Error ? err.message : String(err);
@@ -179,12 +222,21 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }
 
+    // Same gate as POST — revoke is part of the share feature surface.
+    await assertMenuPerm(user, 'header.share', 'operable', {
+      isResourceOwner: true,
+      resourceId: share.classroomId,
+    });
+
     await db.delete(schema.shares).where(eq(schema.shares.id, shareId));
 
     return NextResponse.json({ success: true });
   } catch (err) {
     if (err instanceof UnauthenticatedError) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    if (err instanceof ForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden', detail: err.message }, { status: 403 });
     }
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

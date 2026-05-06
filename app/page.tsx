@@ -1,71 +1,87 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  ArrowUp,
-  BookOpen,
-  Check,
-  ChevronDown,
-  Clock,
-  Coins,
-  Copy,
-  ImagePlus,
-  Pencil,
-  Trash2,
-  Settings,
-  Sun,
-  Moon,
-  Monitor,
-  BotOff,
-  ChevronUp,
-  LogIn,
-  LogOut,
-  Volume2,
-  CheckCircle2,
-} from 'lucide-react';
-import { useI18n } from '@/lib/hooks/use-i18n';
-import { LanguageSwitcher } from '@/components/language-switcher';
-import { createLogger } from '@/lib/logger';
-import { Button } from '@/components/ui/button';
-import { Textarea as UITextarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { SettingsDialog } from '@/components/settings';
-import { GenerationToolbar } from '@/components/generation/generation-toolbar';
 import { AgentBar } from '@/components/agent/agent-bar';
-import { useTheme } from '@/lib/hooks/use-theme';
-import { nanoid } from 'nanoid';
-import { storePdfBlob } from '@/lib/utils/image-storage';
-import type { UserRequirements } from '@/lib/types/generation';
-import { useSettingsStore } from '@/lib/store/settings';
-import { useUserProfileStore, AVATAR_OPTIONS } from '@/lib/store/user-profile';
-import {
-  StageListItem,
-  listStages,
-  deleteStageData,
-  renameStage,
-  getFirstSlideByStages,
-} from '@/lib/utils/stage-storage';
-import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
-import type { Slide } from '@/lib/types/slides';
-import { useMediaGenerationStore } from '@/lib/store/media-generation';
-import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDraftCache } from '@/lib/hooks/use-draft-cache';
 import { SpeechButton } from '@/components/audio/speech-button';
-import { LandingPage } from '@/components/landing/landing-page';
 import { Can } from '@/components/auth/can';
+import { MenuGate } from '@/components/auth/menu-gate';
+import { GenerationToolbar } from '@/components/generation/generation-toolbar';
+import { LandingPage } from '@/components/landing/landing-page';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { SettingsDialog } from '@/components/settings';
+import { ThumbnailSlide } from '@/components/slide-renderer/components/ThumbnailSlide';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BRAND_NAME } from '@/lib/constants/brand';
+import { useDraftCache } from '@/lib/hooks/use-draft-cache';
+import { useI18n } from '@/lib/hooks/use-i18n';
+import { useTheme } from '@/lib/hooks/use-theme';
+import { createLogger } from '@/lib/logger';
+import { useMediaGenerationStore } from '@/lib/store/media-generation';
+import { useSettingsStore } from '@/lib/store/settings';
+import { AVATAR_OPTIONS, useUserProfileStore } from '@/lib/store/user-profile';
+import type { UserRequirements } from '@/lib/types/generation';
+import type { Slide } from '@/lib/types/slides';
+import { cn } from '@/lib/utils';
+import { storePdfBlob } from '@/lib/utils/image-storage';
+import {
+    StageListItem,
+    deleteStageData,
+    getFirstSlideByStages,
+    listStages,
+    renameStage,
+} from '@/lib/utils/stage-storage';
+import {
+    ArrowUp,
+    BookOpen,
+    BotOff,
+    CheckCircle2,
+    Clock,
+    Cloud,
+    Coins,
+    Copy,
+    HardDrive,
+    LogIn,
+    LogOut,
+    Monitor,
+    Moon,
+    Pencil,
+    Settings,
+    Sun,
+    Trash2
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { nanoid } from 'nanoid';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 const log = createLogger('Home');
 
 const WEB_SEARCH_STORAGE_KEY = 'webSearchEnabled';
 const OUTLINE_CONFIRM_STORAGE_KEY = 'outlineConfirmEnabled';
+const PARALLEL_GEN_STORAGE_KEY = 'parallelGenerationEnabled';
 const LANGUAGE_STORAGE_KEY = 'generationLanguage';
 const RECENT_OPEN_STORAGE_KEY = 'recentClassroomsOpen';
+const CLASSROOM_FILTER_STORAGE_KEY = 'classroomFilter';
+
+type ClassroomSource = 'local' | 'cloud' | 'synced';
+type ClassroomFilter = 'all' | 'synced' | 'local' | 'cloud';
+
+interface ClassroomGridItem extends StageListItem {
+    source: ClassroomSource;
+}
+
+interface CloudClassroomItem {
+    id: string;
+    title?: string;
+    language?: string;
+    status?: string;
+    sceneCount?: number;
+    createdAt?: number;
+    updatedAt?: number;
+}
 
 interface FormState {
   pdfFile: File | null;
@@ -73,6 +89,7 @@ interface FormState {
   language: string;
   webSearch: boolean;
   outlineConfirm: boolean;
+  parallelGeneration: boolean;
 }
 
 const initialFormState: FormState = {
@@ -81,6 +98,7 @@ const initialFormState: FormState = {
   language: 'zh-CN',
   webSearch: false,
   outlineConfirm: true,
+  parallelGeneration: false,
 };
 
 function HomePage() {
@@ -88,6 +106,7 @@ function HomePage() {
   const { theme, setTheme } = useTheme();
   const { nickname } = useUserProfileStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<
@@ -101,6 +120,8 @@ function HomePage() {
   // Model setup state
   const currentModelId = useSettingsStore((s) => s.modelId);
   const [recentOpen, setRecentOpen] = useState(true);
+  const [classroomFilter, setClassroomFilter] = useState<ClassroomFilter>('all');
+  const [cloudListAvailable, setCloudListAvailable] = useState(true);
 
   // Credits
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -124,6 +145,21 @@ function HomePage() {
       .catch(() => {});
   }, []);
 
+  // Surface auth-callback failures (?error=auth_failed&reason=...). The
+  // callback bounces back here when token exchange / Casdoor returns
+  // anything unexpected, so without this effect the user sees a silently
+  // unauthenticated home page and assumes login worked.
+  useEffect(() => {
+    const error = searchParams?.get('error');
+    if (error !== 'auth_failed') return;
+    const reason = searchParams?.get('reason') || '';
+    const message = reason
+      ? `${t('home.loginFailed')} (${reason})`
+      : t('home.loginFailed');
+    toast.error(message);
+    router.replace('/');
+  }, [searchParams, router, t]);
+
   // Hydrate client-only state after mount (avoids SSR mismatch)
   /* eslint-disable react-hooks/set-state-in-effect -- Hydration from localStorage must happen in effect */
   useEffect(() => {
@@ -134,8 +170,22 @@ function HomePage() {
       /* localStorage unavailable */
     }
     try {
+      const savedFilter = localStorage.getItem(CLASSROOM_FILTER_STORAGE_KEY);
+      if (
+        savedFilter === 'all' ||
+        savedFilter === 'synced' ||
+        savedFilter === 'local' ||
+        savedFilter === 'cloud'
+      ) {
+        setClassroomFilter(savedFilter);
+      }
+    } catch {
+      /* localStorage unavailable */
+    }
+    try {
       const savedWebSearch = localStorage.getItem(WEB_SEARCH_STORAGE_KEY);
       const savedOutlineConfirm = localStorage.getItem(OUTLINE_CONFIRM_STORAGE_KEY);
+      const savedParallelGen = localStorage.getItem(PARALLEL_GEN_STORAGE_KEY);
       const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
       const updates: Partial<FormState> = {};
       if (savedWebSearch === 'true') updates.webSearch = true;
@@ -144,6 +194,13 @@ function HomePage() {
         updates.outlineConfirm = savedOutlineConfirm !== 'false';
       } else {
         updates.outlineConfirm = useSettingsStore.getState().outlineConfirmEnabled ?? true;
+      }
+      // Parallel generation: per-task override falls back to global persisted setting (default false).
+      if (savedParallelGen !== null) {
+        updates.parallelGeneration = savedParallelGen === 'true';
+      } else {
+        updates.parallelGeneration =
+          useSettingsStore.getState().parallelGenerationEnabled ?? false;
       }
       if (savedLanguage) {
         updates.language = savedLanguage;
@@ -172,7 +229,7 @@ function HomePage() {
 
   const [themeOpen, setThemeOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [classrooms, setClassrooms] = useState<StageListItem[]>([]);
+  const [classrooms, setClassrooms] = useState<ClassroomGridItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<string, Slide>>({});
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -192,13 +249,111 @@ function HomePage() {
 
   const loadClassrooms = async () => {
     try {
-      const list = await listStages();
-      setClassrooms(list);
-      // Load first slide thumbnails
-      if (list.length > 0) {
-        const slides = await getFirstSlideByStages(list.map((c) => c.id));
-        setThumbnails(slides);
+      // Merge two sources: local IndexedDB (instant, may be empty in a fresh
+      // browser) and cloud `/api/classrooms` (authoritative for the user's
+      // owned classrooms across devices). Either failure degrades silently —
+      // the home page must always render whatever it can.
+      const [localRes, cloudRes] = await Promise.allSettled([
+        listStages(),
+        fetch('/api/classrooms', { credentials: 'same-origin' }).then(async (r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return (await r.json()) as { items?: CloudClassroomItem[] };
+        }),
+      ]);
+
+      const local: StageListItem[] =
+        localRes.status === 'fulfilled' ? localRes.value : [];
+      let cloud: CloudClassroomItem[] = [];
+      if (cloudRes.status === 'fulfilled') {
+        cloud = Array.isArray(cloudRes.value?.items) ? cloudRes.value.items : [];
+        setCloudListAvailable(true);
+      } else {
+        setCloudListAvailable(false);
+        log.warn('Cloud classroom listing failed, using local only:', cloudRes.reason);
       }
+
+      const map = new Map<string, ClassroomGridItem>();
+      for (const l of local) {
+        map.set(l.id, { ...l, source: 'local' });
+      }
+      for (const c of cloud) {
+        if (!c?.id) continue;
+        const cloudUpdated = c.updatedAt ?? 0;
+        const cloudCreated = c.createdAt ?? cloudUpdated;
+        const cloudSceneCount = Number(c.sceneCount ?? 0);
+        const prev = map.get(c.id);
+        if (!prev) {
+          map.set(c.id, {
+            id: c.id,
+            name: c.title || c.id,
+            description: undefined,
+            sceneCount: cloudSceneCount,
+            createdAt: cloudCreated,
+            updatedAt: cloudUpdated,
+            source: 'cloud',
+          });
+        } else {
+          // Both sides have the row — pick the newer fields and mark synced.
+          // For sceneCount, trust whichever side reports more (the local
+          // IndexedDB sometimes lags briefly during background generation,
+          // and the cloud only reflects what the last sync flushed; the max
+          // of the two is the closest to "what the user actually sees").
+          const merged: ClassroomGridItem = {
+            ...prev,
+            source: 'synced',
+            sceneCount: Math.max(prev.sceneCount ?? 0, cloudSceneCount),
+          };
+          if (cloudUpdated > prev.updatedAt) {
+            merged.name = c.title || prev.name;
+            merged.updatedAt = cloudUpdated;
+          }
+          if (cloudCreated && (!prev.createdAt || cloudCreated < prev.createdAt)) {
+            merged.createdAt = cloudCreated;
+          }
+          map.set(c.id, merged);
+        }
+      }
+
+      const merged = Array.from(map.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+      setClassrooms(merged);
+
+      // Thumbnails: hydrate locally for items we have in IndexedDB, then
+      // ask the server for any cloud-only IDs. Local results win when both
+      // exist (cheaper, no network round trip).
+      const localIds = local.map((l) => l.id);
+      const cloudOnlyIds = merged
+        .filter((m) => m.source === 'cloud')
+        .map((m) => m.id);
+
+      const [localThumbs, cloudThumbs] = await Promise.allSettled([
+        localIds.length > 0
+          ? getFirstSlideByStages(localIds)
+          : Promise.resolve({} as Record<string, Slide>),
+        cloudOnlyIds.length > 0
+          ? fetch(
+              `/api/classrooms/thumbnails?ids=${encodeURIComponent(cloudOnlyIds.join(','))}`,
+              { credentials: 'same-origin' },
+            ).then(async (r) => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return (await r.json()) as { items?: Record<string, Slide | null> };
+            })
+          : Promise.resolve({ items: {} } as { items: Record<string, Slide | null> }),
+      ]);
+
+      const next: Record<string, Slide> = {};
+      if (cloudThumbs.status === 'fulfilled') {
+        const items = cloudThumbs.value?.items ?? {};
+        for (const [id, slide] of Object.entries(items)) {
+          if (slide) next[id] = slide as Slide;
+        }
+      } else {
+        log.warn('Cloud thumbnails fetch failed:', cloudThumbs.reason);
+      }
+      // Local last so it wins on conflict.
+      if (localThumbs.status === 'fulfilled') {
+        Object.assign(next, localThumbs.value);
+      }
+      setThumbnails(next);
     } catch (err) {
       log.error('Failed to load classrooms:', err);
     }
@@ -222,22 +377,72 @@ function HomePage() {
 
   const confirmDelete = async (id: string) => {
     setPendingDeleteId(null);
+    const target = classrooms.find((c) => c.id === id);
+    const wasLocalOnly = target?.source === 'local';
+
+    let localOk = false;
     try {
       await deleteStageData(id);
-      await loadClassrooms();
+      localOk = true;
     } catch (err) {
-      log.error('Failed to delete classroom:', err);
+      log.error('Failed to delete classroom (local):', err);
+    }
+
+    // Push the deletion to the cloud as well, but only when the row actually
+    // exists server-side (local-only items short-circuit). Failure here is
+    // non-fatal — the local list already reflects the deletion.
+    if (!wasLocalOnly) {
+      try {
+        const res = await fetch(`/api/classroom/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        if (!res.ok && res.status !== 404) {
+          log.warn(`Cloud delete returned ${res.status} for ${id}`);
+          toast.warning(t('classroom.syncDeleteWarning'));
+        }
+      } catch (err) {
+        log.warn('Cloud delete failed:', err);
+        toast.warning(t('classroom.syncDeleteWarning'));
+      }
+    }
+
+    if (!localOk) {
       toast.error('Failed to delete classroom');
     }
+
+    await loadClassrooms();
   };
 
   const handleRename = async (id: string, newName: string) => {
+    const target = classrooms.find((c) => c.id === id);
+    const wasLocalOnly = target?.source === 'local';
+
     try {
       await renameStage(id, newName);
       setClassrooms((prev) => prev.map((c) => (c.id === id ? { ...c, name: newName } : c)));
     } catch (err) {
       log.error('Failed to rename classroom:', err);
       toast.error(t('classroom.renameFailed'));
+      return;
+    }
+
+    if (!wasLocalOnly) {
+      try {
+        const res = await fetch(`/api/classroom/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newName }),
+        });
+        if (!res.ok && res.status !== 404) {
+          log.warn(`Cloud rename returned ${res.status} for ${id}`);
+          toast.warning(t('classroom.syncRenameWarning'));
+        }
+      } catch (err) {
+        log.warn('Cloud rename failed:', err);
+        toast.warning(t('classroom.syncRenameWarning'));
+      }
     }
   };
 
@@ -247,6 +452,13 @@ function HomePage() {
       if (field === 'webSearch') localStorage.setItem(WEB_SEARCH_STORAGE_KEY, String(value));
       if (field === 'outlineConfirm')
         localStorage.setItem(OUTLINE_CONFIRM_STORAGE_KEY, String(value));
+      if (field === 'parallelGeneration') {
+        localStorage.setItem(PARALLEL_GEN_STORAGE_KEY, String(value));
+        // Mirror the per-task choice into the persisted global setting so the
+        // generator hook (which reads from the store, not this form) honors it
+        // when generation kicks off after navigation to /classroom/[id].
+        useSettingsStore.getState().setParallelGenerationEnabled(Boolean(value));
+      }
       if (field === 'language') localStorage.setItem(LANGUAGE_STORAGE_KEY, String(value));
       if (field === 'requirement') updateRequirementCache(value as string);
     } catch {
@@ -449,24 +661,26 @@ function HomePage() {
           )}
         </div>
         {creditBalance !== null && (
-          <>
-            <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
-            <button
-              onClick={() => router.push('/credits')}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
-                creditsUnlimited
-                  ? 'text-green-700 dark:text-green-300 bg-green-50/80 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
-                  : creditBalance <= 10
-                    ? 'text-red-700 dark:text-red-300 bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
-                    : 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
-              )}
-              title="Credits"
-            >
-              <Coins className="size-3" />
-              <span className="tabular-nums">{creditsUnlimited ? '∞' : creditBalance}</span>
-            </button>
-          </>
+          <MenuGate menu="route.credits" op="visible">
+            <>
+              <div className="w-[1px] h-4 bg-gray-200 dark:bg-gray-700" />
+              <button
+                onClick={() => router.push('/credits')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors',
+                  creditsUnlimited
+                    ? 'text-green-700 dark:text-green-300 bg-green-50/80 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40'
+                    : creditBalance <= 10
+                      ? 'text-red-700 dark:text-red-300 bg-red-50/80 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/40'
+                      : 'text-amber-700 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40',
+                )}
+                title="Credits"
+              >
+                <Coins className="size-3" />
+                <span className="tabular-nums">{creditsUnlimited ? '∞' : creditBalance}</span>
+              </button>
+            </>
+          </MenuGate>
         )}
       </div>
       <SettingsDialog
@@ -513,6 +727,8 @@ function HomePage() {
                 onWebSearchChange={(v) => updateForm('webSearch', v)}
                 outlineConfirm={form.outlineConfirm}
                 onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
+                parallelGeneration={form.parallelGeneration}
+                onParallelGenerationChange={(v) => updateForm('parallelGeneration', v)}
                 onSettingsOpen={(section) => {
                   setSettingsSection(section);
                   setSettingsOpen(true);
@@ -588,6 +804,8 @@ function HomePage() {
                     onWebSearchChange={(v) => updateForm('webSearch', v)}
                     outlineConfirm={form.outlineConfirm}
                     onOutlineConfirmChange={(v) => updateForm('outlineConfirm', v)}
+                    parallelGeneration={form.parallelGeneration}
+                    onParallelGenerationChange={(v) => updateForm('parallelGeneration', v)}
                     onSettingsOpen={(section) => {
                       setSettingsSection(section);
                       setSettingsOpen(true);
@@ -598,19 +816,21 @@ function HomePage() {
                   />
                 </div>
 
-                <button
-                  onClick={handleGenerate}
-                  disabled={!canGenerate}
-                  className={cn(
-                    'h-11 rounded-xl flex items-center justify-center gap-2 transition-all px-8 select-none',
-                    canGenerate
-                      ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0 text-sm font-bold tracking-wide'
-                      : 'bg-muted text-muted-foreground/40 cursor-not-allowed text-sm font-bold',
-                  )}
-                >
-                  <span>{t('toolbar.enterClassroom')}</span>
-                  <ArrowUp className="size-4" />
-                </button>
+                <MenuGate menu="home.generate" op="operable" mode="disable">
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!canGenerate}
+                    className={cn(
+                      'h-11 rounded-xl flex items-center justify-center gap-2 transition-all px-8 select-none',
+                      canGenerate
+                        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/20 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0 text-sm font-bold tracking-wide'
+                        : 'bg-muted text-muted-foreground/40 cursor-not-allowed text-sm font-bold',
+                    )}
+                  >
+                    <span>{t('toolbar.enterClassroom')}</span>
+                    <ArrowUp className="size-4" />
+                  </button>
+                </MenuGate>
               </div>
             </div>
 
@@ -631,53 +851,128 @@ function HomePage() {
           </motion.div>
           {/* Historic Library Section */}
           <div className="flex-1 flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-foreground/80 flex items-center gap-2">
-                <Clock className="size-4 text-violet-500" />
-                {t('classroom.recentClassrooms')}
-                <span className="ml-2 px-2 py-0.5 rounded-md bg-border/40 text-[10px] font-bold text-muted-foreground">
-                  {classrooms.length}
-                </span>
-              </h2>
-            </div>
+            {(() => {
+              const FILTERS: Array<{ id: ClassroomFilter; labelKey: string }> = [
+                { id: 'all', labelKey: 'classroom.filterAll' },
+                { id: 'synced', labelKey: 'classroom.filterSynced' },
+                { id: 'local', labelKey: 'classroom.filterLocal' },
+                { id: 'cloud', labelKey: 'classroom.filterCloud' },
+              ];
+              const counts: Record<ClassroomFilter, number> = {
+                all: classrooms.length,
+                synced: classrooms.filter((c) => c.source === 'synced').length,
+                local: classrooms.filter((c) => c.source === 'local').length,
+                cloud: classrooms.filter((c) => c.source === 'cloud').length,
+              };
+              const displayed =
+                classroomFilter === 'all'
+                  ? classrooms
+                  : classrooms.filter((c) => c.source === classroomFilter);
+              const onPickFilter = (next: ClassroomFilter) => {
+                setClassroomFilter(next);
+                try {
+                  localStorage.setItem(CLASSROOM_FILTER_STORAGE_KEY, next);
+                } catch {
+                  /* ignore */
+                }
+              };
+              return (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-bold text-foreground/80 flex items-center gap-2">
+                      <Clock className="size-4 text-violet-500" />
+                      {t('classroom.recentClassrooms')}
+                      <span className="ml-2 px-2 py-0.5 rounded-md bg-border/40 text-[10px] font-bold text-muted-foreground">
+                        {classrooms.length}
+                      </span>
+                    </h2>
+                    <div className="flex items-center gap-1.5">
+                      {FILTERS.map((f) => {
+                        const active = classroomFilter === f.id;
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => onPickFilter(f.id)}
+                            aria-pressed={active}
+                            className={cn(
+                              'h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors border',
+                              active
+                                ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-600/20'
+                                : 'bg-white dark:bg-slate-900 text-muted-foreground hover:text-foreground border-border/60 hover:bg-slate-50 dark:hover:bg-slate-800',
+                            )}
+                          >
+                            <span>{t(f.labelKey)}</span>
+                            <span
+                              className={cn(
+                                'inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-bold',
+                                active
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-muted-foreground',
+                              )}
+                            >
+                              {counts[f.id]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {classrooms.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
-                {classrooms.map((classroom, i) => (
-                  <motion.div
-                    key={classroom.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: Math.min(i * 0.04, 0.4),
-                      duration: 0.4,
-                    }}
-                  >
-                    <ClassroomCard
-                      classroom={classroom}
-                      slide={thumbnails[classroom.id]}
-                      formatDate={formatDate}
-                      onDelete={handleDelete}
-                      onRename={handleRename}
-                      confirmingDelete={pendingDeleteId === classroom.id}
-                      onConfirmDelete={() => confirmDelete(classroom.id)}
-                      onCancelDelete={() => setPendingDeleteId(null)}
-                      onClick={() => router.push(`/classroom/${classroom.id}`)}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
-                <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
-                  <BookOpen className="size-8" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground/80 mb-2">No Documents Yet</h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Use the prompt workspace above to generate your first interactive document!
-                </p>
-              </div>
-            )}
+                  {!cloudListAvailable && (
+                    <div className="mb-4 px-3 py-2 rounded-lg border border-amber-200/60 dark:border-amber-900/40 bg-amber-50/70 dark:bg-amber-950/30 text-[12px] text-amber-700 dark:text-amber-300">
+                      {t('classroom.cloudListUnavailable')}
+                    </div>
+                  )}
+
+                  {displayed.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5">
+                      {displayed.map((classroom, i) => (
+                        <motion.div
+                          key={classroom.id}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            delay: Math.min(i * 0.04, 0.4),
+                            duration: 0.4,
+                          }}
+                        >
+                          <ClassroomCard
+                            classroom={classroom}
+                            slide={thumbnails[classroom.id]}
+                            formatDate={formatDate}
+                            onDelete={handleDelete}
+                            onRename={handleRename}
+                            confirmingDelete={pendingDeleteId === classroom.id}
+                            onConfirmDelete={() => confirmDelete(classroom.id)}
+                            onCancelDelete={() => setPendingDeleteId(null)}
+                            onClick={() => router.push(`/classroom/${classroom.id}`)}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : classrooms.length > 0 ? (
+                    <div className="mt-4 flex flex-col items-center justify-center p-10 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
+                      <p className="text-sm text-muted-foreground">
+                        {t('classroom.filterEmpty')}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-8 flex flex-col items-center justify-center p-12 border border-dashed border-border/80 rounded-3xl text-center bg-white/40 dark:bg-slate-900/40">
+                      <div className="size-16 rounded-3xl bg-violet-100/50 dark:bg-violet-900/20 text-violet-500/50 flex items-center justify-center mb-4">
+                        <BookOpen className="size-8" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground/80 mb-2">
+                        No Documents Yet
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Use the prompt workspace above to generate your first interactive document!
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -919,7 +1214,7 @@ function ClassroomCard({
   onCancelDelete,
   onClick,
 }: {
-  classroom: StageListItem;
+  classroom: ClassroomGridItem;
   slide?: Slide;
   formatDate: (ts: number) => string;
   onDelete: (id: string, e: React.MouseEvent) => void;
@@ -986,6 +1281,37 @@ function ClassroomCard({
             </div>
           </div>
         ) : null}
+
+        {/* Source badge — top-left. Hidden in the default `synced` state to
+            keep the card clean; only highlight asymmetries (cloud-only
+            means "open me on this device to download", local-only means
+            "log in or wait for sync to push"). */}
+        {classroom.source !== 'synced' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  'absolute top-2 left-2 size-7 rounded-full flex items-center justify-center backdrop-blur-sm shadow-sm pointer-events-auto',
+                  classroom.source === 'cloud'
+                    ? 'bg-sky-500/85 text-white'
+                    : 'bg-amber-500/85 text-white',
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {classroom.source === 'cloud' ? (
+                  <Cloud className="size-3.5" />
+                ) : (
+                  <HardDrive className="size-3.5" />
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[220px] text-xs leading-snug">
+              {classroom.source === 'cloud'
+                ? t('classroom.sourceCloudTooltip')
+                : t('classroom.sourceLocalTooltip')}
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Delete — top-right, only on hover. Gated by `delete-classroom` permission. */}
         <AnimatePresence>

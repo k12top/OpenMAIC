@@ -40,6 +40,24 @@ export interface Stage {
     color: string;
     priority: number;
   }>;
+  /**
+   * "Lecture mode" — when true the classroom hides the central play
+   * overlay, mutes auto-TTS, hides thinking/proactive bubbles, and
+   * lets the teacher drive the slides manually with hotkeys / clicks.
+   * Persisted with the stage so the setting follows the courseware
+   * across refresh and into shared viewers (with a non-persistent
+   * override available for visitors).
+   */
+  lectureMode?: boolean;
+  /**
+   * Per-classroom overrides for AI agent display names. Maps stable
+   * `agentId` → desired display name. Takes precedence over
+   * `generatedAgentConfigs[].name`, the global `settings.agentNamePresets`
+   * map, and the `settings.agentNames.<id>` i18n fallback. Persisted with
+   * the stage JSON so the rename follows the courseware across refresh
+   * and shared viewers.
+   */
+  agentNameOverrides?: Record<string, string>;
 }
 
 /**

@@ -21,7 +21,12 @@ import {
   User,
   GraduationCap,
   Users,
+  Pencil,
 } from 'lucide-react';
+import { useStageStore } from '@/lib/store/stage';
+import { resolveAgentName } from '@/lib/agents/resolve-name';
+import { AgentRenameDialog } from '@/components/agent/agent-rename-dialog';
+import { useMenuPerm } from '@/components/auth/menu-gate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { AgentConfig } from '@/lib/orchestration/registry/types';
 import type { TTSProviderId } from '@/lib/audio/types';
@@ -469,10 +474,22 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
   const setAgentMode = useSettingsStore((s) => s.setAgentMode);
   const ttsProvidersConfig = useSettingsStore((s) => s.ttsProvidersConfig);
   const ttsEnabled = useSettingsStore((s) => s.ttsEnabled);
+  const stage = useStageStore((s) => s.stage);
+  const settingsPresets = useSettingsStore((s) => s.agentNamePresets);
+  const canRenameAgents = useMenuPerm('settings.agents', 'operable');
 
   const [open, setOpen] = useState(false);
   const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [renameTarget, setRenameTarget] = useState<{ id: string; baseName: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const getDisplayName = (agentId: string, baseName: string) =>
+    resolveAgentName(agentId, baseName, {
+      stageOverrides: stage?.agentNameOverrides ?? null,
+      generatedConfigs: stage?.generatedAgentConfigs ?? null,
+      settingsPresets,
+      t,
+    });
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -532,17 +549,31 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
     <div className={cn("flex flex-col gap-3", !inline && "w-[400px] p-4 bg-white dark:bg-slate-900 ring-1 ring-border/50 shadow-2xl rounded-2xl z-[100]")}>
       {/* ─── Teacher Card — Always Prominent ─── */}
       {teacherAgent && (
-        <div className="relative group overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/20 dark:to-slate-800/40 border border-blue-200/50 dark:border-blue-900/30 transition-all hover:shadow-lg">
+        <div className="relative group/teacher overflow-hidden p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/20 dark:to-slate-800/40 border border-blue-200/50 dark:border-blue-900/30 transition-all hover:shadow-lg">
           <div className="flex items-center gap-4 relative z-10">
-            <div className="size-16 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-xl shrink-0 transition-transform group-hover:scale-105">
-              <img src={teacherAgent.avatar} alt={teacherAgent.name} className="size-full object-cover" />
+            <div className="size-16 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-xl shrink-0 transition-transform group-hover/teacher:scale-105">
+              <img src={teacherAgent.avatar} alt={getDisplayName(teacherAgent.id, teacherAgent.name)} className="size-full object-cover" />
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
-                <h4 className="text-[17px] font-bold text-slate-900 dark:text-white tracking-tight">
-                  {teacherAgent.name}
+                <h4 className="text-[17px] font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                  {getDisplayName(teacherAgent.id, teacherAgent.name)}
                 </h4>
                 <RoleBadge role="teacher" />
+                {canRenameAgents && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameTarget({ id: teacherAgent.id, baseName: teacherAgent.name });
+                    }}
+                    className="size-6 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50 opacity-0 group-hover/teacher:opacity-100 transition-opacity"
+                    aria-label={t('agent.editName')}
+                    title={t('agent.editName')}
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                )}
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-normal line-clamp-2">
                 {t('settings.agentRoles.teacherShortDesc')}
@@ -602,7 +633,7 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
                 >
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="size-10 rounded-xl overflow-hidden shadow-sm shrink-0 ring-1 ring-border/20 mt-0.5">
-                      <img src={agent.avatar} alt={agent.name} className="size-full object-cover" />
+                      <img src={agent.avatar} alt={getDisplayName(agent.id, agent.name)} className="size-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-0.5">
@@ -612,9 +643,23 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
                             isSelected ? 'text-primary' : 'text-foreground',
                           )}
                         >
-                          {agent.name}
+                          {getDisplayName(agent.id, agent.name)}
                         </span>
                         <RoleBadge role={agent.role} />
+                        {canRenameAgents && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRenameTarget({ id: agent.id, baseName: agent.name });
+                            }}
+                            className="size-5 inline-flex items-center justify-center rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label={t('agent.editName')}
+                            title={t('agent.editName')}
+                          >
+                            <Pencil className="size-3" />
+                          </button>
+                        )}
                       </div>
                       <p className="text-[10px] text-muted-foreground line-clamp-2 italic leading-snug">
                         {agent.role === 'assistant' ? t('settings.agentRoles.assistantShortDesc') : t('settings.agentRoles.studentShortDesc')}
@@ -670,6 +715,16 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
           </div>
         )}
       </div>
+      {renameTarget && (
+        <AgentRenameDialog
+          open={!!renameTarget}
+          onOpenChange={(o) => {
+            if (!o) setRenameTarget(null);
+          }}
+          agentId={renameTarget.id}
+          baseName={renameTarget.baseName}
+        />
+      )}
     </div>
   );
 
@@ -693,7 +748,7 @@ export function AgentBar({ inline = false }: { inline?: boolean } = {}) {
             </div>
             <div className="hidden sm:flex flex-col items-start leading-tight min-w-[70px]">
              <span className="text-[11px] font-bold truncate">
-               {open ? t('agentBar.settingUp') : (teacherAgent?.name || t('agentBar.teacherSettings'))}
+               {open ? t('agentBar.settingUp') : (teacherAgent ? getDisplayName(teacherAgent.id, teacherAgent.name) : t('agentBar.teacherSettings'))}
              </span>
              <span className={cn("text-[9px] font-medium opacity-60", !open && "text-primary/80")}>
                {agentMode === 'auto' ? t('agentBar.autoOrchestrating') : t('agentBar.rolesSelected', { count: selectedAgentIds.length })}

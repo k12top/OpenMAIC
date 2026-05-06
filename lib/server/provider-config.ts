@@ -426,6 +426,16 @@ export function resolveWebSearchApiKey(clientKey?: string): string {
 // ---------------------------------------------------------------------------
 
 export interface ServerDefaults {
+  /**
+   * Preferred LLM model string (`<provider>:<model>` form), sourced from
+   * the operator-set `DEFAULT_MODEL` env. Used by the client store on
+   * first load to pre-populate the LLM provider + model the same way
+   * `DEFAULT_TTS_PROVIDER` etc. do for their respective categories. The
+   * server-side fallback in `lib/server/resolve-model.ts` already uses
+   * the same env var; surfacing it to the client keeps both sides in
+   * sync without the user manually picking a model in Settings.
+   */
+  llmModel?: string;
   /** Preferred TTS provider ID (DEFAULT_TTS_PROVIDER) */
   ttsProvider?: string;
   /** Preferred ASR provider ID (DEFAULT_ASR_PROVIDER) */
@@ -447,6 +457,12 @@ export interface ServerDefaults {
  */
 export function getServerDefaults(): ServerDefaults {
   const defaults: ServerDefaults = {};
+
+  // DEFAULT_MODEL accepts both bare model ids (e.g. "gpt-4o-mini") and
+  // qualified ones (e.g. "google:gemini-3.1-pro-preview"). We expose it
+  // verbatim and let the client-side parser split provider/model.
+  const llm = (process.env.DEFAULT_MODEL ?? '').trim();
+  if (llm) defaults.llmModel = llm;
 
   if (process.env.DEFAULT_TTS_PROVIDER) defaults.ttsProvider = process.env.DEFAULT_TTS_PROVIDER;
   if (process.env.DEFAULT_ASR_PROVIDER) defaults.asrProvider = process.env.DEFAULT_ASR_PROVIDER;

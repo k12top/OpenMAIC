@@ -151,9 +151,42 @@ export interface SettingsState {
   maxTurns: string;
   agentMode: 'preset' | 'auto';
   autoAgentCount: number;
+  /**
+   * Global per-user overrides for AI agent display names. Maps stable
+   * `agentId` → desired display name. Used as the third-priority source
+   * after stage-level overrides and stage-generated configs, ahead of the
+   * `settings.agentNames.<id>` i18n fallback. Empty string clears the
+   * override (use the default).
+   */
+  agentNamePresets: Record<string, string>;
 
   // Outline confirmation (pause generation after outlines stream so user can review/edit)
   outlineConfirmEnabled: boolean;
+
+  /**
+   * Continuity-Preserving Parallel scene generation. When enabled,
+   * `useSceneGenerator.generateRemaining` switches from the existing
+   * pipelined-sequential loop to a batched-parallel loop:
+   *  - First pending scene runs solo (real `previousSpeeches` from the
+   *    most recently completed scene), seeding tone for the rest.
+   *  - Remaining scenes are processed in batches of `parallelGenerationBatchSize`,
+   *    sharing the same `previousSpeeches` (taken from the last scene
+   *    completed by the previous batch) so cross-batch narrative
+   *    continuity is preserved.
+   *  - Within a batch, scenes 2..K do not see each other's speeches —
+   *    they share the upstream context only. This trades a small amount
+   *    of intra-batch continuity for ~K× speedup.
+   * Default `false` so existing users see no behavior change. Toggleable
+   * from the generation toolbar (lightning icon next to outlineConfirm).
+   */
+  parallelGenerationEnabled: boolean;
+  /**
+   * Number of scenes to run in parallel within each batch. Range 2-5;
+   * default 3. Higher values give bigger speedup but multiply upstream
+   * LLM/TTS pressure (rate-limit timeouts will appear as failed scenes
+   * eligible for `retrySingleOutline`).
+   */
+  parallelGenerationBatchSize: number;
 
   // Layout preferences (persisted via localStorage)
   sidebarCollapsed: boolean;
@@ -173,7 +206,16 @@ export interface SettingsState {
   setMaxTurns: (turns: string) => void;
   setAgentMode: (mode: 'preset' | 'auto') => void;
   setAutoAgentCount: (count: number) => void;
+  /**
+   * Set or clear the global preset name for an agent. Pass `null` to
+   * remove the override and fall back to the i18n / registry default.
+   */
+  setAgentNamePreset: (agentId: string, name: string | null) => void;
   setOutlineConfirmEnabled: (enabled: boolean) => void;
+  /** Toggle the continuity-preserving parallel scene-generation mode. */
+  setParallelGenerationEnabled: (enabled: boolean) => void;
+  /** Adjust the parallel batch size; clamped to the supported 2-5 range. */
+  setParallelGenerationBatchSize: (size: number) => void;
 
   // Layout actions
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -550,7 +592,10 @@ export const useSettingsStore = create<SettingsState>()(
         maxTurns: migratedData?.maxTurns?.toString() || '10',
         agentMode: 'auto' as const,
         autoAgentCount: 3,
+        agentNamePresets: {},
         outlineConfirmEnabled: true,
+        parallelGenerationEnabled: false,
+        parallelGenerationBatchSize: 3,
 
         // Playback controls
         ttsMuted: false,
@@ -619,7 +664,25 @@ export const useSettingsStore = create<SettingsState>()(
         setMaxTurns: (turns) => set({ maxTurns: turns }),
         setAgentMode: (mode) => set({ agentMode: mode }),
         setAutoAgentCount: (count) => set({ autoAgentCount: count }),
+        setAgentNamePreset: (agentId, name) =>
+          set((state) => {
+            const next = { ...state.agentNamePresets };
+            const trimmed = typeof name === 'string' ? name.trim() : '';
+            if (!agentId) return state;
+            if (name === null || trimmed === '') {
+              delete next[agentId];
+            } else {
+              next[agentId] = trimmed;
+            }
+            return { agentNamePresets: next };
+          }),
         setOutlineConfirmEnabled: (enabled) => set({ outlineConfirmEnabled: enabled }),
+        setParallelGenerationEnabled: (enabled) =>
+          set({ parallelGenerationEnabled: enabled }),
+        setParallelGenerationBatchSize: (size) =>
+          set({
+            parallelGenerationBatchSize: Math.max(2, Math.min(5, Math.floor(size) || 3)),
+          }),
 
         // Layout actions
         setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -767,8 +830,10 @@ export const useSettingsStore = create<SettingsState>()(
               image: Record<string, { baseUrl?: string }>;
               video: Record<string, { baseUrl?: string }>;
               webSearch: Record<string, { baseUrl?: string }>;
-              /** Operator defaults from env (DEFAULT_TTS_PROVIDER, etc.) — see getServerDefaults */
+              /** Operator defaults from env (DEFAULT_MODEL, DEFAULT_TTS_PROVIDER, etc.) — see getServerDefaults */
               defaults?: {
+                /** `<provider>:<model>` form, sourced from DEFAULT_MODEL */
+                llmModel?: string;
                 ttsProvider?: string;
                 asrProvider?: string;
                 imageProvider?: string;
@@ -1156,21 +1221,49 @@ export const useSettingsStore = create<SettingsState>()(
                 }
               }
 
-              // LLM auto-select: only on true first load (no provider selected yet)
+              // LLM auto-select: fires whenever the user has no model picked
+              // yet (modelId is empty). The previous guard also required
+              // `!state.providerId`, but providerId defaults to 'openai' on
+              // first load — making the guard impossible to satisfy and
+              // forcing every new user to manually pick a model in Settings.
+              //
+              // Priority order, first match wins:
+              //   1. Operator's DEFAULT_MODEL (`<provider>:<model>`), provided
+              //      that provider is server-configured.
+              //   2. First server-configured provider's first model.
               let autoProviderId: ProviderId | undefined;
               let autoModelId: string | undefined;
-              if (!state.providerId && !state.modelId) {
-                for (const [pid, cfg] of Object.entries(newProvidersConfig)) {
-                  if (cfg.isServerConfigured) {
-                    // Prefer server-restricted models, fall back to built-in list
-                    const serverModels = cfg.serverModels;
-                    const modelId = serverModels?.length
-                      ? serverModels[0]
-                      : PROVIDERS[pid as ProviderId]?.models[0]?.id;
-                    if (modelId) {
-                      autoProviderId = pid as ProviderId;
-                      autoModelId = modelId;
-                      break;
+              if (!state.modelId) {
+                const serverDefaults = data.defaults;
+                const llmDefault = serverDefaults?.llmModel?.trim();
+                if (llmDefault) {
+                  // Local mini-parser to avoid pulling parseModelString from
+                  // ai/providers (heavier import surface). Mirrors the same
+                  // "split on first colon, default to openai if bare" logic.
+                  const colon = llmDefault.indexOf(':');
+                  const pid = (
+                    colon > 0 ? llmDefault.slice(0, colon) : 'openai'
+                  ) as ProviderId;
+                  const mid = colon > 0 ? llmDefault.slice(colon + 1) : llmDefault;
+                  const cfg = newProvidersConfig[pid];
+                  if (cfg?.isServerConfigured && mid) {
+                    autoProviderId = pid;
+                    autoModelId = mid;
+                  }
+                }
+                if (!autoModelId) {
+                  for (const [pid, cfg] of Object.entries(newProvidersConfig)) {
+                    if (cfg.isServerConfigured) {
+                      // Prefer server-restricted models, fall back to built-in list
+                      const serverModels = cfg.serverModels;
+                      const modelId = serverModels?.length
+                        ? serverModels[0]
+                        : PROVIDERS[pid as ProviderId]?.models[0]?.id;
+                      if (modelId) {
+                        autoProviderId = pid as ProviderId;
+                        autoModelId = modelId;
+                        break;
+                      }
                     }
                   }
                 }
@@ -1369,6 +1462,20 @@ export const useSettingsStore = create<SettingsState>()(
         }
         if ((state as Record<string, unknown>).outlineConfirmEnabled === undefined) {
           (state as Record<string, unknown>).outlineConfirmEnabled = true;
+        }
+        if (
+          (state as Record<string, unknown>).parallelGenerationEnabled === undefined
+        ) {
+          (state as Record<string, unknown>).parallelGenerationEnabled = false;
+        }
+        const pgbsRaw = (state as Record<string, unknown>).parallelGenerationBatchSize;
+        if (typeof pgbsRaw !== 'number' || !Number.isFinite(pgbsRaw)) {
+          (state as Record<string, unknown>).parallelGenerationBatchSize = 3;
+        } else {
+          (state as Record<string, unknown>).parallelGenerationBatchSize = Math.max(
+            2,
+            Math.min(5, Math.floor(pgbsRaw)),
+          );
         }
 
         // Migrate Web Search: old flat fields → new provider-based config

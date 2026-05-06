@@ -9,6 +9,9 @@ import {
   resolvePermissions,
   type Action,
 } from '@/lib/auth/permissions';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('auth-guard');
 
 export interface AuthUser {
   id: string;
@@ -70,6 +73,10 @@ export async function requireAuth(): Promise<AuthUser> {
   const token = cookieStore.get('casdoor_token')?.value;
 
   if (!token) {
+    // Debug, not warn — most 401s are simply unauthenticated visitors
+    // (incognito, devtools probes like /.well-known/...). Bumping these
+    // to warn would make logs unreadable. Use LOG_LEVEL=debug to see them.
+    log.debug('401 reason=no-cookie (casdoor_token absent)');
     throw new UnauthenticatedError();
   }
 
@@ -81,7 +88,8 @@ export async function requireAuth(): Promise<AuthUser> {
   let parsed: CasdoorJwtUser;
   try {
     parsed = casdoorSDK.parseJwtToken(token) as CasdoorJwtUser;
-  } catch {
+  } catch (err) {
+    log.info(`401 reason=invalid-or-expired-token err=${(err as Error).message}`);
     throw new UnauthenticatedError('Invalid or expired token');
   }
 
@@ -105,6 +113,7 @@ export async function requireAuth(): Promise<AuthUser> {
   };
 
   if (!user.id) {
+    log.warn('401 reason=token-missing-user-identity');
     throw new UnauthenticatedError('Token missing user identity');
   }
 

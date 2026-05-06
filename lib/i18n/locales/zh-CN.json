@@ -9,6 +9,7 @@
     "home": {
         "slogan": "智能互动课堂与文书生成",
         "greetingWithName": "嗨，{{name}}!",
+        "loginFailed": "登录失败，请重试。",
         "logout": "退出登录",
         "workspace": "工作空间",
         "sidebarBranding": "翔宇文淑"
@@ -48,6 +49,8 @@
         "webSearchOff": "点击开启",
         "outlineConfirmOn": "大纲生成后等待我确认",
         "outlineConfirmOff": "点击开启：生成大纲后先暂停让我审阅",
+        "parallelOnTooltip": "并行生成已开启：每页同时生成 ~3×加速。优点：批与批之间真实台词衔接；缺点：同批 2-3 页之间台词不互相引用，对模型/语音上游瞬时压力更大，触发限速的页会进入失败列表可单条重试。点击关闭恢复串行生成。",
+        "parallelOffTooltip": "串行生成（默认）：按顺序逐页生成，台词上下文完全连贯。点击开启并行模式可获得 ~2-3× 提速，但会牺牲少量同批内的连贯性。",
         "webSearchDesc": "生成前搜索网络获取最新资料，让内容更丰富准确",
         "webSearchProvider": "搜索引擎",
         "webSearchNoProvider": "请在设置中配置搜索引擎 API Key",
@@ -62,7 +65,10 @@
         "ttsPreviewing": "播放中...",
         "toggleChat": "切换聊天面板",
         "openChatPanel": "打开聊天面板",
-        "voiceSettings": "音色设置"
+        "voiceSettings": "音色设置",
+        "lectureModeOn": "讲解模式",
+        "lectureModeOff": "自动模式",
+        "lectureModeTooltip": "讲解/自动模式：讲解模式适合教师亲自授课，去除中央播放按钮、静音 AI 朗读"
     },
     "export": {
         "pptx": "导出 PPTX",
@@ -127,7 +133,6 @@
     "agentBar": {
         "readyToLearn": "准备好一起学习了吗？",
         "expandedTitle": "课堂角色配置",
-        "configTooltip": "点击配置课堂角色",
         "voiceLabel": "音色",
         "voiceLoading": "加载中...",
         "voiceAutoAssign": "音色将自动分配",
@@ -185,7 +190,9 @@
         "mediaPromptsLabel": "媒体提示词",
         "mediaPromptsHint": "可按元素调整生成图/视频的提示词",
         "startRegenerate": "开始重新生成",
-        "ownerOnly": "仅课件作者可见"
+        "ownerOnly": "仅课件作者可见",
+        "syncSuccess": "同步到云端成功",
+        "syncFailed": "同步到云端失败"
     },
     "whiteboard": {
         "title": "互动白板",
@@ -322,7 +329,113 @@
         }
     },
     "share": {
-        "notReady": "生成完成后可分享"
+        "notReady": "生成完成后可分享",
+        "title": "分享与协作",
+        "createLink": "创建分享链接",
+        "applyModeChange": "更新分享模式",
+        "loading": "加载中…",
+        "linkCopied": "链接已复制",
+        "linkCreated": "分享链接已创建",
+        "modeUpdated": "分享模式已更新",
+        "createFailed": "创建分享链接失败",
+        "revoke": "撤销链接",
+        "revoked": "已撤销",
+        "revokeFailed": "撤销失败",
+        "modePublic": "公开",
+        "modePublicDesc": "任何人通过链接即可查看",
+        "modeReadonly": "登录可看",
+        "modeReadonlyDesc": "对方需要先登录账号才能查看本课堂",
+        "modeEditable": "可复制",
+        "modeEditableDesc": "对方需要先登录，登录后可复制到自己的「我的课堂」",
+        "modeSso": "组织内可见",
+        "modeSsoDesc": "仅限你所在组织的成员可见",
+        "persistentBadge": "持久链接",
+        "persistentHint": "每个课堂为每位作者保留一条持久链接，更新后用「立即推送最新」即可同步给所有访客。",
+        "pushLatest": "立即推送最新",
+        "pushing": "推送中…",
+        "pushFailed": "推送失败",
+        "pushSuccessClean": "分享内容已更新，所有媒体均已就绪",
+        "pushSuccessSummary": "分享内容已更新（补传 {{uploaded}} / {{total}} 个媒体，跳过 {{skipped}}）",
+        "pushExplanation": "「立即推送最新」会先把当前编辑同步到云端，再补传缺失的语音、图片等媒体。",
+        "lectureModeLabel": "课堂模式",
+        "lectureModeDesc": "开启后，访问者打开链接即进入讲解模式：隐藏中央播放按钮、静音 AI 朗读，由教师亲自授课。",
+        "lectureModeOn": "课堂模式已开启",
+        "lectureModeOff": "课堂模式已关闭",
+        "viewer": {
+            "bannerPublicTitle": "共享课堂（公开）",
+            "bannerPublicHint": "持有链接即可观看。若需账号专属能力请先登录。",
+            "bannerReadonlyTitle": "共享课堂（需登录）",
+            "bannerReadonlyHint": "请使用你的账号登录后打开本课堂。",
+            "bannerEditableTitle": "共享课堂 — 可复制到你的空间",
+            "bannerEditableHint": "登录后复制到「我的课堂」即可自行编辑、用自己的链接上课或留作备份。",
+            "bannerSsoTitle": "共享课堂（组织内）",
+            "bannerSsoHint": "仅通过你所在组织 SSO 登录的成员可访问此链接。",
+            "copyToMine": "复制到我的课堂",
+            "signInToCopy": "登录后复制",
+            "signIn": "登录",
+            "copying": "正在复制…",
+            "copySuccess": "已复制到你的账号",
+            "copyFailed": "复制失败，请稍后重试",
+            "lectureAsAuto": "自动播放视图",
+            "lectureAsLecture": "讲解模式视图",
+            "lectureAsAutoTooltip": "在本机切换为自动播放（不会修改作者的课堂文件）",
+            "lectureAsLectureTooltip": "在本机切回讲解模式（不会修改作者的课堂文件）"
+        }
+    },
+    "sidebar": {
+        "addScene": "新增页面",
+        "insertHere": "在此处插入新页面"
+    },
+    "addScene": {
+        "title": "新增课堂页面",
+        "typeLabel": "选择页面类型",
+        "typeSlide": "讲解页",
+        "typeSlideDesc": "AI 老师讲解一个主题",
+        "typeQuiz": "测验",
+        "typeQuizDesc": "出几道题检验掌握情况",
+        "typeInteractive": "动画演示",
+        "typeInteractiveDesc": "可交互的动画或 demo",
+        "titleField": "标题",
+        "titlePlaceholder": "例如：神经元的工作机制",
+        "descriptionField": "简介",
+        "descriptionPlaceholder": "用一两句话描述这页的目的",
+        "keyPointsField": "关键要点",
+        "keyPointPlaceholder": "本页要讲的一个核心点",
+        "addKeyPoint": "添加要点",
+        "quizQuestionCount": "题目数量",
+        "quizDifficulty": "难度",
+        "difficultyEasy": "简单",
+        "difficultyMedium": "中等",
+        "difficultyHard": "困难",
+        "interactiveDesignIdea": "互动设计建议（可选）",
+        "interactiveDesignIdeaPlaceholder": "想要的演示形式或交互思路（可空，AI 自由发挥）",
+        "aiHint": "提交后 AI 会先生成内容，再生成动作脚本与语音，过程中可以继续编辑其它页面。",
+        "generate": "生成",
+        "generating": "生成中…",
+        "success": "新页面已加入课堂",
+        "failed": "生成失败",
+        "typeLocked": "你的角色暂时无权创建此类型，请联系管理员",
+        "typeForbidden": "你的角色无权创建该类型的页面",
+        "appendForbidden": "你的角色无权在末尾追加新页面",
+        "insertForbidden": "你的角色无权在中间位置插入新页面",
+        "noTypesAllowed": "你的角色暂未被授权创建任何类型的新页面"
+    },
+    "speech": {
+        "staleBadge": "音频与文本不一致",
+        "staleHint": "点击查看并重生本句语音",
+        "preview": "试听",
+        "previewStop": "停止试听",
+        "previewMissing": "尚未生成语音，无法试听",
+        "regenerateOne": "重生本句",
+        "regenerating": "重生中…",
+        "regenSuccess": "语音已重新生成",
+        "regenFailed": "语音重生失败",
+        "staleSummary": "{{count}} / {{total}} 条语音与文本不一致",
+        "regenAllStale": "一键重生过期 ({{count}})",
+        "regenAllRunning": "正在重生 {{done}} / {{total}}…",
+        "regenAllNoStale": "全部语音已是最新",
+        "regenAllSummaryOk": "已重生 {{ok}} 条语音",
+        "regenAllSummaryMixed": "成功 {{ok}} 条，失败 {{fail}} 条（{{ids}}）"
     },
     "classroom": {
         "recentClassrooms": "最近学习",
@@ -335,7 +448,17 @@
         "delete": "删除",
         "rename": "重命名",
         "renamePlaceholder": "输入课堂名称",
-        "renameFailed": "重命名失败"
+        "renameFailed": "重命名失败",
+        "filterAll": "全部",
+        "filterSynced": "已同步",
+        "filterLocal": "仅本地",
+        "filterCloud": "仅云端",
+        "filterEmpty": "当前筛选下没有课堂",
+        "sourceLocalTooltip": "仅在此浏览器，未上传云端。登录后下次保存时会自动同步。",
+        "sourceCloudTooltip": "仅云端，本浏览器未下载。点击进入即可加载到本地。",
+        "syncDeleteWarning": "本地已删除，但云端同步失败，请稍后重试。",
+        "syncRenameWarning": "本地已重命名，但云端同步失败，请稍后重试。",
+        "cloudListUnavailable": "云端课程列表暂不可用，仅显示本浏览器的本地课堂。"
     },
     "upload": {
         "pdfSizeLimit": "支持最大50MB的PDF文件",
@@ -578,6 +701,9 @@
         "keyboardShortcuts": "键盘快捷键",
         "generalSettings": "常规设置",
         "systemSettings": "系统设置",
+        "profileSection": "个人资料",
+        "profileSectionHint": "更新你的昵称、头像和简介。AI 老师会用昵称称呼你。",
+        "agentNamePresetsHint": "这里的改名是全局生效的，单个课堂仍可独立覆盖。",
         "addProvider": "添加",
         "importFromClipboard": "从剪贴板导入",
         "apiSecret": "API 密钥",
@@ -1161,6 +1287,72 @@
     "editSource": {
         "code": "代码",
         "split": "双栏",
-        "preview": "预览"
+        "preview": "预览",
+        "speech": "语音脚本",
+        "speechEmpty": "本页没有语音动作"
+    },
+    "menu": {
+        "noPermission": "你没有权限使用该功能",
+        "route": {
+            "home": "首页",
+            "classroom": "课堂",
+            "share": "共享课堂",
+            "credits": "积分",
+            "recharge": "充值",
+            "generation": "生成预览"
+        },
+        "home": {
+            "generate": "生成课堂",
+            "deleteClassroom": "删除课堂",
+            "renameClassroom": "重命名课堂"
+        },
+        "header": {
+            "share": "分享",
+            "shareLectureMode": "分享 · 课堂模式",
+            "sync": "同步到云端",
+            "export": "导出"
+        },
+        "sidebar": {
+            "addScene": "新增页面",
+            "addSceneSlide": "新增页面 · 讲解页",
+            "addSceneQuiz": "新增页面 · 测试页",
+            "addSceneInteractive": "新增页面 · 互动 / 动画演示",
+            "addSceneAppend": "新增页面 · 末尾追加",
+            "addSceneInsert": "新增页面 · 任意位置插入",
+            "reorderScenes": "调整页面顺序",
+            "deleteScene": "删除页面"
+        },
+        "toolbar": {
+            "regenerate": "重新生成本页",
+            "editSource": "编辑源代码",
+            "lectureMode": "讲解模式切换"
+        },
+        "settings": {
+            "providers": "模型供应商",
+            "image": "图像生成",
+            "video": "视频生成",
+            "tts": "语音合成",
+            "asr": "语音识别",
+            "pdf": "PDF 处理",
+            "webSearch": "联网搜索",
+            "general": "通用设置",
+            "agents": "智能体改名",
+            "profile": "个人资料"
+        }
+    },
+    "agent": {
+        "editName": "修改名称",
+        "saveName": "保存名称",
+        "nameLabel": "显示名称",
+        "namePlaceholder": "输入展示名称…",
+        "nameRequired": "名称不能为空",
+        "resetToDefault": "恢复默认",
+        "renameSuccess": "名称已更新",
+        "renameReset": "已恢复默认名称",
+        "renameStaleHint": "已生成的台词若引用了旧名，可对该 action 单独重新生成。",
+        "customName": "自定义名称",
+        "customNameBadge": "已自定义",
+        "scopeStageDesc": "仅在当前课堂生效，分享时跟随课堂带走。",
+        "scopeGlobalDesc": "对你的所有课堂全局生效；单个课堂可独立覆盖。"
     }
 }

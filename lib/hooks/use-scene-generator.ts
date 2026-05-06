@@ -11,8 +11,9 @@ import type { AgentInfo } from '@/lib/generation/generation-pipeline';
 import type { Scene } from '@/lib/types/stage';
 import type { Action, SpeechAction } from '@/lib/types/action';
 import type { TTSProviderId } from '@/lib/audio/types';
-import { splitLongSpeechActions } from '@/lib/audio/tts-utils';
+import { splitLongSpeechActions, hashSpeechText } from '@/lib/audio/tts-utils';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
+import { applyEffectiveNames } from '@/lib/agents/resolve-name';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('SceneGenerator');
@@ -34,6 +35,23 @@ interface SceneActionsResult {
 interface LlmModelOverride {
   providerId: ProviderId;
   modelId: string;
+}
+
+/**
+ * Apply per-classroom + global per-user name overrides to an `agents`
+ * roster before sending it to a generation API. Pulls override sources
+ * from the current stage and settings stores so individual call sites
+ * don't have to.
+ */
+function resolveAgentsForRequest(agents?: AgentInfo[]): AgentInfo[] | undefined {
+  if (!agents || agents.length === 0) return agents;
+  const stage = useStageStore.getState().stage;
+  const presets = useSettingsStore.getState().agentNamePresets;
+  return applyEffectiveNames(agents, {
+    stageOverrides: stage?.agentNameOverrides ?? null,
+    generatedConfigs: stage?.generatedAgentConfigs ?? null,
+    settingsPresets: presets,
+  });
 }
 
 function getApiHeaders(modelOverride?: LlmModelOverride): HeadersInit {
@@ -199,8 +217,16 @@ export async function generateAndStoreTTS(
     id: audioId,
     blob,
     format: data.format,
+    text,
     createdAt: Date.now(),
   });
+
+  // Tag the speech action with a hash of the text we just synthesized so
+  // the UI can detect later text edits as "audio out of sync". Done before
+  // the cloud upload so a slow MinIO doesn't delay the freshness signal.
+  useStageStore
+    .getState()
+    .updateSpeechAction(audioId, { audioTextHash: hashSpeechText(text) });
 
   // Upload to cloud storage and write back the MinIO URL into the speech action
   const stageId = useStageStore.getState().stage?.id;
@@ -360,17 +386,252 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
           .map((a) => a.text);
       }
 
-      // Pipeline generation loop — prefetch next scene's content while current
-      // scene's actions + TTS are generating. This overlaps the two heaviest
-      // LLM calls and can reduce total time by ~30-40%.
-      //
-      // Timeline:
-      //   Scene 1: [content] → [actions + TTS]
-      //   Scene 2:              [content(prefetch)] → [actions + TTS]
-      //   Scene 3:                                     [content(prefetch)] → ...
+      // ── Mode selection ────────────────────────────────────────────
+      // Default = sequential pipelined loop (unchanged below). When the
+      // user opts into the "continuity-preserving parallel" mode in
+      // generation toolbar, the first pending scene runs solo (so it can
+      // honor any pre-existing `previousSpeeches`) and the rest are
+      // batched: within a batch every scene runs concurrently sharing
+      // the same `previousSpeeches`, and the next batch picks up the
+      // tail speech of the previously completed batch. Trades intra-
+      // batch continuity for ~K× speedup. See settings store doc.
+      const useParallel =
+        useSettingsStore.getState().parallelGenerationEnabled === true;
+      const batchSizeRaw =
+        useSettingsStore.getState().parallelGenerationBatchSize ?? 3;
+      const batchSize = Math.max(2, Math.min(5, Math.floor(batchSizeRaw) || 3));
+
+      // Per-scene runner used by the parallel branch. Mirrors the steps
+      // of the sequential loop but isolated so we can `Promise.allSettled`
+      // a whole batch. Returns a tagged outcome the caller threads into
+      // the store (no side effects beyond the existing `generateTTSForScene`
+      // / `generateAndStoreTTS` writes, which are themselves audioId-keyed).
+      type SceneOutcome =
+        | { kind: 'success'; outline: SceneOutline; scene: Scene; tailSpeeches: string[] }
+        | { kind: 'fail'; outline: SceneOutline; error: string }
+        | { kind: 'credits'; outline: SceneOutline }
+        | { kind: 'aborted'; outline: SceneOutline };
+
+      const runOneScene = async (
+        outline: SceneOutline,
+        sharedPrev: string[],
+      ): Promise<SceneOutcome> => {
+        const isAborted = () =>
+          abortRef.current || store.getState().generationEpoch !== startEpoch;
+        try {
+          const contentResult = await fetchSceneContent(
+            {
+              outline,
+              allOutlines: outlines,
+              stageId: stage.id,
+              pdfImages: params.pdfImages,
+              imageMapping: params.imageMapping,
+              stageInfo: params.stageInfo,
+              agents: resolveAgentsForRequest(params.agents),
+            },
+            signal,
+          );
+          if (isAborted()) return { kind: 'aborted', outline };
+          if (!contentResult.success || !contentResult.content) {
+            if (contentResult.error === 'INSUFFICIENT_CREDITS') {
+              return { kind: 'credits', outline };
+            }
+            return {
+              kind: 'fail',
+              outline,
+              error: contentResult.error || 'Content generation failed',
+            };
+          }
+
+          const actionsResult = await fetchSceneActions(
+            {
+              outline: contentResult.effectiveOutline || outline,
+              allOutlines: outlines,
+              content: contentResult.content,
+              stageId: stage.id,
+              agents: resolveAgentsForRequest(params.agents),
+              previousSpeeches: sharedPrev,
+              userProfile: params.userProfile,
+            },
+            signal,
+          );
+          if (isAborted()) return { kind: 'aborted', outline };
+          if (!actionsResult.success || !actionsResult.scene) {
+            if (actionsResult.error === 'INSUFFICIENT_CREDITS') {
+              return { kind: 'credits', outline };
+            }
+            return {
+              kind: 'fail',
+              outline,
+              error: actionsResult.error || 'Actions generation failed',
+            };
+          }
+
+          const scene = actionsResult.scene;
+          const settings = useSettingsStore.getState();
+          if (settings.ttsEnabled && settings.ttsProviderId !== 'browser-native-tts') {
+            const ttsResult = await generateTTSForScene(scene, signal);
+            if (isAborted()) return { kind: 'aborted', outline };
+            if (!ttsResult.success) {
+              return {
+                kind: 'fail',
+                outline,
+                error: ttsResult.error || 'TTS generation failed',
+              };
+            }
+          }
+          return {
+            kind: 'success',
+            outline,
+            scene,
+            tailSpeeches: actionsResult.previousSpeeches || [],
+          };
+        } catch (err) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            return { kind: 'aborted', outline };
+          }
+          return {
+            kind: 'fail',
+            outline,
+            error: err instanceof Error ? err.message : 'Scene generation crashed',
+          };
+        }
+      };
+
+      // Apply a successful scene outcome to the store / fire callbacks.
+      // Returns the new tail speeches so callers can thread them forward.
+      const commitSuccess = (out: Extract<SceneOutcome, { kind: 'success' }>) => {
+        removeGeneratingOutline(out.outline.id);
+        store.getState().addScene(out.scene);
+        options.onSceneGenerated?.(out.scene, out.outline.order);
+        return out.tailSpeeches;
+      };
+
       try {
         let pausedByFailureOrAbort = false;
 
+        if (useParallel && pending.length > 1) {
+          // ── Continuity-preserving parallel path ────────────────────
+          // 1. First scene solo (real previousSpeeches from prior scenes).
+          // 2. Subsequent scenes in batches of `batchSize` sharing one
+          //    previousSpeeches per batch (the tail of the prior batch).
+          let sharedPrev = previousSpeeches;
+
+          // Step 1: first scene solo.
+          const firstOutline = pending[0];
+          if (abortRef.current || store.getState().generationEpoch !== startEpoch) {
+            store.getState().setGenerationStatus('paused');
+            pausedByFailureOrAbort = true;
+          } else {
+            store.getState().setCurrentGeneratingOrder(firstOutline.order);
+            options.onPhaseChange?.('content', firstOutline);
+            const first = await runOneScene(firstOutline, sharedPrev);
+            if (first.kind === 'success') {
+              sharedPrev = commitSuccess(first);
+            } else if (first.kind === 'aborted') {
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+            } else if (first.kind === 'credits') {
+              store.getState().setCreditsInsufficient(true);
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+            } else {
+              store.getState().addFailedOutline(first.outline);
+              options.onSceneFailed?.(first.outline, first.error);
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+            }
+          }
+
+          // Step 2: batched remainder.
+          for (
+            let i = 1;
+            !pausedByFailureOrAbort && i < pending.length;
+            i += batchSize
+          ) {
+            if (abortRef.current || store.getState().generationEpoch !== startEpoch) {
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+              break;
+            }
+            const batch = pending.slice(i, i + batchSize);
+            // Track the most recent generating order so the sidebar's
+            // "currently generating" indicator follows the leading edge.
+            store.getState().setCurrentGeneratingOrder(batch[0].order);
+            for (const o of batch) options.onPhaseChange?.('content', o);
+
+            const settled = await Promise.allSettled(
+              batch.map((o) => runOneScene(o, sharedPrev)),
+            );
+
+            // Map settled results back into outcomes in batch order so we
+            // can commit deterministically and pick the tail by `order`.
+            const outcomes: SceneOutcome[] = settled.map((r, idx) =>
+              r.status === 'fulfilled'
+                ? r.value
+                : ({
+                    kind: 'fail',
+                    outline: batch[idx],
+                    error:
+                      r.reason instanceof Error
+                        ? r.reason.message
+                        : 'Scene generation crashed',
+                  } as SceneOutcome),
+            );
+
+            // Commit successes in outline-order so addScene calls produce
+            // a stable visible sequence; track the highest-order success
+            // for the next batch's seed.
+            const successes = outcomes
+              .filter((o): o is Extract<SceneOutcome, { kind: 'success' }> => o.kind === 'success')
+              .sort((a, b) => a.outline.order - b.outline.order);
+            for (const s of successes) {
+              const tail = commitSuccess(s);
+              // The last (highest-order) success seeds the next batch.
+              if (s === successes[successes.length - 1]) sharedPrev = tail;
+            }
+
+            // Handle the first non-success outcome (if any) as the pause
+            // trigger. Earlier-order successes are already committed.
+            const firstBad = outcomes.find((o) => o.kind !== 'success');
+            if (firstBad) {
+              if (firstBad.kind === 'aborted') {
+                store.getState().setGenerationStatus('paused');
+                pausedByFailureOrAbort = true;
+                break;
+              }
+              if (firstBad.kind === 'credits') {
+                store.getState().setCreditsInsufficient(true);
+                store.getState().setGenerationStatus('paused');
+                pausedByFailureOrAbort = true;
+                break;
+              }
+              // Treat every fail-kind in this batch as a real failure so
+              // the user can retry each one individually.
+              for (const o of outcomes) {
+                if (o.kind === 'fail') {
+                  store.getState().addFailedOutline(o.outline);
+                  options.onSceneFailed?.(o.outline, o.error);
+                }
+              }
+              store.getState().setGenerationStatus('paused');
+              pausedByFailureOrAbort = true;
+              break;
+            }
+          }
+
+          if (!abortRef.current && !pausedByFailureOrAbort) {
+            store.getState().setGenerationStatus('completed');
+            store.getState().setGeneratingOutlines([]);
+            options.onComplete?.();
+          }
+          // Fall through to the existing finally{} for cleanup.
+          generatingRef.current = false;
+          fetchAbortRef.current = null;
+          return;
+        }
+
+        // ── Sequential pipeline (original behavior) ──────────────────
         // Prefetch content for the first pending outline immediately
         let nextContentPromise: Promise<SceneContentResult> | null = null;
         const prefetchContent = (outline: SceneOutline) =>
@@ -382,7 +643,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               pdfImages: params.pdfImages,
               imageMapping: params.imageMapping,
               stageInfo: params.stageInfo,
-              agents: params.agents,
+              agents: resolveAgentsForRequest(params.agents),
             },
             signal,
           );
@@ -443,7 +704,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
               allOutlines: outlines,
               content: contentResult.content,
               stageId: stage.id,
-              agents: params.agents,
+              agents: resolveAgentsForRequest(params.agents),
               previousSpeeches,
               userProfile: params.userProfile,
             },
@@ -568,7 +829,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             pdfImages: params.pdfImages,
             imageMapping: params.imageMapping,
             stageInfo: params.stageInfo,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
           },
           signal,
         );
@@ -598,7 +859,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             allOutlines: state.outlines,
             content: contentResult.content,
             stageId: state.stage.id,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
             previousSpeeches,
             userProfile: params.userProfile,
           },
@@ -740,7 +1001,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             pdfImages: params.pdfImages,
             imageMapping: params.imageMapping,
             stageInfo: params.stageInfo,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
           },
           signal,
           modelOverride,
@@ -764,7 +1025,7 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
             allOutlines: store.getState().outlines,
             content: contentResult.content,
             stageId: state.stage.id,
-            agents: params.agents,
+            agents: resolveAgentsForRequest(params.agents),
             previousSpeeches,
             userProfile: params.userProfile,
           },

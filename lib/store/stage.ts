@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Stage, Scene, StageMode, SlideContent } from '@/lib/types/stage';
+import type { SpeechAction } from '@/lib/types/action';
 import type { PPTImageElement, PPTVideoElement } from '@/lib/types/slides';
 import { createSelectors } from '@/lib/utils/create-selectors';
 import type { ChatSession } from '@/lib/types/chat';
@@ -125,6 +126,17 @@ interface StageState {
   retryFailedOutline: (outlineId: string) => void;
   setCreditsInsufficient: (value: boolean) => void;
   updateSpeechActionAudioUrl: (audioId: string, url: string) => void;
+  /**
+   * Patch a speech action's fields (audioId-keyed). Use to update
+   * `audioTextHash`, clear `audioUrl`, etc. without disturbing siblings.
+   */
+  updateSpeechAction: (audioId: string, partial: Partial<SpeechAction>) => void;
+  /**
+   * Update a speech action's text by audioId. Does not clear the cached
+   * audioTextHash — staleness is computed by comparing the hash to the
+   * current text on the read side (see `isSpeechAudioStale`).
+   */
+  updateSpeechActionText: (audioId: string, text: string) => void;
   /** Replace a placeholder media elementId with its persisted cloud URL across all scenes */
   updateMediaElementSrc: (elementId: string, url: string) => void;
 
@@ -149,6 +161,22 @@ interface StageState {
   // Ownership
   setIsOwner: (isOwner: boolean) => void;
   setIsSharedView: (isSharedView: boolean) => void;
+
+  /**
+   * Toggle lecture-mode on the current stage. Persists via debouncedSave so
+   * the setting survives refresh and syncs to the cloud for share viewers.
+   * No-op when no stage is loaded.
+   */
+  setLectureMode: (value: boolean) => void;
+
+  /**
+   * Set or clear a per-classroom override for an AI agent's display name.
+   * Pass `null` (or empty string) to remove the override and fall back to
+   * the lower-priority sources (generated config / global preset / i18n /
+   * registry). Persisted with the stage so the rename follows the
+   * courseware across refresh and shared viewers.
+   */
+  setAgentNameOverride: (agentId: string, name: string | null) => void;
 }
 
 const useStageStoreBase = create<StageState>()((set, get) => ({
@@ -368,23 +396,32 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
   setCreditsInsufficient: (value) => set({ creditsInsufficient: value }),
 
   updateSpeechActionAudioUrl: (audioId, url) => {
+    get().updateSpeechAction(audioId, { audioUrl: url });
+  },
+
+  updateSpeechAction: (audioId, partial) => {
     const { scenes } = get();
     for (const scene of scenes) {
       const actions = scene.actions || [];
       if (
         actions.some(
-          (a) => a.type === 'speech' && (a as { audioId?: string }).audioId === audioId,
+          (a) => a.type === 'speech' && (a as SpeechAction).audioId === audioId,
         )
       ) {
-        const updated = actions.map((a) =>
-          a.type === 'speech' && (a as { audioId?: string }).audioId === audioId
-            ? { ...a, audioUrl: url }
-            : a,
-        );
+        const updated = actions.map((a) => {
+          if (a.type === 'speech' && (a as SpeechAction).audioId === audioId) {
+            return { ...(a as SpeechAction), ...partial } as SpeechAction;
+          }
+          return a;
+        });
         get().updateScene(scene.id, { actions: updated });
         break;
       }
     }
+  },
+
+  updateSpeechActionText: (audioId, text) => {
+    get().updateSpeechAction(audioId, { text });
   },
 
   updateMediaElementSrc: (elementId, url) => {
@@ -542,6 +579,32 @@ const useStageStoreBase = create<StageState>()((set, get) => ({
 
   setIsOwner: (isOwner) => set({ isOwner }),
   setIsSharedView: (isSharedView) => set({ isSharedView }),
+
+  setLectureMode: (value) => {
+    const { stage } = get();
+    if (!stage) return;
+    set({ stage: { ...stage, lectureMode: value } });
+    debouncedSave();
+  },
+
+  setAgentNameOverride: (agentId, name) => {
+    const { stage } = get();
+    if (!stage || !agentId) return;
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    const next = { ...(stage.agentNameOverrides ?? {}) };
+    if (name === null || trimmed === '') {
+      delete next[agentId];
+    } else {
+      next[agentId] = trimmed;
+    }
+    set({
+      stage: {
+        ...stage,
+        agentNameOverrides: Object.keys(next).length > 0 ? next : undefined,
+      },
+    });
+    debouncedSave();
+  },
 
   /**
    * Swap a scene with a new one atomically at the same array position.

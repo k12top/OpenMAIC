@@ -3,7 +3,7 @@ import path from 'path';
 import type { NextRequest } from 'next/server';
 import type { Scene, Stage } from '@/lib/types/stage';
 import { isDbConfigured, getDb, schema } from '@/lib/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('ClassroomStorage');
@@ -152,21 +152,27 @@ export async function persistClassroom(
 
 /**
  * List classrooms for a specific user from PostgreSQL.
+ *
+ * Includes `sceneCount` derived from `jsonb_array_length(scenes_json)` so
+ * the home page card can render "{n} slides" without us having to ship
+ * the full `scenesJson` over the wire (a single classroom's scenes can
+ * easily be several MB once images / canvas data are baked in).
  */
 export async function listUserClassrooms(userId: string) {
   if (!isDbConfigured()) return [];
 
   const db = getDb();
-  return db.query.classrooms.findMany({
-    where: eq(schema.classrooms.userId, userId),
-    orderBy: desc(schema.classrooms.updatedAt),
-    columns: {
-      id: true,
-      title: true,
-      language: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  return db
+    .select({
+      id: schema.classrooms.id,
+      title: schema.classrooms.title,
+      language: schema.classrooms.language,
+      status: schema.classrooms.status,
+      createdAt: schema.classrooms.createdAt,
+      updatedAt: schema.classrooms.updatedAt,
+      sceneCount: sql<number>`COALESCE(CASE WHEN jsonb_typeof(${schema.classrooms.scenesJson}) = 'array' THEN jsonb_array_length(${schema.classrooms.scenesJson}) END, 0)`,
+    })
+    .from(schema.classrooms)
+    .where(eq(schema.classrooms.userId, userId))
+    .orderBy(desc(schema.classrooms.updatedAt));
 }

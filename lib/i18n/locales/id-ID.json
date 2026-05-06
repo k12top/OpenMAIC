@@ -8,7 +8,8 @@
   },
   "home": {
     "slogan": "Ruang kelas interaktif & pembuatan dokumen AI",
-    "greetingWithName": "Halo, {{name}}"
+    "greetingWithName": "Halo, {{name}}",
+    "loginFailed": "Login gagal. Silakan coba lagi."
   },
   "landing": {
     "badge": "Platform kursus bertenaga AI",
@@ -45,6 +46,8 @@
     "webSearchOff": "Klik untuk mengaktifkan",
     "outlineConfirmOn": "Tunggu konfirmasi kerangka",
     "outlineConfirmOff": "Klik: jeda setelah pembuatan kerangka untuk ditinjau",
+    "parallelOnTooltip": "Generasi paralel AKTIF: scene dibuat secara berkelompok bersamaan untuk percepatan ~3×. Kelebihan: kontinuitas dialog antar batch tetap nyata. Kekurangan: scene 2-3 dalam batch yang sama tidak saling merujuk dialog; tekanan ke LLM/TTS naik ~K×, scene yang kena rate-limit akan masuk daftar gagal untuk dicoba ulang per item. Klik untuk kembali ke generasi berurutan.",
+    "parallelOffTooltip": "Generasi berurutan (default): scene dibuat satu per satu dengan konteks dialog sepenuhnya berkelanjutan. Klik untuk mengaktifkan mode paralel demi percepatan ~2-3× dengan sedikit kompromi kontinuitas dalam batch.",
     "webSearchDesc": "Cari di web untuk informasi terbaru sebelum pembuatan",
     "webSearchProvider": "Mesin pencari",
     "webSearchNoProvider": "Konfigurasi kunci API pencarian di Pengaturan",
@@ -58,7 +61,11 @@
     "ttsPreview": "Pratinjau",
     "ttsPreviewing": "Memutar...",
     "toggleChat": "Alihkan panel obrolan",
-    "openChatPanel": "Buka panel obrolan"
+    "openChatPanel": "Buka panel obrolan",
+    "voiceSettings": "Pengaturan suara",
+    "lectureModeOn": "Mode kuliah",
+    "lectureModeOff": "Mode otomatis",
+    "lectureModeTooltip": "Beralih kuliah/otomatis: mode kuliah menyembunyikan tombol play utama dan membisukan narasi AI agar pengajar bisa membawakan sendiri"
   },
   "export": {
     "pptx": "Ekspor PPTX",
@@ -165,7 +172,9 @@
     "mediaPromptsLabel": "Prompt Media",
     "mediaPromptsHint": "Sesuaikan prompt untuk setiap gambar atau video",
     "startRegenerate": "Mulai buat ulang",
-    "ownerOnly": "Hanya terlihat oleh pemilik kelas"
+    "ownerOnly": "Hanya terlihat oleh pemilik kelas",
+    "syncSuccess": "Berhasil disinkronkan ke cloud",
+    "syncFailed": "Gagal menyinkronkan ke cloud"
   },
   "whiteboard": {
     "title": "Papan Tulis Interaktif",
@@ -301,7 +310,113 @@
     }
   },
   "share": {
-    "notReady": "Tersedia setelah pembuatan selesai"
+    "notReady": "Tersedia setelah pembuatan selesai",
+    "title": "Bagikan & Kolaborasi",
+    "createLink": "Buat tautan bagikan",
+    "applyModeChange": "Perbarui mode bagikan",
+    "loading": "Memuat…",
+    "linkCopied": "Tautan disalin",
+    "linkCreated": "Tautan dibuat",
+    "modeUpdated": "Mode bagikan diperbarui",
+    "createFailed": "Gagal membuat tautan",
+    "revoke": "Cabut tautan",
+    "revoked": "Dicabut",
+    "revokeFailed": "Gagal mencabut",
+    "modePublic": "Publik",
+    "modePublicDesc": "Siapa pun yang punya tautan bisa melihat",
+    "modeReadonly": "Perlu masuk",
+    "modeReadonlyDesc": "Penerima harus masuk terlebih dahulu sebelum dapat melihat kelas ini",
+    "modeEditable": "Bisa disalin",
+    "modeEditableDesc": "Penerima harus masuk; setelah login mereka bisa menyalinnya ke Kelas saya",
+    "modeSso": "Hanya organisasi",
+    "modeSsoDesc": "Hanya anggota organisasi Anda yang bisa melihat",
+    "persistentBadge": "Tautan permanen",
+    "persistentHint": "Setiap kelas menyimpan satu tautan permanen per penulis. Setelah edit, klik \"Kirim sekarang\" untuk menyinkronkan ke semua pengunjung.",
+    "pushLatest": "Kirim sekarang",
+    "pushing": "Mengirim…",
+    "pushFailed": "Gagal mengirim",
+    "pushSuccessClean": "Bagikan sudah terbaru — semua media tersinkron",
+    "pushSuccessSummary": "Bagikan diperbarui ({{uploaded}}/{{total}} media diunggah ulang, {{skipped}} dilewati)",
+    "pushExplanation": "\"Kirim sekarang\" akan menyinkronkan editan ke cloud lalu mengunggah ulang audio atau gambar yang hilang.",
+    "lectureModeLabel": "Mode kuliah",
+    "lectureModeDesc": "Saat aktif, penonton membuka tautan dalam mode kuliah: tombol play utama disembunyikan dan narasi AI dibisukan agar pengajar dapat membawakan sendiri.",
+    "lectureModeOn": "Mode kuliah diaktifkan",
+    "lectureModeOff": "Mode kuliah dinonaktifkan",
+    "viewer": {
+      "bannerPublicTitle": "Kelas bersama (publik)",
+      "bannerPublicHint": "Siapa pun yang punya tautan dapat melihat. Masuk jika memerlukan fitur khusus akun.",
+      "bannerReadonlyTitle": "Kelas bersama (wajib masuk)",
+      "bannerReadonlyHint": "Masuk dengan akun Anda untuk membuka kelas ini.",
+      "bannerEditableTitle": "Kelas bersama — dapat disalin",
+      "bannerEditableHint": "Masuk dulu, lalu simpan salinan ke Kelas saya untuk mengajar dari tautan Anda sendiri, mengedit, atau cadangan.",
+      "bannerSsoTitle": "Kelas bersama (organisasi)",
+      "bannerSsoHint": "Hanya anggota yang masuk lewat SSO organisasi Anda yang dapat mengakses tautan ini.",
+      "copyToMine": "Salin ke Kelas saya",
+      "signInToCopy": "Masuk untuk menyalin",
+      "signIn": "Masuk",
+      "copying": "Menyalin…",
+      "copySuccess": "Kelas telah disalin ke akun Anda",
+      "copyFailed": "Tidak dapat menyalin kelas ini",
+      "lectureAsAuto": "Tampilan putar otomatis",
+      "lectureAsLecture": "Tampilan mode kuliah",
+      "lectureAsAutoTooltip": "Beralih ke putar otomatis hanya di perangkat ini (tidak mengubah berkas penulis)",
+      "lectureAsLectureTooltip": "Kembali ke mode kuliah hanya di perangkat ini (tidak mengubah berkas penulis)"
+    }
+  },
+  "sidebar": {
+    "addScene": "Tambah halaman",
+    "insertHere": "Sisipkan halaman baru di sini"
+  },
+  "addScene": {
+    "title": "Tambah halaman baru",
+    "typeLabel": "Pilih tipe halaman",
+    "typeSlide": "Slide",
+    "typeSlideDesc": "Guru AI menjelaskan satu topik",
+    "typeQuiz": "Kuis",
+    "typeQuizDesc": "Beberapa soal untuk mengecek pemahaman",
+    "typeInteractive": "Interaktif",
+    "typeInteractiveDesc": "Demo animasi atau widget interaktif",
+    "titleField": "Judul",
+    "titlePlaceholder": "mis. Bagaimana neuron bekerja",
+    "descriptionField": "Deskripsi",
+    "descriptionPlaceholder": "Jelaskan tujuan halaman dalam satu-dua kalimat",
+    "keyPointsField": "Poin penting",
+    "keyPointPlaceholder": "Ide inti yang harus dibahas",
+    "addKeyPoint": "Tambah poin",
+    "quizQuestionCount": "Jumlah soal",
+    "quizDifficulty": "Tingkat kesulitan",
+    "difficultyEasy": "Mudah",
+    "difficultyMedium": "Sedang",
+    "difficultyHard": "Sulit",
+    "interactiveDesignIdea": "Ide desain (opsional)",
+    "interactiveDesignIdeaPlaceholder": "Ide visual atau interaksi (kosongkan agar AI yang menentukan)",
+    "aiHint": "Setelah dikirim, AI akan membuat konten dulu, lalu aksi dan suara. Anda bisa terus mengedit halaman lain selama proses berjalan.",
+    "generate": "Buat",
+    "generating": "Membuat…",
+    "success": "Halaman baru ditambahkan ke kelas",
+    "failed": "Pembuatan gagal",
+    "typeLocked": "Peran Anda belum diizinkan membuat tipe ini — hubungi admin untuk minta akses",
+    "typeForbidden": "Peran Anda tidak diizinkan membuat tipe halaman ini",
+    "appendForbidden": "Peran Anda tidak diizinkan menambah halaman di akhir",
+    "insertForbidden": "Peran Anda tidak diizinkan menyisipkan halaman di tengah",
+    "noTypesAllowed": "Peran Anda saat ini belum diberi izin menambah halaman"
+  },
+  "speech": {
+    "staleBadge": "Audio tidak sinkron",
+    "staleHint": "Klik untuk memeriksa dan membuat ulang",
+    "preview": "Pratinjau",
+    "previewStop": "Berhenti",
+    "previewMissing": "Belum ada audio — buat dulu untuk diputar",
+    "regenerateOne": "Buat ulang baris ini",
+    "regenerating": "Membuat ulang…",
+    "regenSuccess": "Audio dibuat ulang",
+    "regenFailed": "Gagal membuat ulang",
+    "staleSummary": "{{count}} dari {{total}} baris tidak sinkron",
+    "regenAllStale": "Buat ulang semua yang basi ({{count}})",
+    "regenAllRunning": "Membuat ulang {{done}} / {{total}}…",
+    "regenAllNoStale": "Semua audio sudah terbaru",
+    "regenAllSummaryOk": "{{ok}} baris audio dibuat ulang",
+    "regenAllSummaryMixed": "{{ok}} berhasil, {{fail}} gagal ({{ids}})"
   },
   "classroom": {
     "recentClassrooms": "Terbaru",
@@ -314,7 +429,17 @@
     "delete": "Hapus",
     "rename": "Ubah Nama",
     "renamePlaceholder": "Masukkan nama kelas",
-    "renameFailed": "Gagal mengubah nama kelas"
+    "renameFailed": "Gagal mengubah nama kelas",
+    "filterAll": "Semua",
+    "filterSynced": "Tersinkron",
+    "filterLocal": "Hanya lokal",
+    "filterCloud": "Hanya cloud",
+    "filterEmpty": "Tidak ada kelas yang cocok dengan filter ini",
+    "sourceLocalTooltip": "Hanya ada di peramban ini. Masuk lalu simpan ulang agar tersinkron ke cloud.",
+    "sourceCloudTooltip": "Hanya ada di cloud — buka sekali untuk mengunduhnya ke peramban ini.",
+    "syncDeleteWarning": "Dihapus secara lokal, tetapi sinkronisasi cloud gagal. Silakan coba lagi nanti.",
+    "syncRenameWarning": "Diubah secara lokal, tetapi sinkronisasi cloud gagal. Silakan coba lagi nanti.",
+    "cloudListUnavailable": "Daftar kelas cloud tidak tersedia — hanya menampilkan kelas lokal di peramban ini."
   },
   "upload": {
     "pdfSizeLimit": "Mendukung berkas PDF hingga 50MB",
@@ -520,6 +645,9 @@
     "keyboardShortcuts": "Pintasan",
     "generalSettings": "Umum",
     "systemSettings": "Sistem",
+    "profileSection": "Profil",
+    "profileSectionHint": "Perbarui nama panggilan, avatar, dan bio Anda. Agen AI akan memanggil Anda dengan nama ini.",
+    "agentNamePresetsHint": "Penggantian nama di sini berlaku global. Setiap kelas tetap dapat menimpa nama-nama ini.",
     "addProvider": "Tambah",
     "importFromClipboard": "Impor dari Papan Klip",
     "apiSecret": "Kunci API",
@@ -978,5 +1106,76 @@
     "voice": "Suara",
     "speed": "Kecepatan",
     "language": "Bahasa"
+  },
+  "editSource": {
+    "code": "Kode",
+    "split": "Tampilan terbagi",
+    "preview": "Pratinjau",
+    "speech": "Naskah suara",
+    "speechEmpty": "Halaman ini belum punya aksi suara"
+  },
+  "menu": {
+    "noPermission": "Anda tidak memiliki izin untuk fitur ini",
+    "route": {
+      "home": "Beranda",
+      "classroom": "Kelas",
+      "share": "Kelas dibagikan",
+      "credits": "Kredit",
+      "recharge": "Isi ulang",
+      "generation": "Pratinjau pembuatan"
+    },
+    "home": {
+      "generate": "Buat kelas",
+      "deleteClassroom": "Hapus kelas",
+      "renameClassroom": "Ganti nama kelas"
+    },
+    "header": {
+      "share": "Bagikan",
+      "shareLectureMode": "Bagikan · Mode kuliah",
+      "sync": "Sinkronkan ke cloud",
+      "export": "Ekspor"
+    },
+    "sidebar": {
+      "addScene": "Tambah halaman",
+      "addSceneSlide": "Tambah halaman · Slide pengajaran",
+      "addSceneQuiz": "Tambah halaman · Kuis",
+      "addSceneInteractive": "Tambah halaman · Interaktif / animasi",
+      "addSceneAppend": "Tambah halaman · Sambungkan di akhir",
+      "addSceneInsert": "Tambah halaman · Sisipkan di mana saja",
+      "reorderScenes": "Atur ulang halaman",
+      "deleteScene": "Hapus halaman"
+    },
+    "toolbar": {
+      "regenerate": "Buat ulang halaman",
+      "editSource": "Edit sumber",
+      "lectureMode": "Mode presentasi"
+    },
+    "settings": {
+      "providers": "Penyedia model",
+      "image": "Pembuatan gambar",
+      "video": "Pembuatan video",
+      "tts": "Sintesis suara",
+      "asr": "Pengenalan suara",
+      "pdf": "Pemrosesan PDF",
+      "webSearch": "Pencarian web",
+      "general": "Pengaturan umum",
+      "agents": "Ganti nama agen",
+      "profile": "Profil pribadi"
+    }
+  },
+  "agent": {
+    "editName": "Edit nama",
+    "saveName": "Simpan nama",
+    "nameLabel": "Nama tampilan",
+    "namePlaceholder": "Masukkan nama tampilan…",
+    "nameRequired": "Nama tidak boleh kosong",
+    "resetToDefault": "Kembalikan ke default",
+    "renameSuccess": "Nama diperbarui",
+    "renameReset": "Dikembalikan ke nama default",
+    "renameStaleHint": "Dialog yang sudah dihasilkan mungkin masih menyebut nama lama. Buat ulang aksi terkait jika perlu.",
+    "customName": "Nama kustom",
+    "customNameBadge": "Kustom",
+    "scopeStageDesc": "Hanya berlaku di kelas ini dan ikut saat dibagikan.",
+    "scopeGlobalDesc": "Berlaku global untuk semua kelas Anda; setiap kelas dapat menimpanya."
   }
 }
