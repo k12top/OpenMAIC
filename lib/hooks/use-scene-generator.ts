@@ -14,6 +14,7 @@ import type { TTSProviderId } from '@/lib/audio/types';
 import { splitLongSpeechActions, hashSpeechText } from '@/lib/audio/tts-utils';
 import { generateMediaForOutlines } from '@/lib/media/media-orchestrator';
 import { applyEffectiveNames } from '@/lib/agents/resolve-name';
+import { reconstructOutlineFromScene } from '@/lib/utils/outline-reconstruct';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('SceneGenerator');
@@ -935,21 +936,35 @@ export function useSceneGenerator(options: UseSceneGeneratorOptions = {}) {
         },
       };
 
-      const originalOutline = state.outlines.find((o) => o.order === scene.order);
-      if (!originalOutline) return;
+      // Outlines live in IndexedDB only. If the user opens the classroom on
+      // a fresh browser / cleared profile, the lookup can come back empty.
+      // Fall back to a best-effort outline reconstructed from the scene so
+      // regeneration stays available even when the original outline was
+      // never replicated to this device.
+      const persistedOutline = state.outlines.find((o) => o.order === scene.order);
+      const originalOutline = persistedOutline ?? reconstructOutlineFromScene(scene);
+      if (!persistedOutline) {
+        log.info(
+          `[regenerateScene] ${sceneId} outline missing from store — using reconstructed fallback`,
+        );
+      }
 
       const effectiveOutline: SceneOutline = {
         ...originalOutline,
         ...(overrides ?? {}),
       };
 
-      // Persist the tweaked outline so refreshes / later regens see the edits.
+      // Persist the tweaked outline so refreshes / later regens see the
+      // edits. Also persists when we just reconstructed (so the dialog and
+      // future regen calls find a real entry instead of re-reconstructing).
       const didOverride = !!overrides && Object.keys(overrides).length > 0;
-      if (didOverride) {
-        const nextOutlines = state.outlines.map((o) =>
-          o.order === scene.order ? effectiveOutline : o,
-        );
-        store.getState().setOutlines(nextOutlines);
+      if (didOverride || !persistedOutline) {
+        const baseOutlines = persistedOutline
+          ? state.outlines.map((o) =>
+              o.order === scene.order ? effectiveOutline : o,
+            )
+          : [...state.outlines, effectiveOutline].sort((a, b) => a.order - b.order);
+        store.getState().setOutlines(baseOutlines);
       }
 
       // Clear media tasks tied to this scene's elements so the orchestrator

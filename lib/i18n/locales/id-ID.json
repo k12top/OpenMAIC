@@ -161,6 +161,7 @@
     "regenerateModelLabel": "Model generasi",
     "retryMode": "Coba lagi saja",
     "retryModeHint": "Buat ulang halaman ini apa adanya, tanpa mengubah prompt apa pun (teks, media, dan TTS dibuat ulang semua).",
+    "outlineMissingHint": "Outline asli tidak tersedia secara lokal. Mode Coba Lagi akan menyusunnya kembali dari judul dan slot media halaman ini — alihkan ke mode Sederhana atau Lanjutan untuk mengisi deskripsi dan poin utama terlebih dahulu.",
     "simpleMode": "Sederhana",
     "advancedMode": "Lanjutan",
     "titleLabel": "Judul",

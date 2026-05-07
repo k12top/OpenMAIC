@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, Loader2, RefreshCw, X } from 'lucide-react';
 import { useI18n } from '@/lib/hooks/use-i18n';
 import { useStageStore } from '@/lib/store';
 import { useSettingsStore } from '@/lib/store/settings';
 import type { SceneOutline } from '@/lib/types/generation';
 import type { MediaGenerationRequest } from '@/lib/media/types';
 import type { ProviderId } from '@/lib/ai/providers';
+import {
+  isReconstructedOutlineId,
+  reconstructOutlineFromScene,
+} from '@/lib/utils/outline-reconstruct';
 import { cn } from '@/lib/utils';
 
 type Mode = 'retry' | 'simple' | 'advanced';
@@ -45,10 +49,29 @@ export function RegenerateSceneDialog({
   const scenes = useStageStore.use.scenes();
   const outlines = useStageStore.use.outlines();
 
-  const { scene, outline } = useMemo(() => {
+  // Outlines are persisted to IndexedDB only — when a user opens the
+  // classroom on a fresh browser / cleared profile, the lookup by `order`
+  // can come back empty even though the scene exists. Fall back to a
+  // best-effort outline reconstructed from the scene itself so the dialog
+  // (and the regenerate pipeline) keep working. We surface a banner to
+  // the user so they understand retry-mode will work off a barebones
+  // outline and that simple/advanced modes let them fill in the gaps.
+  const { scene, outline, outlineReconstructed } = useMemo(() => {
     const s = sceneId ? scenes.find((x) => x.id === sceneId) : null;
-    const o = s ? outlines.find((x) => x.order === s.order) : null;
-    return { scene: s || null, outline: o || null };
+    if (!s) return { scene: null, outline: null, outlineReconstructed: false };
+    const persisted = outlines.find((x) => x.order === s.order);
+    if (persisted) {
+      return {
+        scene: s,
+        outline: persisted,
+        outlineReconstructed: isReconstructedOutlineId(persisted.id),
+      };
+    }
+    return {
+      scene: s,
+      outline: reconstructOutlineFromScene(s),
+      outlineReconstructed: true,
+    };
   }, [sceneId, scenes, outlines]);
 
   // Current global LLM selection — used as the default for the override dropdown.
@@ -127,6 +150,8 @@ export function RegenerateSceneDialog({
     // Target scene was deleted between opening the dialog and now — dismiss.
     return null;
   }
+  // After this point `outline` is always defined (either persisted or
+  // freshly reconstructed via reconstructOutlineFromScene above).
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -266,6 +291,12 @@ export function RegenerateSceneDialog({
 
         {/* Form */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {outlineReconstructed && (
+            <div className="rounded-lg border border-amber-300/60 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-200 leading-relaxed flex gap-2 items-start">
+              <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+              <span>{t('stage.outlineMissingHint')}</span>
+            </div>
+          )}
           {mode === 'retry' ? (
             <div className="rounded-lg bg-muted/30 border border-border/40 p-4 text-xs text-muted-foreground leading-relaxed">
               {t('stage.retryModeHint')}

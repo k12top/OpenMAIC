@@ -179,6 +179,7 @@
         "regenerateModelLabel": "生成模型",
         "retryMode": "仅重试",
         "retryModeHint": "不改动任何提示词，直接重新生成当前页（文字、媒体、TTS 全部重新产出）。",
+        "outlineMissingHint": "原始大纲在本机已不可用，重试模式将基于当前页的标题与媒体元素重建。建议切到傻瓜模式或专业模式，补充本页的描述与关键点后再生成。",
         "simpleMode": "傻瓜模式",
         "advancedMode": "专业模式",
         "titleLabel": "标题",

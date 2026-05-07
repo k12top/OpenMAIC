@@ -177,6 +177,7 @@
         "regenerateModelLabel": "Generation model",
         "retryMode": "Retry only",
         "retryModeHint": "Re-run this page as-is, without changing any prompts (text, media, and TTS are all produced again).",
+        "outlineMissingHint": "The original outline isn't available locally. Retry mode will rebuild it from the current page's title and media slots — switching to Simple or Advanced lets you fill in the description and key points first.",
         "simpleMode": "Simple",
         "advancedMode": "Advanced",
         "titleLabel": "Title",

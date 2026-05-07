@@ -116,6 +116,33 @@ export default function ClassroomDetailPage() {
 
       // Restore completed media generation tasks from IndexedDB
       await useMediaGenerationStore.getState().restoreFromDB(classroomId);
+
+      // Outlines are persisted to IndexedDB only — not the server. When we
+      // hydrate from server-side storage, or when a user opens the classroom
+      // on a different browser / cleared profile, `outlines` ends up empty
+      // even though `scenes` is populated. Without outlines the
+      // regenerate-current-page dialog silently no-ops on click. Backfill a
+      // best-effort outline derived from each scene so the dialog renders
+      // and the regen pipeline has a starting point. Skipped when outlines
+      // were already loaded from IDB (the normal path).
+      const stateAfterLoad = useStageStore.getState();
+      if (
+        stateAfterLoad.scenes.length > 0 &&
+        stateAfterLoad.outlines.length === 0
+      ) {
+        const { reconstructOutlineFromScene } = await import(
+          '@/lib/utils/outline-reconstruct'
+        );
+        const reconstructed = stateAfterLoad.scenes
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .map(reconstructOutlineFromScene);
+        useStageStore.getState().setOutlines(reconstructed);
+        log.info(
+          `[Classroom] Reconstructed ${reconstructed.length} outline(s) from scenes (server payload had none)`,
+        );
+      }
+
       // Restore agents for this stage
       const { loadGeneratedAgentsForStage, useAgentRegistry } =
         await import('@/lib/orchestration/registry/store');

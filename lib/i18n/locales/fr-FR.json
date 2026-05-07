@@ -161,6 +161,7 @@
     "regenerateModelLabel": "Modèle de génération",
     "retryMode": "Réessayer uniquement",
     "retryModeHint": "Relancer cette page telle quelle, sans modifier les invites (le texte, les médias et le TTS sont tous régénérés).",
+    "outlineMissingHint": "Le plan d'origine n'est plus disponible localement. Le mode Réessayer le reconstruit à partir du titre et des emplacements média de la page — passez en mode Simple ou Avancé pour saisir la description et les points clés avant de relancer.",
     "simpleMode": "Simple",
     "advancedMode": "Avancé",
     "titleLabel": "Titre",
